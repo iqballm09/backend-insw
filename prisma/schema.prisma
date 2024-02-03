@@ -1,0 +1,240 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  CO
+  SL
+}
+
+enum StatusDo {
+  Draft
+  Submitted
+  Checking
+  Approved
+  Rejected
+}
+
+model Role {
+  id    Int     @id @default(autoincrement())
+  name  UserRole
+
+  users User[]
+  requestor_form td_do_requestor_form[] 
+}
+model User {
+  id     Int    @id @default(autoincrement())
+  name   String @unique
+  roleId Int
+
+  role   Role   @relation(fields: [roleId], references: [id])
+  reqdo td_reqdo_header_form[]
+}
+
+
+
+// HEADER FORM
+model td_reqdo_header_form{
+  id        BigInt    @id @default(autoincrement())
+  no_reqdo  String    @db.VarChar(35)
+  tgl_reqdo DateTime  @default(now())
+  request_type Int
+  created_at DateTime @default(now())
+  created_by  String  @db.VarChar(255)
+
+  author  User  @relation(fields: [created_by], references: [name])
+  td_do_req_form  td_do_req_form?
+  td_parties_detail_form  td_parties_detail_form?
+  td_do_requestor_form  td_do_requestor_form?
+  td_do_bl_form  td_do_bl_form?
+  td_do_invoice_form  td_do_invoice_form[]
+  td_do_dok_form  td_do_dok_form[]
+  td_reqdo_status  td_reqdo_status[]
+  td_do_kontainer_form  td_do_kontainer_form[]
+  td_do_nonkontainer_form  td_do_nonkontainer_form[]
+}
+
+// REQUESTOR FORM
+model td_do_requestor_form{
+  id        BigInt    @id @default(autoincrement())
+  id_reqdo_header BigInt  @unique
+  id_jenis_requestor Int
+  nama String @db.VarChar(255)
+  nib String @db.VarChar(15) 
+  alamat String @db.VarChar(255) 
+  filepath_suratkuasa String
+  created_at DateTime @default(now())
+  created_by String
+
+  jenis_requestor Role @relation(fields: [id_jenis_requestor], references: [id])
+  do_req_header td_reqdo_header_form  @relation(fields: [id_reqdo_header], references: [id])
+}
+
+// DO REQ FORM
+model td_do_req_form{
+  id        BigInt    @id @default(autoincrement())
+  id_reqdo_header BigInt  @unique
+  id_terminal_op Int
+  id_shippingline Int
+  id_metode_bayar Int
+  nama_vessel String  @db.VarChar(45)
+  no_voyage String   @db.VarChar(20)
+  no_bc11 String   @db.VarChar(20)
+  tanggal_bc11 DateTime
+  kode_pos String  @db.VarChar(45)
+  call_sign String  @db.VarChar(10)
+  no_do_release String  @db.VarChar(50)
+  tgl_reqdo_exp DateTime
+  tgl_do_exp DateTime
+  tgl_do_release DateTime
+  updated_by  String
+  updated_at  DateTime  @updatedAt
+  created_at DateTime @default(now())
+  created_by String
+
+  do_req_header td_reqdo_header_form  @relation(fields: [id_reqdo_header], references: [id])
+}
+
+// PARTIES DETAIL FORM
+model td_parties_detail_form{
+  id        BigInt    @id @default(autoincrement())
+  id_reqdo_header BigInt  @unique
+  id_negara_loading Int
+  id_port_loading Int
+  id_port_destination Int
+  id_port_discharge Int
+  nama_shipper String @db.VarChar(255)
+  nama_consignee String @db.VarChar(255)
+  npwp_consignee String @db.VarChar(15)
+  nama_notifyparty String @db.VarChar(255)
+  npwp_notifyparty String @db.VarChar(15)
+  updated_by String @db.VarChar(255)
+  updated_at DateTime @updatedAt
+  created_at DateTime @default(now())
+  created_by String
+
+  do_req_header td_reqdo_header_form  @relation(fields: [id_reqdo_header], references: [id])
+}
+
+
+// KONTAINER FORM
+model td_do_kontainer_form{
+  id        BigInt    @id @default(autoincrement())
+  id_reqdo_header BigInt  @unique
+  id_depo Int
+  id_sizeType Int
+  id_ownership Int
+  id_gross_weight_unit Int
+  no_kontainer String @db.VarChar(20)
+  gross_weight Float 
+  updated_by String @db.VarChar(255)
+  updated_at DateTime @updatedAt
+  created_at DateTime @default(now())
+  created_by String
+
+  do_kontainer_seal td_do_kontainer_seal?
+  do_req_header td_reqdo_header_form  @relation(fields: [id_reqdo_header], references: [id])
+}
+
+// KONTAINER SEAL
+model td_do_kontainer_seal{
+  id        BigInt    @id @default(autoincrement())
+  id_do_kontainer BigInt  @unique
+  no_seal String
+
+  do_kontainer td_do_kontainer_form  @relation(fields: [id_do_kontainer], references: [id])
+}
+
+// NON-KONTAINER FORM
+model td_do_nonkontainer_form{
+  id        BigInt    @id @default(autoincrement())
+  id_reqdo_header BigInt  @unique
+  id_package_unit Int
+  id_gross_weight_unit Int
+  good_desc String
+  package_qty Float
+  gross_weight Float
+  measurement_vol Float
+  measurement_unit String @db.VarChar(5)
+  updated_by String @db.VarChar(255)
+  updated_at DateTime @updatedAt
+  created_at DateTime @default(now())
+  created_by String
+
+  do_req_header td_reqdo_header_form  @relation(fields: [id_reqdo_header], references: [id])
+}
+
+// BL FORM
+model td_do_bl_form{
+  id        BigInt    @id @default(autoincrement())
+  id_reqdo_header BigInt  @unique
+  id_jenis_bl Int
+  no_bl String @db.VarChar(50)
+  tgl_bl DateTime
+  filepath_dok String
+  updated_by String @db.VarChar(255)
+  updated_at DateTime @updatedAt
+  created_at DateTime @default(now())
+  created_by String
+
+  do_req_header td_reqdo_header_form  @relation(fields: [id_reqdo_header], references: [id])
+}
+
+// INVOICE FORM
+model td_do_invoice_form{
+  id        BigInt    @id @default(autoincrement())
+  id_reqdo_header BigInt  @unique
+  id_currency Int
+  id_bank Int
+  no_invoice String @db.VarChar(255)
+  tgl_invoice DateTime
+  total_payment String @db.VarChar(45)
+  no_rekening String @db.VarChar(30)
+  filepath_buktibayar String
+  updated_by String @db.VarChar(255)
+  updated_at DateTime @updatedAt
+  created_at DateTime @default(now())
+  created_by String
+
+  do_req_header td_reqdo_header_form  @relation(fields: [id_reqdo_header], references: [id])
+}
+
+// SUPPORT DOCUMENT FORM
+model td_do_dok_form{
+  id        BigInt    @id @default(autoincrement())
+  id_reqdo_header BigInt  @unique
+  id_jenis_dok Int
+  no_dok String @db.VarChar(50)
+  tgl_dok DateTime
+  filepath_dok String
+  updated_by String @db.VarChar(255)
+  updated_at DateTime @updatedAt
+  created_at DateTime @default(now())
+  created_by String @db.VarChar(255)
+
+  do_req_header td_reqdo_header_form  @relation(fields: [id_reqdo_header], references: [id])
+}
+
+// REQ DO STATUS
+model td_reqdo_status{
+  id        BigInt    @id @default(autoincrement())
+  id_reqdo_header BigInt  @unique
+  name StatusDo
+  datetime_status DateTime
+
+  do_req_header td_reqdo_header_form  @relation(fields: [id_reqdo_header], references: [id])
+}
+
+
+
+
+
+
