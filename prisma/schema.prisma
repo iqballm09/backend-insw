@@ -138,9 +138,20 @@ model td_do_kontainer_form {
   created_at           DateTime @default(now())
   created_by           String
 
-  do_kontainer_seal td_do_kontainer_seal[]
-  do_req_header     td_reqdo_header_form   @relation(fields: [id_reqdo_header], references: [id])
-  td_depo           td_depo?
+  seals         sealsOnKontainers[]
+  do_req_header td_reqdo_header_form @relation(fields: [id_reqdo_header], references: [id])
+  td_depo       td_depo?
+}
+
+model sealsOnKontainers {
+  kontainer   td_do_kontainer_form @relation(fields: [kontainerId], references: [id])
+  kontainerId Int // relation scalar field (used in the `@relation` attribute above)
+  seal        td_do_kontainer_seal @relation(fields: [sealId], references: [id])
+  sealId      Int // relation scalar field (used in the `@relation` attribute above)
+  assignedAt  DateTime             @default(now())
+  assignedBy  String
+
+  @@id([kontainerId, sealId])
 }
 
 // DEPO
@@ -160,11 +171,10 @@ model td_depo {
 
 // KONTAINER SEAL
 model td_do_kontainer_seal {
-  id              Int    @id @default(autoincrement())
-  id_do_kontainer Int
-  no_seal         String
+  id      Int    @id @default(autoincrement())
+  no_seal String
 
-  do_kontainer td_do_kontainer_form @relation(fields: [id_do_kontainer], references: [id])
+  kontainers sealsOnKontainers[]
 }
 
 // NON-KONTAINER FORM

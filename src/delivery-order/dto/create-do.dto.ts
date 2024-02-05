@@ -1,44 +1,3 @@
-interface SizeType {
-  size: number;
-  type: string;
-}
-
-interface GrossWeight {
-  amount: number;
-  unit: string;
-}
-
-interface Container {
-  containerSeq: number;
-  containerNo: string;
-  sealNo: string;
-  sizeType: SizeType;
-  grossWeight: GrossWeight;
-  ownership: string;
-}
-
-interface LocationType {
-  location: string;
-  countryCode: string;
-  portCode: string;
-}
-
-interface Invoice {
-  invoiceNo: string;
-  invoiceDate: string;
-  totalAmount: number;
-  bankId: string;
-  accountNo: string;
-  urlFile: string;
-}
-
-interface DocumentType {
-  document: string;
-  documentNo: string;
-  documentDate: string;
-  urlFile: string;
-}
-
 interface Requestor {
   requestorType: string;
   urlFile: string;
@@ -90,7 +49,7 @@ interface GrossWeight {
 interface Container {
   containerSeq: number;
   containerNo: string;
-  sealNo: string;
+  sealNo: string[];
   sizeType: SizeType;
   grossWeight: GrossWeight;
   ownership: string;

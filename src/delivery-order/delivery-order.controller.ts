@@ -8,11 +8,8 @@ export class DeliveryOrderController {
   constructor(private readonly deliveryOrderService: DeliveryOrderService) {}
 
   @Post('kontainer')
-  createDoKontainer(
-    @Body() payload: RequestDO,
-    @Query('status') status: StatusDo,
-  ) {
-    return this.deliveryOrderService.createKontainer(payload.request, status);
+  createDoKontainer(@Body() payload: RequestDO) {
+    return this.deliveryOrderService.createKontainer(payload.request);
   }
 
   @Get()

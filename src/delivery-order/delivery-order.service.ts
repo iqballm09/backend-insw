@@ -8,9 +8,11 @@ import { RequestDoDto } from './dto/create-do.dto';
 import { PrismaService } from 'src/prisma/prisma.service';
 import {
   StatusDo,
+  sealsOnKontainers,
   td_do_dok_form,
   td_do_invoice_form,
   td_do_kontainer_form,
+  td_do_kontainer_seal,
 } from '@prisma/client';
 import * as moment from 'moment';
 
@@ -113,7 +115,11 @@ export class DeliveryOrderService {
         },
         td_do_kontainer_form: {
           include: {
-            do_kontainer_seal: true,
+            seals: {
+              include: {
+                seal: true,
+              },
+            },
             td_depo: true,
           },
         },
@@ -163,7 +169,7 @@ export class DeliveryOrderService {
       },
       containerDetailForm: data.td_do_kontainer_form.map((data) => ({
         containerNumber: data.no_kontainer,
-        containerSeal: data.do_kontainer_seal.map((seal) => seal.no_seal),
+        containerSeal: data.seals.map((item) => item.seal.no_seal),
         sizeType: data.id_sizeType,
         grossWeightAmount: data.gross_weight,
         grossWeightUnit: data.id_gross_weight_unit,
@@ -194,21 +200,8 @@ export class DeliveryOrderService {
   // TODO: CREATE NON KONTAINER
   async createNonKontainer() {}
 
-  async createKontainer(data: RequestDoDto, status: StatusDo) {
+  async createKontainer(data: RequestDoDto, status?: StatusDo) {
     const created_by = 'admin_demo_co';
-
-    if (!Object.keys(StatusDo).includes(status)) {
-      throw new BadRequestException(
-        'Status not allowed, only allowed:' + Object.keys(StatusDo).join(', '),
-      );
-    }
-
-    if (
-      created_by == 'admin_demo_co' &&
-      ['Checking', 'Released', 'Rejected'].includes(status)
-    ) {
-      throw new ForbiddenException('Cargo owner not allowed for this action');
-    }
 
     // CHECK IF USER IS FF AND SURAT KUASA EXIST
     if (
@@ -291,19 +284,7 @@ export class DeliveryOrderService {
             tgl_reqdo_exp: new Date(data.requestDetail.shippingLine.doExpired),
           },
         },
-        td_do_kontainer_form: {
-          createMany: {
-            // data: dataKontainer as td_do_kontainer_form[],
-            data: data.cargoDetail.container.map((item) => ({
-              created_by,
-              gross_weight: item.grossWeight.amount,
-              no_kontainer: item.containerNo,
-              id_sizeType: item.sizeType.size,
-              id_ownership: +item.ownership,
-              id_gross_weight_unit: item.grossWeight.unit,
-            })),
-          },
-        },
+
         td_parties_detail_form: {
           create: {
             created_by,
@@ -330,25 +311,45 @@ export class DeliveryOrderService {
         },
         td_reqdo_status: {
           create: {
-            name: status,
-          },
-        },
-      },
-      include: {
-        td_do_kontainer_form: {
-          include: {
-            do_kontainer_seal: true,
+            name: status ?? 'Draft',
           },
         },
       },
     });
 
     // TODO: POPULATE DATA SEAL TO CONTAINER ITEM
-    // data.cargoDetail.container.forEach(async (kontainer) => {
-    //   await this.prisma.td_do_kontainer_seal.createMany({
-    //     data: kontainer.sealNo,
-    //   });
-    // });
+    const promises = data.cargoDetail.container.map((item) => {
+      return this.prisma.td_do_kontainer_form.create({
+        data: {
+          id_reqdo_header: createdDo.id,
+          created_by,
+          gross_weight: item.grossWeight.amount,
+          no_kontainer: item.containerNo,
+          id_sizeType: item.sizeType.size,
+          id_ownership: +item.ownership,
+          id_gross_weight_unit: item.grossWeight.unit,
+          seals: {
+            create: item.sealNo.map((val) => ({
+              assignedBy: created_by,
+              seal: {
+                create: {
+                  no_seal: val,
+                },
+              },
+            })),
+          },
+        },
+      });
+    });
+
+    // Using Promise.all to wait for all promises to resolve
+    Promise.all(promises)
+      .then((results) => {
+        console.log('All promises resolved successfully');
+      })
+      .catch((error) => {
+        console.error('Error in one or more promises:', error);
+      });
 
     return {
       messsage: 'success',
