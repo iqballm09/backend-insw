@@ -1,14 +1,18 @@
-import { Body, Controller, Get, Param, Post } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Query } from '@nestjs/common';
 import { DeliveryOrderService } from './delivery-order.service';
 import { RequestDO, RequestDoDto } from './dto/create-do.dto';
+import { StatusDo } from '@prisma/client';
 
 @Controller('do')
 export class DeliveryOrderController {
   constructor(private readonly deliveryOrderService: DeliveryOrderService) {}
 
   @Post('kontainer')
-  createDoKontainer(@Body() payload: RequestDO) {
-    return this.deliveryOrderService.createKontainer(payload.request);
+  createDoKontainer(
+    @Body() payload: RequestDO,
+    @Query('status') status: StatusDo,
+  ) {
+    return this.deliveryOrderService.createKontainer(payload.request, status);
   }
 
   @Get()

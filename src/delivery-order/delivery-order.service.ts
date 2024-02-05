@@ -1,11 +1,13 @@
 import {
   BadRequestException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
 import { RequestDoDto } from './dto/create-do.dto';
 import { PrismaService } from 'src/prisma/prisma.service';
 import {
+  StatusDo,
   td_do_dok_form,
   td_do_invoice_form,
   td_do_kontainer_form,
@@ -143,8 +145,21 @@ export class DeliveryOrderService {
   // TODO: CREATE NON KONTAINER
   async createNonKontainer() {}
 
-  async createKontainer(data: RequestDoDto) {
+  async createKontainer(data: RequestDoDto, status: StatusDo) {
     const created_by = 'admin_demo_co';
+
+    if (!Object.keys(StatusDo).includes(status)) {
+      throw new BadRequestException(
+        'Status not allowed, only allowed:' + Object.keys(StatusDo).join(', '),
+      );
+    }
+
+    if (
+      created_by == 'admin_demo_co' &&
+      ['Checking', 'Released', 'Rejected'].includes(status)
+    ) {
+      throw new ForbiddenException('Cargo owner not allowed for this action');
+    }
 
     // CHECK IF USER IS FF AND SURAT KUASA EXIST
     if (
@@ -258,7 +273,7 @@ export class DeliveryOrderService {
         },
         td_reqdo_status: {
           create: {
-            name: 'Submitted',
+            name: status,
           },
         },
       },

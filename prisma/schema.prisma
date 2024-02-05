@@ -18,7 +18,7 @@ enum UserRole {
 enum StatusDo {
   Draft
   Submitted
-  Checking  
+  Checking
   Released
   Rejected
 }
@@ -42,7 +42,7 @@ model User {
 
 // HEADER FORM
 model td_reqdo_header_form {
-  id           Int   @id @default(autoincrement())
+  id           Int      @id @default(autoincrement())
   no_reqdo     String   @unique @default(dbgenerated("CONCAT('LNSW', EXTRACT(EPOCH FROM NOW())::Int)::text"))
   tgl_reqdo    DateTime @default(now())
   request_type Int
@@ -63,8 +63,8 @@ model td_reqdo_header_form {
 
 // REQUESTOR FORM
 model td_do_requestor_form {
-  id                  Int   @id @default(autoincrement())
-  id_reqdo_header     Int   @unique
+  id                  Int      @id @default(autoincrement())
+  id_reqdo_header     Int      @unique
   id_jenis_requestor  Int
   nama                String   @db.VarChar(255)
   nib                 String   @db.VarChar(15)
@@ -79,8 +79,8 @@ model td_do_requestor_form {
 
 // DO REQ FORM
 model td_do_req_form {
-  id              Int    @id @default(autoincrement())
-  id_reqdo_header Int    @unique
+  id              Int       @id @default(autoincrement())
+  id_reqdo_header Int       @unique
   id_terminal_op  Int?
   id_shippingline String
   id_metode_bayar Int
@@ -104,8 +104,8 @@ model td_do_req_form {
 
 // PARTIES DETAIL FORM
 model td_parties_detail_form {
-  id                  Int   @id @default(autoincrement())
-  id_reqdo_header     Int   @unique
+  id                  Int      @id @default(autoincrement())
+  id_reqdo_header     Int      @unique
   id_negara_loading   String
   id_port_loading     String
   id_port_destination String
@@ -125,7 +125,7 @@ model td_parties_detail_form {
 
 // KONTAINER FORM
 model td_do_kontainer_form {
-  id                   Int   @id @default(autoincrement())
+  id                   Int      @id @default(autoincrement())
   id_reqdo_header      Int
   id_depo              Int?
   id_sizeType          Int
@@ -144,8 +144,8 @@ model td_do_kontainer_form {
 
 // KONTAINER SEAL
 model td_do_kontainer_seal {
-  id              Int @id @default(autoincrement())
-  id_do_kontainer Int @unique
+  id              Int    @id @default(autoincrement())
+  id_do_kontainer Int    @unique
   no_seal         String
 
   do_kontainer td_do_kontainer_form @relation(fields: [id_do_kontainer], references: [id])
@@ -153,7 +153,7 @@ model td_do_kontainer_seal {
 
 // NON-KONTAINER FORM
 model td_do_nonkontainer_form {
-  id                   Int   @id @default(autoincrement())
+  id                   Int      @id @default(autoincrement())
   id_reqdo_header      Int
   id_package_unit      Int
   id_gross_weight_unit Int
@@ -172,8 +172,8 @@ model td_do_nonkontainer_form {
 
 // BL FORM
 model td_do_bl_form {
-  id              Int   @id @default(autoincrement())
-  id_reqdo_header Int   @unique
+  id              Int      @id @default(autoincrement())
+  id_reqdo_header Int      @unique
   id_jenis_bl     Int
   no_bl           String   @db.VarChar(50)
   tgl_bl          DateTime
@@ -188,7 +188,7 @@ model td_do_bl_form {
 
 // INVOICE FORM
 model td_do_invoice_form {
-  id                  Int   @id @default(autoincrement())
+  id                  Int      @id @default(autoincrement())
   id_reqdo_header     Int
   id_currency         String
   id_bank             Int
@@ -207,7 +207,7 @@ model td_do_invoice_form {
 
 // SUPPORT DOCUMENT FORM
 model td_do_dok_form {
-  id              Int   @id @default(autoincrement())
+  id              Int      @id @default(autoincrement())
   id_reqdo_header Int
   id_jenis_dok    Int
   no_dok          String   @db.VarChar(50)
@@ -223,7 +223,7 @@ model td_do_dok_form {
 
 // REQ DO STATUS
 model td_reqdo_status {
-  id              Int   @id @default(autoincrement())
+  id              Int      @id @default(autoincrement())
   id_reqdo_header Int
   name            StatusDo
   datetime_status DateTime @default(now())
