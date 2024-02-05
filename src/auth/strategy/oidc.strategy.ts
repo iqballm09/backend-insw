@@ -13,7 +13,7 @@ import { AuthService } from '../auth.service';
 
 export const buildOpenIdClient = async () => {
   const TrustIssuer = await Issuer.discover(
-    `https://demo-sso.insw.go.id/connect/.well-known/openid-configuration`,
+    `https://sso.insw.go.id/connect/.well-known/openid-configuration`,
   );
   const client = new TrustIssuer.Client({
     client_id: '90b61241-8687-40f8-942d-391b54529936',
@@ -33,8 +33,8 @@ export class OidcStrategy extends PassportStrategy(Strategy, 'oidc') {
     super({
       client: client,
       params: {
-        redirect_uri: 'https://chat.somai.id/',
-        scope: 'openid',
+        redirect_uri: 'https://insw-app.vercel.app', //TODO: CHANGE REDIRECT URI
+        scope: 'openid + profile + role + organization',
         response_type: 'code',
       },
       passReqToCallback: false,

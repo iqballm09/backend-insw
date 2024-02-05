@@ -18,8 +18,8 @@ enum UserRole {
 enum StatusDo {
   Draft
   Submitted
-  Checking
-  Approved
+  Checking  
+  Released
   Rejected
 }
 

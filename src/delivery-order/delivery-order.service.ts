@@ -116,6 +116,7 @@ export class DeliveryOrderService {
     const response = {
       requestDetailForm: {
         // TODO: ADD FIELD
+        requestorType: data.td_do_requestor_form.id_jenis_requestor,
       },
       partiesDetailForm: {
         // TODO: ADD FIELD
