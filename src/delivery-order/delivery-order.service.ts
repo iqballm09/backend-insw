@@ -108,6 +108,7 @@ export class DeliveryOrderService {
             id_negara_loading: true,
             id_port_discharge: true,
             id_port_destination: true,
+            id_port_loading: true,
           },
         },
       },
@@ -144,7 +145,15 @@ export class DeliveryOrderService {
         terminalOp: data.td_do_req_form.id_terminal_op,
       },
       partiesDetailForm: {
-        // TODO: ADD FIELD
+        shipperName: data.td_parties_detail_form.nama_shipper,
+        consigneeName: data.td_parties_detail_form.nama_consignee,
+        consigneeNpwp: data.td_parties_detail_form.npwp_consignee,
+        notifyPartyName: data.td_parties_detail_form.nama_notifyparty,
+        notifyPartyNpwp: data.td_parties_detail_form.npwp_notifyparty,
+        placeLoading: data.td_parties_detail_form.id_negara_loading,
+        portLoading: data.td_parties_detail_form.id_port_loading,
+        placeDischarge: data.td_parties_detail_form.id_port_discharge,
+        placeDestination: data.td_parties_detail_form.id_port_destination,
       },
       containerDetailForm: [
         {
