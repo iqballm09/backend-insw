@@ -90,6 +90,12 @@ export class DeliveryOrderService {
             tgl_do_release: true,
             tgl_do_exp: true,
             id_terminal_op: true,
+            id_shippingline: true,
+            nama_vessel: true,
+            no_voyage: true,
+            no_bc11: true,
+            tanggal_bc11: true,
+            kode_pos: true,
           },
         },
         td_parties_detail_form: {
@@ -119,6 +125,23 @@ export class DeliveryOrderService {
       requestDetailForm: {
         // TODO: ADD FIELD
         requestorType: data.td_do_requestor_form.id_jenis_requestor,
+        shippingLine: data.td_do_req_form.id_shippingline,
+        vesselName: data.td_do_req_form.nama_vessel,
+        voyageNumber: data.td_do_req_form.no_voyage,
+        blNumber: data.td_do_bl_form.no_bl,
+        blDate: moment(data.td_do_bl_form.tgl_bl).format('YYYY-MM-DD'),
+        blType: data.td_do_bl_form.id_jenis_bl,
+        blFile: data.td_do_bl_form.filepath_dok,
+        bc11Date: data.td_do_req_form.tanggal_bc11,
+        bc11Number: data.td_do_req_form.no_bc11,
+        kodePos: data.td_do_req_form.kode_pos,
+        reqdoExp: data.td_do_req_form.tgl_reqdo_exp,
+        metodeBayar: data.td_do_req_form.id_metode_bayar,
+        callSign: data.td_do_req_form.call_sign,
+        doReleaseDate: data.td_do_req_form.tgl_do_release,
+        doReleaseNumber: data.td_do_req_form.no_do_release,
+        doExp: data.td_do_req_form.tgl_do_exp,
+        terminalOp: data.td_do_req_form.id_terminal_op,
       },
       partiesDetailForm: {
         // TODO: ADD FIELD
@@ -139,7 +162,7 @@ export class DeliveryOrderService {
         },
       ],
     };
-    return data;
+    return response;
   }
 
   // TODO: CREATE NON KONTAINER
