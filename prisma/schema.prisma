@@ -138,14 +138,30 @@ model td_do_kontainer_form {
   created_at           DateTime @default(now())
   created_by           String
 
-  do_kontainer_seal td_do_kontainer_seal?
-  do_req_header     td_reqdo_header_form  @relation(fields: [id_reqdo_header], references: [id])
+  do_kontainer_seal td_do_kontainer_seal[]
+  do_req_header     td_reqdo_header_form   @relation(fields: [id_reqdo_header], references: [id])
+  td_depo           td_depo?
+}
+
+// DEPO
+model td_depo {
+  id         Int    @id @default(autoincrement())
+  id_kabkota Int
+  kode_depo  String @db.VarChar(30)
+  npwp       String @db.VarChar(15)
+  deskripsi  String @db.VarChar(255)
+  alamat     String @db.VarChar(1025)
+  kode_pos   String @db.VarChar(5)
+  no_telp    String @db.VarChar(20)
+
+  do_kontainer_item      td_do_kontainer_form? @relation(fields: [td_do_kontainer_formId], references: [id])
+  td_do_kontainer_formId Int?                  @unique
 }
 
 // KONTAINER SEAL
 model td_do_kontainer_seal {
   id              Int    @id @default(autoincrement())
-  id_do_kontainer Int    @unique
+  id_do_kontainer Int
   no_seal         String
 
   do_kontainer td_do_kontainer_form @relation(fields: [id_do_kontainer], references: [id])

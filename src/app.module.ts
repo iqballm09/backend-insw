@@ -11,8 +11,8 @@ import { PrismaModule } from './prisma/prisma.module';
       isGlobal: true,
     }),
     PrismaModule,
-    BankModule,
-    AuthModule,
+    // BankModule,
+    // AuthModule,
     DeliveryOrderModule,
   ],
 })

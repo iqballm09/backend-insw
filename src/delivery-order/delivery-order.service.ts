@@ -111,6 +111,12 @@ export class DeliveryOrderService {
             id_port_loading: true,
           },
         },
+        td_do_kontainer_form: {
+          include: {
+            do_kontainer_seal: true,
+            td_depo: true,
+          },
+        },
       },
       where: {
         id: idDo,
@@ -155,11 +161,22 @@ export class DeliveryOrderService {
         placeDischarge: data.td_parties_detail_form.id_port_discharge,
         placeDestination: data.td_parties_detail_form.id_port_destination,
       },
-      containerDetailForm: [
-        {
-          // TODO: ADD FIELD
+      containerDetailForm: data.td_do_kontainer_form.map((data) => ({
+        containerNumber: data.no_kontainer,
+        containerSeal: data.do_kontainer_seal.map((seal) => seal.no_seal),
+        sizeType: data.id_sizeType,
+        grossWeightAmount: data.gross_weight,
+        grossWeightUnit: data.id_gross_weight_unit,
+        ownership: data.id_ownership,
+        depoForm: {
+          nama: data.td_depo?.kode_depo,
+          npwp: data.td_depo?.npwp,
+          alamat: data.td_depo?.alamat,
+          noTelp: data.td_depo?.no_telp,
+          kota: data.td_depo?.id_kabkota,
+          kodePos: data.td_depo?.kode_pos,
         },
-      ],
+      })),
       paymentDetailForm: [
         {
           // TODO: ADD FIELD
@@ -276,7 +293,15 @@ export class DeliveryOrderService {
         },
         td_do_kontainer_form: {
           createMany: {
-            data: dataKontainer as td_do_kontainer_form[],
+            // data: dataKontainer as td_do_kontainer_form[],
+            data: data.cargoDetail.container.map((item) => ({
+              created_by,
+              gross_weight: item.grossWeight.amount,
+              no_kontainer: item.containerNo,
+              id_sizeType: item.sizeType.size,
+              id_ownership: +item.ownership,
+              id_gross_weight_unit: item.grossWeight.unit,
+            })),
           },
         },
         td_parties_detail_form: {
@@ -309,7 +334,22 @@ export class DeliveryOrderService {
           },
         },
       },
+      include: {
+        td_do_kontainer_form: {
+          include: {
+            do_kontainer_seal: true,
+          },
+        },
+      },
     });
+
+    // TODO: POPULATE DATA SEAL TO CONTAINER ITEM
+    // data.cargoDetail.container.forEach(async (kontainer) => {
+    //   await this.prisma.td_do_kontainer_seal.createMany({
+    //     data: kontainer.sealNo,
+    //   });
+    // });
+
     return {
       messsage: 'success',
       data: createdDo,
