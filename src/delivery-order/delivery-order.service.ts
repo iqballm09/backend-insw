@@ -238,13 +238,26 @@ export class DeliveryOrderService {
     return response;
   }
 
-  // async deleteDo(idDo: number) {
-  //   const deleted = await this.prisma.td_reqdo_header_form.delete({
-  //     where: {
-  //       id: idDo,
-  //     },
-  //   });
-  // }
+  async deleteDo(idDo: number) {
+    const data = await this.prisma.td_reqdo_header_form.findUnique({
+      where: {
+        id: idDo,
+      },
+    });
+    if (!data) {
+      throw new NotFoundException(`DO data by id = ${idDo} not found`);
+    }
+
+    const deleted = await this.prisma.td_reqdo_header_form.delete({
+      where: {
+        id: idDo,
+      },
+    });
+    return {
+      message: 'success',
+      data: deleted,
+    };
+  }
 
   // TODO: CREATE NON KONTAINER
   async createNonKontainer(data: RequestDoDto, status?: StatusDo) {
