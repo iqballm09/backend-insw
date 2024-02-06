@@ -74,7 +74,7 @@ model td_do_requestor_form {
   created_by          String
 
   jenis_requestor Role                 @relation(fields: [id_jenis_requestor], references: [id])
-  do_req_header   td_reqdo_header_form @relation(fields: [id_reqdo_header], references: [id])
+  do_req_header   td_reqdo_header_form @relation(fields: [id_reqdo_header], references: [id], onDelete: Cascade)
 }
 
 // DO REQ FORM
@@ -99,7 +99,7 @@ model td_do_req_form {
   created_at      DateTime  @default(now())
   created_by      String
 
-  do_req_header td_reqdo_header_form @relation(fields: [id_reqdo_header], references: [id])
+  do_req_header td_reqdo_header_form @relation(fields: [id_reqdo_header], references: [id], onDelete: Cascade)
 }
 
 // PARTIES DETAIL FORM
@@ -120,7 +120,7 @@ model td_parties_detail_form {
   created_at          DateTime @default(now())
   created_by          String
 
-  do_req_header td_reqdo_header_form @relation(fields: [id_reqdo_header], references: [id])
+  do_req_header td_reqdo_header_form @relation(fields: [id_reqdo_header], references: [id], onDelete: Cascade)
 }
 
 // KONTAINER FORM
@@ -139,14 +139,14 @@ model td_do_kontainer_form {
   created_by           String
 
   seals         sealsOnKontainers[]
-  do_req_header td_reqdo_header_form @relation(fields: [id_reqdo_header], references: [id])
+  do_req_header td_reqdo_header_form @relation(fields: [id_reqdo_header], references: [id], onDelete: Cascade)
   td_depo       td_depo?
 }
 
 model sealsOnKontainers {
-  kontainer   td_do_kontainer_form @relation(fields: [kontainerId], references: [id])
+  kontainer   td_do_kontainer_form @relation(fields: [kontainerId], references: [id], onDelete: Cascade)
   kontainerId Int // relation scalar field (used in the `@relation` attribute above)
-  seal        td_do_kontainer_seal @relation(fields: [sealId], references: [id])
+  seal        td_do_kontainer_seal @relation(fields: [sealId], references: [id], onDelete: Cascade)
   sealId      Int // relation scalar field (used in the `@relation` attribute above)
   assignedAt  DateTime             @default(now())
   assignedBy  String
@@ -165,7 +165,7 @@ model td_depo {
   kode_pos   String @db.VarChar(5)
   no_telp    String @db.VarChar(20)
 
-  do_kontainer_item      td_do_kontainer_form? @relation(fields: [td_do_kontainer_formId], references: [id])
+  do_kontainer_item      td_do_kontainer_form? @relation(fields: [td_do_kontainer_formId], references: [id], onDelete: Cascade)
   td_do_kontainer_formId Int?                  @unique
 }
 
@@ -193,7 +193,7 @@ model td_do_nonkontainer_form {
   created_at           DateTime @default(now())
   created_by           String
 
-  do_req_header td_reqdo_header_form @relation(fields: [id_reqdo_header], references: [id])
+  do_req_header td_reqdo_header_form @relation(fields: [id_reqdo_header], references: [id], onDelete: Cascade)
 }
 
 // BL FORM
@@ -209,7 +209,17 @@ model td_do_bl_form {
   created_at      DateTime @default(now())
   created_by      String
 
-  do_req_header td_reqdo_header_form @relation(fields: [id_reqdo_header], references: [id])
+  do_req_header td_reqdo_header_form @relation(fields: [id_reqdo_header], references: [id], onDelete: Cascade)
+  td_do_vin     td_do_vin[]
+}
+
+// VIN FORM
+model td_do_vin {
+  id     Int    @id @default(autoincrement())
+  id_bl  Int    @unique
+  no_vin String @db.VarChar(50)
+
+  do_vin_number td_do_bl_form @relation(fields: [id_bl], references: [id])
 }
 
 // INVOICE FORM
@@ -228,7 +238,7 @@ model td_do_invoice_form {
   created_at          DateTime @default(now())
   created_by          String
 
-  do_req_header td_reqdo_header_form @relation(fields: [id_reqdo_header], references: [id])
+  do_req_header td_reqdo_header_form @relation(fields: [id_reqdo_header], references: [id], onDelete: Cascade)
 }
 
 // SUPPORT DOCUMENT FORM
@@ -244,7 +254,7 @@ model td_do_dok_form {
   created_at      DateTime @default(now())
   created_by      String   @db.VarChar(255)
 
-  do_req_header td_reqdo_header_form @relation(fields: [id_reqdo_header], references: [id])
+  do_req_header td_reqdo_header_form @relation(fields: [id_reqdo_header], references: [id], onDelete: Cascade)
 }
 
 // REQ DO STATUS
@@ -254,5 +264,5 @@ model td_reqdo_status {
   name            StatusDo
   datetime_status DateTime @default(now())
 
-  do_req_header td_reqdo_header_form @relation(fields: [id_reqdo_header], references: [id])
+  do_req_header td_reqdo_header_form @relation(fields: [id_reqdo_header], references: [id], onDelete: Cascade)
 }

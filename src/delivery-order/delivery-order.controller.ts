@@ -1,4 +1,12 @@
-import { Body, Controller, Get, Param, Post, Query } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  Post,
+  Query,
+} from '@nestjs/common';
 import { DeliveryOrderService } from './delivery-order.service';
 import { RequestDO, RequestDoDto } from './dto/create-do.dto';
 import { StatusDo } from '@prisma/client';
@@ -22,9 +30,9 @@ export class DeliveryOrderController {
     return this.deliveryOrderService.getDoDetail(+id);
   }
 
-  // TODO: ADD DELETE DO CONTROLLER
+  @Delete(':id')
+  deleteModel(@Param('id') id: string) {}
 
-  // TODO: ADD CREATE NON KONTAINER
   // @Post('non-kontainer')
   // createDoNonKontainer(@Body() payload: RequestDO) {
   //   return this.deliveryOrderService.createNonKontainer();

@@ -123,6 +123,25 @@ export class DeliveryOrderService {
             td_depo: true,
           },
         },
+        td_do_invoice_form: {
+          select: {
+            no_invoice: true,
+            tgl_invoice: true,
+            no_rekening: true,
+            id_bank: true,
+            id_currency: true,
+            total_payment: true,
+            filepath_buktibayar: true,
+          },
+        },
+        td_do_dok_form: {
+          select: {
+            no_dok: true,
+            tgl_dok: true,
+            id_jenis_dok: true,
+            filepath_dok: true,
+          },
+        },
       },
       where: {
         id: idDo,
@@ -183,22 +202,35 @@ export class DeliveryOrderService {
           kodePos: data.td_depo?.kode_pos,
         },
       })),
-      paymentDetailForm: [
-        {
-          // TODO: ADD FIELD
-        },
-      ],
-      supportingDocumentForm: [
-        {
-          // TODO: ADD FIELD
-        },
-      ],
+      paymentDetailForm: data.td_do_invoice_form.map((inv) => ({
+        invoiceNumber: inv.no_invoice,
+        invoiceDate: inv.tgl_invoice,
+        currency: inv.id_currency,
+        totalPayment: inv.total_payment,
+        bank: inv.id_bank,
+        accountNumber: inv.no_rekening,
+        urlFile: inv.filepath_buktibayar,
+      })),
+      supportingDocumentForm: data.td_do_dok_form.map((dok) => ({
+        documentType: dok.id_jenis_dok,
+        documentNumber: dok.no_dok,
+        documentDate: dok.tgl_dok,
+        urlFile: dok.filepath_dok,
+      })),
     };
     return response;
   }
 
+  // async deleteDo(idDo: number) {
+  //   const deleted = await this.prisma.td_reqdo_header_form.delete({
+  //     where: {
+  //       id: idDo,
+  //     },
+  //   });
+  // }
+
   // TODO: CREATE NON KONTAINER
-  async createNonKontainer() {}
+  async createNonKontainer(data: RequestDoDto, status?: StatusDo) {}
 
   async createKontainer(data: RequestDoDto, status?: StatusDo) {
     const created_by = 'admin_demo_co';
