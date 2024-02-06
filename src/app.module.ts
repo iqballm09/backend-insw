@@ -4,6 +4,10 @@ import { AuthModule } from './auth/auth.module';
 import { ConfigModule } from '@nestjs/config';
 import { DeliveryOrderModule } from './delivery-order/delivery-order.module';
 import { PrismaModule } from './prisma/prisma.module';
+import { AppController } from './app.controller';
+import { AuthService } from './auth/auth.service';
+import { UserModule } from './user/user.module';
+import { UserService } from './user/user.service';
 
 @Module({
   imports: [
@@ -11,9 +15,13 @@ import { PrismaModule } from './prisma/prisma.module';
       isGlobal: true,
     }),
     PrismaModule,
-    // BankModule,
-    // AuthModule,
+    BankModule,
+    AuthModule,
     DeliveryOrderModule,
+    UserModule,
+    UserModule,
   ],
+  controllers: [AppController],
+  providers: [AuthService, UserService],
 })
 export class AppModule {}

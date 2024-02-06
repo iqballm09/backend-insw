@@ -6,6 +6,7 @@ import {
   Client,
   Issuer,
   Strategy,
+  StrategyVerifyCallback,
   TokenSet,
   UserinfoResponse,
 } from 'openid-client';
@@ -33,7 +34,7 @@ export class OidcStrategy extends PassportStrategy(Strategy, 'oidc') {
     super({
       client: client,
       params: {
-        redirect_uri: 'https://insw-app.vercel.app', //TODO: CHANGE REDIRECT URI
+        redirect_uri: 'http://localhost:5000', //TODO: CHANGE REDIRECT URI
         scope: 'openid + profile + role + organization',
         response_type: 'code',
       },
@@ -46,6 +47,7 @@ export class OidcStrategy extends PassportStrategy(Strategy, 'oidc') {
 
   async validate(tokenset: TokenSet): Promise<any> {
     const userinfo: UserinfoResponse = await this.client.userinfo(tokenset);
+    console.log({ tokenset });
 
     try {
       const id_token = tokenset.id_token;

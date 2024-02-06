@@ -32,12 +32,23 @@ model Role {
 }
 
 model User {
-  id     Int    @id @default(autoincrement())
-  name   String @unique
+  id     Int     @id @default(autoincrement())
   roleId Int
+  name   String  @unique
+  hash   String?
 
-  role  Role                   @relation(fields: [roleId], references: [id])
-  reqdo td_reqdo_header_form[]
+  role    Role                   @relation(fields: [roleId], references: [id])
+  reqdo   td_reqdo_header_form[]
+  session Session[]
+}
+
+model Session {
+  id           Int    @id @default(autoincrement())
+  accessToken  String
+  refreshToken String
+
+  user   User @relation(fields: [userId], references: [id])
+  userId Int
 }
 
 // HEADER FORM

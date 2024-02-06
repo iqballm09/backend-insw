@@ -243,19 +243,6 @@ export class DeliveryOrderService {
       throw new BadRequestException('Freight Forwarder required surat kuasa');
     }
 
-    const dataKontainer = data.cargoDetail.container.map((item) => {
-      const data: Partial<td_do_kontainer_form> = {
-        created_by,
-        gross_weight: item.grossWeight.amount,
-        no_kontainer: item.containerNo,
-        id_sizeType: item.sizeType.size,
-        id_ownership: +item.ownership,
-        id_gross_weight_unit: item.grossWeight.unit,
-      };
-
-      return data;
-    });
-
     const dataDokumen = data.supportingDocument.documentType.map((item) => {
       const data: Partial<td_do_dok_form> = {
         created_by,
