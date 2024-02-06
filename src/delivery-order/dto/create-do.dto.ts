@@ -96,6 +96,11 @@ interface DocumentType {
   urlFile: string;
 }
 
+interface VinDetail {
+  ladingBillNumber: string;
+  vinNumber: string;
+}
+
 export interface RequestDoDto {
   requestType: number;
   requestDetail: {
@@ -108,8 +113,8 @@ export interface RequestDoDto {
   cargoDetail: {
     container?: Container[];
     nonContainer?: NonContainer[];
-    vinNumber?: string[];
   };
+  vinDetail?: VinDetail[];
   location: {
     locationType: LocationType[];
   };

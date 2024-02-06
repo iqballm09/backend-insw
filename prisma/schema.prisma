@@ -59,6 +59,7 @@ model td_reqdo_header_form {
   td_reqdo_status         td_reqdo_status[]
   td_do_kontainer_form    td_do_kontainer_form[]
   td_do_nonkontainer_form td_do_nonkontainer_form[]
+  td_do_vin               td_do_vin[]
 }
 
 // REQUESTOR FORM
@@ -181,8 +182,8 @@ model td_do_kontainer_seal {
 model td_do_nonkontainer_form {
   id                   Int      @id @default(autoincrement())
   id_reqdo_header      Int
-  id_package_unit      Int
-  id_gross_weight_unit Int
+  id_package_unit      String
+  id_gross_weight_unit String
   good_desc            String
   package_qty          Float
   gross_weight         Float
@@ -210,16 +211,15 @@ model td_do_bl_form {
   created_by      String
 
   do_req_header td_reqdo_header_form @relation(fields: [id_reqdo_header], references: [id], onDelete: Cascade)
-  td_do_vin     td_do_vin[]
 }
 
 // VIN FORM
 model td_do_vin {
-  id     Int    @id @default(autoincrement())
-  id_bl  Int    @unique
-  no_vin String @db.VarChar(50)
-
-  do_vin_number td_do_bl_form @relation(fields: [id_bl], references: [id])
+  id              Int                  @id @default(autoincrement())
+  id_reqdo_header Int
+  no_bl           String               @db.VarChar(50)
+  no_vin          String               @db.VarChar(50)
+  do_req_header   td_reqdo_header_form @relation(fields: [id_reqdo_header], references: [id], onDelete: Cascade)
 }
 
 // INVOICE FORM
