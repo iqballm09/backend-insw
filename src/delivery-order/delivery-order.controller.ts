@@ -30,8 +30,6 @@ export class DeliveryOrderController {
     return this.deliveryOrderService.getDoDetail(+id);
   }
 
-  // TODO: ADD DELETE DO CONTROLLER
-
   // TODO: ADD CREATE NON KONTAINER
   // @Post('non-kontainer')
   // createDoNonKontainer(@Body() payload: RequestDO) {

@@ -256,7 +256,7 @@ ALTER TABLE "td_reqdo_header_form" ADD CONSTRAINT "td_reqdo_header_form_created_
 ALTER TABLE "td_do_requestor_form" ADD CONSTRAINT "td_do_requestor_form_id_jenis_requestor_fkey" FOREIGN KEY ("id_jenis_requestor") REFERENCES "Role"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "td_do_requestor_form" ADD CONSTRAINT "td_do_requestor_form_id_reqdo_header_fkey" FOREIGN KEY ("id_reqdo_header") REFERENCES "td_reqdo_header_form"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "td_do_requestor_form" ADD CONSTRAINT "td_do_requestor_form_id_reqdo_header_fkey" FOREIGN KEY ("id_reqdo_header") REFERENCES "td_reqdo_header_form"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "td_do_req_form" ADD CONSTRAINT "td_do_req_form_id_reqdo_header_fkey" FOREIGN KEY ("id_reqdo_header") REFERENCES "td_reqdo_header_form"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
