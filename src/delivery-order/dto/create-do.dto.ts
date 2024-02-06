@@ -108,6 +108,7 @@ export interface RequestDoDto {
   cargoDetail: {
     container?: Container[];
     nonContainer?: NonContainer[];
+    vinNumber?: string[];
   };
   location: {
     locationType: LocationType[];
