@@ -2,7 +2,7 @@
 CREATE TYPE "UserRole" AS ENUM ('CO', 'SL');
 
 -- CreateEnum
-CREATE TYPE "StatusDo" AS ENUM ('Draft', 'Submitted', 'Checking', 'Approved', 'Rejected');
+CREATE TYPE "StatusDo" AS ENUM ('Draft', 'Submitted', 'Checking', 'Released', 'Rejected');
 
 -- CreateTable
 CREATE TABLE "Role" (
@@ -113,9 +113,33 @@ CREATE TABLE "td_do_kontainer_form" (
 );
 
 -- CreateTable
+CREATE TABLE "sealsOnKontainers" (
+    "kontainerId" INTEGER NOT NULL,
+    "sealId" INTEGER NOT NULL,
+    "assignedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "assignedBy" TEXT NOT NULL,
+
+    CONSTRAINT "sealsOnKontainers_pkey" PRIMARY KEY ("kontainerId","sealId")
+);
+
+-- CreateTable
+CREATE TABLE "td_depo" (
+    "id" SERIAL NOT NULL,
+    "id_kabkota" INTEGER NOT NULL,
+    "kode_depo" VARCHAR(30) NOT NULL,
+    "npwp" VARCHAR(15) NOT NULL,
+    "deskripsi" VARCHAR(255) NOT NULL,
+    "alamat" VARCHAR(1025) NOT NULL,
+    "kode_pos" VARCHAR(5) NOT NULL,
+    "no_telp" VARCHAR(20) NOT NULL,
+    "td_do_kontainer_formId" INTEGER,
+
+    CONSTRAINT "td_depo_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
 CREATE TABLE "td_do_kontainer_seal" (
     "id" SERIAL NOT NULL,
-    "id_do_kontainer" INTEGER NOT NULL,
     "no_seal" TEXT NOT NULL,
 
     CONSTRAINT "td_do_kontainer_seal_pkey" PRIMARY KEY ("id")
@@ -217,7 +241,7 @@ CREATE UNIQUE INDEX "td_do_req_form_id_reqdo_header_key" ON "td_do_req_form"("id
 CREATE UNIQUE INDEX "td_parties_detail_form_id_reqdo_header_key" ON "td_parties_detail_form"("id_reqdo_header");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "td_do_kontainer_seal_id_do_kontainer_key" ON "td_do_kontainer_seal"("id_do_kontainer");
+CREATE UNIQUE INDEX "td_depo_td_do_kontainer_formId_key" ON "td_depo"("td_do_kontainer_formId");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "td_do_bl_form_id_reqdo_header_key" ON "td_do_bl_form"("id_reqdo_header");
@@ -244,7 +268,13 @@ ALTER TABLE "td_parties_detail_form" ADD CONSTRAINT "td_parties_detail_form_id_r
 ALTER TABLE "td_do_kontainer_form" ADD CONSTRAINT "td_do_kontainer_form_id_reqdo_header_fkey" FOREIGN KEY ("id_reqdo_header") REFERENCES "td_reqdo_header_form"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "td_do_kontainer_seal" ADD CONSTRAINT "td_do_kontainer_seal_id_do_kontainer_fkey" FOREIGN KEY ("id_do_kontainer") REFERENCES "td_do_kontainer_form"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "sealsOnKontainers" ADD CONSTRAINT "sealsOnKontainers_kontainerId_fkey" FOREIGN KEY ("kontainerId") REFERENCES "td_do_kontainer_form"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "sealsOnKontainers" ADD CONSTRAINT "sealsOnKontainers_sealId_fkey" FOREIGN KEY ("sealId") REFERENCES "td_do_kontainer_seal"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "td_depo" ADD CONSTRAINT "td_depo_td_do_kontainer_formId_fkey" FOREIGN KEY ("td_do_kontainer_formId") REFERENCES "td_do_kontainer_form"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "td_do_nonkontainer_form" ADD CONSTRAINT "td_do_nonkontainer_form_id_reqdo_header_fkey" FOREIGN KEY ("id_reqdo_header") REFERENCES "td_reqdo_header_form"("id") ON DELETE RESTRICT ON UPDATE CASCADE;

@@ -1,4 +1,12 @@
-import { Body, Controller, Get, Param, Post, Query } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  Post,
+  Query,
+} from '@nestjs/common';
 import { DeliveryOrderService } from './delivery-order.service';
 import { RequestDO, RequestDoDto } from './dto/create-do.dto';
 import { StatusDo } from '@prisma/client';
