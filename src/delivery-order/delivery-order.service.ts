@@ -230,7 +230,7 @@ export class DeliveryOrderService {
   // }
 
   // TODO: CREATE NON KONTAINER
-  async createNonKontainer() {}
+  async createNonKontainer(data: RequestDoDto, status?: StatusDo) {}
 
   async createKontainer(data: RequestDoDto, status?: StatusDo) {
     const created_by = 'admin_demo_co';

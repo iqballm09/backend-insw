@@ -46,6 +46,16 @@ interface GrossWeight {
   unit: string;
 }
 
+interface PackageQuantity {
+  amount: number;
+  unit: string;
+}
+
+interface MeasurementVolume {
+  amount: number;
+  unit: string;
+}
+
 interface Container {
   containerSeq: number;
   containerNo: string;
@@ -53,6 +63,14 @@ interface Container {
   sizeType: SizeType;
   grossWeight: GrossWeight;
   ownership: string;
+}
+
+interface NonContainer {
+  nonContainerSeq: number;
+  goodsDescription: string;
+  packageQuantity: PackageQuantity;
+  grossWeight: GrossWeight;
+  measurementVolume: MeasurementVolume;
 }
 
 interface LocationType {
@@ -88,7 +106,8 @@ export interface RequestDoDto {
   };
   parties: Parties;
   cargoDetail: {
-    container: Container[];
+    container?: Container[];
+    nonContainer?: NonContainer[];
   };
   location: {
     locationType: LocationType[];
