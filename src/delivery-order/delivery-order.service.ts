@@ -125,6 +125,7 @@ export class DeliveryOrderService {
             td_depo: true,
           },
         },
+        td_do_nonkontainer_form: true,
         td_do_invoice_form: {
           select: {
             no_invoice: true,
@@ -203,6 +204,15 @@ export class DeliveryOrderService {
           kota: data.td_depo?.id_kabkota,
           kodePos: data.td_depo?.kode_pos,
         },
+      })),
+      nonContainerDetailForm: data.td_do_nonkontainer_form.map((data) => ({
+        goodsDescription: data.good_desc,
+        packageQuantityAmount: data.package_qty,
+        packageQuantityUnit: data.id_package_unit,
+        grossWeightAmount: data.gross_weight,
+        grossWeightUnit: data.id_gross_weight_unit,
+        measurementVolume: data.measurement_vol,
+        measurementUnit: data.measurement_unit,
       })),
       paymentDetailForm: data.td_do_invoice_form.map((inv) => ({
         invoiceNumber: inv.no_invoice,
@@ -360,7 +370,7 @@ export class DeliveryOrderService {
       },
     });
 
-    const promisesCargo = data.cargoDetail.nonContainer.map((item) => {
+    const promises = data.cargoDetail.nonContainer.map((item) => {
       return this.prisma.td_do_nonkontainer_form.create({
         data: {
           id_reqdo_header: createdDo.id,
@@ -377,7 +387,7 @@ export class DeliveryOrderService {
     });
 
     // Using Promise.all to wait for all promises to resolve
-    Promise.all(promisesCargo)
+    Promise.all(promises)
       .then((results) => {
         console.log('All promises resolved successfully');
       })
