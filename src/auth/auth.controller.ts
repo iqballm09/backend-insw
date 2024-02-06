@@ -36,11 +36,7 @@ export class AuthController {
   }
 
   @Post('signup')
-  async signUp(
-    @Query('token') token: string,
-    @Body() user: UserDto,
-    @Res() res: Response,
-  ) {
+  async signUp(@Query('token') token: string, @Body() user: UserDto) {
     if (!token) {
       throw new BadRequestException('Query token is required');
     }
@@ -56,7 +52,7 @@ export class AuthController {
       throw new BadRequestException();
     }
 
-    res.redirect(`http://localhost:3000/?token=${token}`);
+    return { accessToken: token };
   }
 
   @Get('/signout')
