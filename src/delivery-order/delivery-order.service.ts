@@ -134,6 +134,14 @@ export class DeliveryOrderService {
             filepath_buktibayar: true,
           },
         },
+        td_do_dok_form: {
+          select: {
+            no_dok: true,
+            tgl_dok: true,
+            id_jenis_dok: true,
+            filepath_dok: true,
+          },
+        },
       },
       where: {
         id: idDo,
@@ -194,20 +202,21 @@ export class DeliveryOrderService {
           kodePos: data.td_depo?.kode_pos,
         },
       })),
-      paymentDetailForm: data.td_do_invoice_form.map((data) => ({
-        invoiceNumber: data.no_invoice,
-        invoiceDate: data.tgl_invoice,
-        currency: data.id_currency,
-        totalPayment: data.total_payment,
-        bank: data.id_bank,
-        accountNumber: data.no_rekening,
-        urlFile: data.filepath_buktibayar,
+      paymentDetailForm: data.td_do_invoice_form.map((inv) => ({
+        invoiceNumber: inv.no_invoice,
+        invoiceDate: inv.tgl_invoice,
+        currency: inv.id_currency,
+        totalPayment: inv.total_payment,
+        bank: inv.id_bank,
+        accountNumber: inv.no_rekening,
+        urlFile: inv.filepath_buktibayar,
       })),
-      supportingDocumentForm: [
-        {
-          // TODO: ADD FIELD
-        },
-      ],
+      supportingDocumentForm: data.td_do_dok_form.map((dok) => ({
+        documentType: dok.id_jenis_dok,
+        documentNumber: dok.no_dok,
+        documentDate: dok.tgl_dok,
+        urlFile: dok.filepath_dok,
+      })),
     };
     return response;
   }
