@@ -126,6 +126,7 @@ export class DeliveryOrderService {
           },
         },
         td_do_nonkontainer_form: true,
+        td_do_vin: true,
         td_do_invoice_form: {
           select: {
             no_invoice: true,
@@ -213,6 +214,10 @@ export class DeliveryOrderService {
         grossWeightUnit: data.id_gross_weight_unit,
         measurementVolume: data.measurement_vol,
         measurementUnit: data.measurement_unit,
+      })),
+      vinDetailForm: data.td_do_vin.map((vin) => ({
+        ladingBillNumber: vin.no_bl,
+        vinNumber: vin.no_vin,
       })),
       paymentDetailForm: data.td_do_invoice_form.map((inv) => ({
         invoiceNumber: inv.no_invoice,
