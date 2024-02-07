@@ -10,6 +10,7 @@ import { AuthService } from './auth/auth.service';
 import { UserModule } from './user/user.module';
 import { UserService } from './user/user.service';
 import { KursModule } from './kurs/kurs.module';
+import { ShippinglineModule } from './shippingline/shippingline.module';
 
 @Module({
   imports: [
@@ -23,6 +24,7 @@ import { KursModule } from './kurs/kurs.module';
     FilesModule,
     UserModule,
     KursModule,
+    ShippinglineModule,
   ],
   controllers: [AppController],
   providers: [AuthService, UserService],
