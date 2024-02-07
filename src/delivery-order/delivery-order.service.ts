@@ -13,6 +13,8 @@ import {
   td_do_invoice_form,
   td_do_kontainer_form,
   td_do_kontainer_seal,
+  td_do_nonkontainer_form,
+  td_do_vin,
 } from '@prisma/client';
 import * as moment from 'moment';
 
@@ -123,6 +125,8 @@ export class DeliveryOrderService {
             td_depo: true,
           },
         },
+        td_do_nonkontainer_form: true,
+        td_do_vin: true,
         td_do_invoice_form: {
           select: {
             no_invoice: true,
@@ -202,6 +206,19 @@ export class DeliveryOrderService {
           kodePos: data.td_depo?.kode_pos,
         },
       })),
+      nonContainerDetailForm: data.td_do_nonkontainer_form.map((data) => ({
+        goodsDescription: data.good_desc,
+        packageQuantityAmount: data.package_qty,
+        packageQuantityUnit: data.id_package_unit,
+        grossWeightAmount: data.gross_weight,
+        grossWeightUnit: data.id_gross_weight_unit,
+        measurementVolume: data.measurement_vol,
+        measurementUnit: data.measurement_unit,
+      })),
+      vinDetailForm: data.td_do_vin.map((vin) => ({
+        ladingBillNumber: vin.no_bl,
+        vinNumber: vin.no_vin,
+      })),
       paymentDetailForm: data.td_do_invoice_form.map((inv) => ({
         invoiceNumber: inv.no_invoice,
         invoiceDate: inv.tgl_invoice,
@@ -221,16 +238,186 @@ export class DeliveryOrderService {
     return response;
   }
 
-  // async deleteDo(idDo: number) {
-  //   const deleted = await this.prisma.td_reqdo_header_form.delete({
-  //     where: {
-  //       id: idDo,
-  //     },
-  //   });
-  // }
+  async deleteDo(idDo: number) {
+    const data = await this.prisma.td_reqdo_header_form.findUnique({
+      where: {
+        id: idDo,
+      },
+    });
+    if (!data) {
+      throw new NotFoundException(`DO data by id = ${idDo} not found`);
+    }
+
+    const deleted = await this.prisma.td_reqdo_header_form.delete({
+      where: {
+        id: idDo,
+      },
+    });
+    return {
+      message: 'success',
+      data: deleted,
+    };
+  }
 
   // TODO: CREATE NON KONTAINER
-  async createNonKontainer(data: RequestDoDto, status?: StatusDo) {}
+  async createNonKontainer(data: RequestDoDto, status?: StatusDo) {
+    const created_by = 'admin_demo_co';
+    // CHECK IF USER IS FF AND SURAT KUASA EXIST
+    if (
+      data.requestDetail.requestor.requestorType == '2' &&
+      !data.requestDetail.requestor.urlFile
+    ) {
+      throw new BadRequestException('Freight Forwarder required surat kuasa');
+    }
+
+    const dataNonKontainer = data.cargoDetail.nonContainer.map((item) => {
+      const data: Partial<td_do_nonkontainer_form> = {
+        created_by,
+        gross_weight: item.grossWeight.amount,
+        package_qty: item.packageQuantity.amount,
+        measurement_vol: item.measurementVolume.amount,
+        measurement_unit: item.measurementVolume.unit,
+        good_desc: item.goodsDescription,
+        id_gross_weight_unit: item.grossWeight.unit,
+        id_package_unit: item.packageQuantity.unit,
+      };
+    });
+
+    const dataDokumen = data.supportingDocument.documentType.map((item) => {
+      const data: Partial<td_do_dok_form> = {
+        created_by,
+        id_jenis_dok: +item.document,
+        filepath_dok: item.urlFile,
+        no_dok: item.documentNo,
+        tgl_dok: new Date(item.documentDate),
+      };
+
+      return data;
+    });
+
+    const dataInvoice = data.paymentDetail.invoice.map((item) => {
+      const data: Partial<td_do_invoice_form> = {
+        created_by,
+        filepath_buktibayar: item.urlFile,
+        id_bank: +item.bankId,
+        no_invoice: item.invoiceNo,
+        tgl_invoice: new Date(item.invoiceDate),
+        no_rekening: item.accountNo,
+        total_payment: item.totalAmount,
+        id_currency: item.currency, //TODO: ADD CURRENCY JSON
+      };
+
+      return data;
+    });
+
+    const dataVin = data.vinDetail.map((item) => {
+      const data = {
+        no_bl: item.ladingBillNumber,
+        no_vin: item.vinNumber,
+      };
+      return data;
+    });
+
+    const createdDo = await this.prisma.td_reqdo_header_form.create({
+      data: {
+        request_type: data.requestType,
+        created_by,
+        td_do_requestor_form: {
+          create: {
+            id_jenis_requestor: +data.requestDetail.requestor.requestorType,
+            alamat: data.requestDetail.requestor.requestorAddress,
+            created_by,
+            nama: data.requestDetail.requestor.requestorName,
+            nib: data.requestDetail.requestor.nib,
+            filepath_suratkuasa: data.requestDetail.requestor.urlFile,
+          },
+        },
+        td_do_req_form: {
+          create: {
+            created_by,
+            id_metode_bayar: +data.requestDetail.payment,
+            id_shippingline: data.requestDetail.shippingLine.shippingType,
+            nama_vessel: data.requestDetail.shippingLine.vesselName,
+            no_voyage: data.requestDetail.shippingLine.voyageNumber,
+            tgl_reqdo_exp: new Date(data.requestDetail.shippingLine.doExpired),
+          },
+        },
+        td_parties_detail_form: {
+          create: {
+            created_by,
+            id_negara_loading: data.location.locationType[0].countryCode,
+            id_port_loading: data.location.locationType[0].portCode,
+            id_port_discharge: data.location.locationType[1].portCode,
+            id_port_destination: data.location.locationType[2].portCode,
+            nama_consignee: data.parties.consignee.name,
+            nama_notifyparty: data.parties.notifyParty.name,
+            nama_shipper: data.parties.shipper.name,
+            npwp_consignee: data.parties.shipper.npwp,
+            npwp_notifyparty: data.parties.notifyParty.npwp,
+          },
+        },
+        td_do_bl_form: {
+          create: {
+            created_by,
+            filepath_dok: data.requestDetail.document.urlFile,
+            id_jenis_bl: +data.requestDetail.document.ladingBillType,
+            no_bl: data.requestDetail.document.ladingBillNumber,
+            tgl_bl: new Date(data.requestDetail.document.ladingBillDate),
+          },
+        },
+        td_do_dok_form: {
+          createMany: {
+            data: dataDokumen as td_do_dok_form[],
+          },
+        },
+        td_do_vin: {
+          createMany: {
+            data: dataVin as td_do_vin[],
+          },
+        },
+        td_do_invoice_form: {
+          createMany: {
+            data: dataInvoice as td_do_invoice_form[],
+          },
+        },
+        td_reqdo_status: {
+          create: {
+            name: status ?? 'Draft',
+          },
+        },
+      },
+    });
+
+    const promises = data.cargoDetail.nonContainer.map((item) => {
+      return this.prisma.td_do_nonkontainer_form.create({
+        data: {
+          id_reqdo_header: createdDo.id,
+          created_by,
+          good_desc: item.goodsDescription,
+          gross_weight: item.grossWeight.amount,
+          id_gross_weight_unit: item.grossWeight.unit,
+          measurement_unit: item.measurementVolume.unit,
+          measurement_vol: item.measurementVolume.amount,
+          package_qty: item.packageQuantity.amount,
+          id_package_unit: item.packageQuantity.unit,
+        },
+      });
+    });
+
+    // Using Promise.all to wait for all promises to resolve
+    Promise.all(promises)
+      .then((results) => {
+        console.log('All promises resolved successfully');
+      })
+      .catch((error) => {
+        console.error('Error in one or more promises:', error);
+      });
+
+    return {
+      messsage: 'success',
+      data: createdDo,
+    };
+  }
 
   async createKontainer(data: RequestDoDto, status?: StatusDo) {
     const created_by = 'admin_demo_co';
@@ -243,6 +430,18 @@ export class DeliveryOrderService {
       throw new BadRequestException('Freight Forwarder required surat kuasa');
     }
 
+    const dataKontainer = data.cargoDetail.container.map((item) => {
+      const data: Partial<td_do_kontainer_form> = {
+        created_by,
+        gross_weight: item.grossWeight.amount,
+        no_kontainer: item.containerNo,
+        id_sizeType: item.sizeType.size,
+        id_ownership: +item.ownership,
+        id_gross_weight_unit: item.grossWeight.unit,
+      };
+      return data;
+    });
+    
     const dataDokumen = data.supportingDocument.documentType.map((item) => {
       const data: Partial<td_do_dok_form> = {
         created_by,
@@ -375,4 +574,8 @@ export class DeliveryOrderService {
       data: createdDo,
     };
   }
+
+  async updateKontainer(data: RequestDoDto, status?: StatusDo) {}
+
+  async updateNonKontainer(data: RequestDoDto, status?: StatusDo) {}
 }

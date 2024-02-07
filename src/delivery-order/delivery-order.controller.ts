@@ -31,10 +31,12 @@ export class DeliveryOrderController {
   }
 
   @Delete(':id')
-  deleteModel(@Param('id') id: string) {}
+  deleteModel(@Param('id') id: string) {
+    return this.deliveryOrderService.deleteDo(+id);
+  }
 
-  // @Post('non-kontainer')
-  // createDoNonKontainer(@Body() payload: RequestDO) {
-  //   return this.deliveryOrderService.createNonKontainer();
-  // }
+  @Post('non-kontainer')
+  createDoNonKontainer(@Body() payload: RequestDO) {
+    return this.deliveryOrderService.createNonKontainer(payload.request);
+  }
 }
