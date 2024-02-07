@@ -64,7 +64,5 @@ export class AuthController {
 
   @UseGuards(OidcGuard)
   @Get('signin')
-  signIn(@Req() request: Request) {
-    console.log({ request });
-  }
+  signIn() {}
 }

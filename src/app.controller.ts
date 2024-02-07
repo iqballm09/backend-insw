@@ -33,8 +33,6 @@ export class AppController {
       );
     }
 
-    return res.redirect(
-      `http://localhost:3000/?token=${authResult.data.access_token}`,
-    );
+    return res.redirect(`http://localhost:3000/?token=${authResult.token}`);
   }
 }

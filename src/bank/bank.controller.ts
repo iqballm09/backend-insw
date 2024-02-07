@@ -21,8 +21,8 @@ export class BankController {
   constructor(private readonly bankService: BankService) {}
 
   @Get()
-  // @UseGuards(AuthGuard)
-  findAll(@Req() req: Request) {
-    return this.bankService.findAll(req.headers.authorization.split(' ')[1]);
+  @UseGuards(AuthGuard)
+  findAll(@Req() req: any) {
+    return this.bankService.findAll(req.token);
   }
 }

@@ -5,6 +5,7 @@ import axios from 'axios';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { UserService } from 'src/user/user.service';
 import { UserRole } from '@prisma/client';
+import { validateError } from 'src/util';
 
 @Injectable()
 export class AuthService {
@@ -85,10 +86,10 @@ export class AuthService {
       }
 
       return {
-        data,
+        token: data.access_token,
       };
     } catch (error) {
-      return { error };
+      validateError(error);
     }
   }
 }

@@ -11,9 +11,7 @@ import { AuthService } from '../auth.service';
 export class AuthGuard implements CanActivate {
   constructor(private readonly authService: AuthService) {}
 
-  canActivate(
-    context: ExecutionContext,
-  ): boolean | Promise<boolean> | Observable<boolean> {
+  async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest();
 
     // Extract the authorization header and split the token
@@ -24,7 +22,8 @@ export class AuthGuard implements CanActivate {
     const token = authHeader.split(' ')[1];
 
     // Now you have the token, you can perform any necessary authentication/authorization logic
-    const isAuthorized = this.authService.isAuthenticated(token);
+    const isAuthorized = await this.authService.isAuthenticated(token);
+    request.token = token;
 
     return !!isAuthorized;
   }
