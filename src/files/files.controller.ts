@@ -37,6 +37,8 @@ const storage = diskStorage({
 
 @Controller('files')
 export class FilesController {
+  // TODO: GET FILE
+
   @Post('upload?')
   @HttpCode(201)
   @UseInterceptors(FileInterceptor('file', { storage }))
