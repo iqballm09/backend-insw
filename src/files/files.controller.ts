@@ -2,21 +2,26 @@ import {
   BadRequestException,
   Controller,
   FileTypeValidator,
+  Get,
   HttpCode,
   MaxFileSizeValidator,
+  NotFoundException,
   Param,
   ParseFilePipe,
   Post,
   Query,
+  Res,
   UploadedFile,
   UseInterceptors,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
-import { extname } from 'path';
+import { extname, join } from 'path';
 import { FolderType } from './folder.types';
 import { FileSizeValidationPipe } from 'src/helpers/pipes/file-size-validation.pipe';
 import { FileTypeValidationPipe } from 'src/helpers/pipes/file-type-validation.pipe';
+import { Response } from 'express';
+import * as fs from 'fs';
 
 const storage = diskStorage({
   destination: (req, file, callback) => {
@@ -35,32 +40,63 @@ const storage = diskStorage({
   },
 });
 
-@Controller('files')
+@Controller('file')
 export class FilesController {
-  // TODO: GET FILE
-
-  @Post('upload?')
-  @HttpCode(201)
-  @UseInterceptors(FileInterceptor('file', { storage }))
-  uploadFile(
-    @Query('type') type: FolderType,
-    @UploadedFile(
-      new ParseFilePipe({
-        validators: [
-          new MaxFileSizeValidator({ maxSize: 10000000 }),
-          new FileTypeValidator({ fileType: 'pdf' }),
-        ],
+  @Post('upload')
+  @UseInterceptors(
+    FileInterceptor('file', {
+      storage: diskStorage({
+        destination: (req, file, cb) => {
+          const folderType = req.query.type; // Get folder type from query params
+          const uploadPath = `./uploads/${folderType}`;
+          if (!fs.existsSync(uploadPath)) {
+            fs.mkdirSync(uploadPath, { recursive: true }); // Create the folderType if it doesn't exist
+          }
+          cb(null, uploadPath);
+        },
+        filename: (req, file, cb) => {
+          const randomName = Array(32)
+            .fill(null)
+            .map(() => Math.round(Math.random() * 16).toString(16))
+            .join('');
+          cb(null, `${randomName}${extname(file.originalname)}`);
+        },
       }),
-    )
-    file: Express.Multer.File,
+      fileFilter: (req, file, cb) => {
+        if (file.mimetype !== 'application/pdf') {
+          return cb(
+            new BadRequestException('Only PDF files are allowed'),
+            false,
+          );
+        }
+        if (file.size > 10 * 1024 * 1024) {
+          // 10MB limit
+          return cb(
+            new BadRequestException('File size must be less than 10MB'),
+            false,
+          );
+        }
+        cb(null, true);
+      },
+      limits: {
+        fileSize: 10 * 1024 * 1024, // 10MB limit
+      },
+    }),
+  )
+  async uploadFile(
+    @UploadedFile() file: Express.Multer.File,
+    @Query('type') type: FolderType,
   ) {
-    const path = `${file.destination}`.slice(1);
-    // console.log(path);
-    const response = {
-      originalName: file.originalname,
-      mimetype: file.mimetype,
-      path: `${process.env.DEV_HOST}${path}/${file.filename}`,
-    };
-    return { data: response };
+    // Handle file upload logic
+    return { urlFile: `${process.env.DEV_HOST}/file/${type}/${file.filename}` };
+  }
+
+  @Get(':type/:filename')
+  async serveFile(
+    @Param('filename') filename: string,
+    @Param('type') type: FolderType,
+    @Res() res: Response,
+  ) {
+    res.sendFile(filename, { root: 'uploads/' + type });
   }
 }
