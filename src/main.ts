@@ -9,7 +9,7 @@ async function bootstrap() {
   // Authentication & Session
   app.use(
     session({
-      secret: 'super-secret', // to sign session id
+      secret: 'secret', // to sign session id
       resave: false, // will default to false in near future: https://github.com/expressjs/session#resave
       saveUninitialized: false, // will default to false in near future: https://github.com/expressjs/session#saveuninitialized
       rolling: true, // keep session alive
@@ -19,9 +19,9 @@ async function bootstrap() {
       },
     }),
   );
-
   app.use(passport.initialize());
   app.use(passport.session());
-  await app.listen(3000);
+
+  await app.listen(5000);
 }
 bootstrap();

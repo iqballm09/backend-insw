@@ -441,7 +441,7 @@ export class DeliveryOrderService {
       };
       return data;
     });
-
+    
     const dataDokumen = data.supportingDocument.documentType.map((item) => {
       const data: Partial<td_do_dok_form> = {
         created_by,
