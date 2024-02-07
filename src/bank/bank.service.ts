@@ -15,6 +15,7 @@ import { validateError } from 'src/util';
 @Injectable()
 export class BankService {
   constructor(private configService: ConfigService) {}
+
   async findAll(token: string) {
     try {
       const { data } = await axios.get(

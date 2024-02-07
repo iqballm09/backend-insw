@@ -17,8 +17,9 @@ export class AuthGuard implements CanActivate {
     // Extract the authorization header and split the token
     const authHeader = request.headers.authorization;
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      throw new UnauthorizedException();
+      throw new UnauthorizedException('Token must be provide');
     }
+
     const token = authHeader.split(' ')[1];
 
     // Now you have the token, you can perform any necessary authentication/authorization logic

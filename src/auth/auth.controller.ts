@@ -21,6 +21,7 @@ import { OidcGuard } from './guard/oidc.guard';
 import { Request, Response } from 'express';
 import { UserDto } from 'src/user/entities/user.entity';
 import { UserService } from 'src/user/user.service';
+import { AuthGuard } from './guard/auth.guard';
 
 @Controller('auth')
 export class AuthController {
@@ -30,9 +31,9 @@ export class AuthController {
   ) {}
 
   @Post()
-  checkAuth(@Headers('authorization') authorization: string) {
-    const token = authorization.split(' ')[1];
-    return this.authService.isAuthenticated(token);
+  @UseGuards(AuthGuard)
+  checkAuth(@Req() req: any) {
+    return this.authService.isAuthenticated(req.token);
   }
 
   @Post('signup')
