@@ -574,4 +574,8 @@ export class DeliveryOrderService {
       data: createdDo,
     };
   }
+
+  async updateKontainer(data: RequestDoDto, status?: StatusDo) {}
+
+  async updateNonKontainer(data: RequestDoDto, status?: StatusDo) {}
 }

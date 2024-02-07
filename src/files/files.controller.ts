@@ -1,7 +1,9 @@
 import {
   BadRequestException,
   Controller,
+  FileTypeValidator,
   HttpCode,
+  MaxFileSizeValidator,
   Param,
   ParseFilePipe,
   Post,
@@ -13,6 +15,8 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
 import { extname } from 'path';
 import { FolderType } from './folder.types';
+import { FileSizeValidationPipe } from 'src/helpers/pipes/file-size-validation.pipe';
+import { FileTypeValidationPipe } from 'src/helpers/pipes/file-type-validation.pipe';
 
 const storage = diskStorage({
   destination: (req, file, callback) => {
@@ -38,7 +42,14 @@ export class FilesController {
   @UseInterceptors(FileInterceptor('file', { storage }))
   uploadFile(
     @Query('type') type: FolderType,
-    @UploadedFile()
+    @UploadedFile(
+      new ParseFilePipe({
+        validators: [
+          new MaxFileSizeValidator({ maxSize: 10000000 }),
+          new FileTypeValidator({ fileType: 'pdf' }),
+        ],
+      }),
+    )
     file: Express.Multer.File,
   ) {
     const path = `${file.destination}`.slice(1);
