@@ -6,18 +6,25 @@ import {
   Param,
   Post,
   Query,
+  Req,
+  UseGuards,
 } from '@nestjs/common';
 import { DeliveryOrderService } from './delivery-order.service';
 import { RequestDO, RequestDoDto } from './dto/create-do.dto';
 import { StatusDo } from '@prisma/client';
+import { AuthGuard } from 'src/auth/guard/auth.guard';
 
 @Controller('do')
 export class DeliveryOrderController {
   constructor(private readonly deliveryOrderService: DeliveryOrderService) {}
 
   @Post('kontainer')
-  createDoKontainer(@Body() payload: RequestDO) {
-    return this.deliveryOrderService.createKontainer(payload.request);
+  @UseGuards(AuthGuard)
+  createDoKontainer(@Body() payload: RequestDO, @Req() req: any) {
+    return this.deliveryOrderService.createKontainer(
+      payload.request,
+      req.token,
+    );
   }
 
   @Get()
@@ -36,7 +43,11 @@ export class DeliveryOrderController {
   }
 
   @Post('non-kontainer')
-  createDoNonKontainer(@Body() payload: RequestDO) {
-    return this.deliveryOrderService.createNonKontainer(payload.request);
+  @UseGuards(AuthGuard)
+  createDoNonKontainer(@Body() payload: RequestDO, @Req() req: any) {
+    return this.deliveryOrderService.createNonKontainer(
+      payload.request,
+      req.token,
+    );
   }
 }

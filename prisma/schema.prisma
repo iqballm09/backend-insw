@@ -15,6 +15,11 @@ enum UserRole {
   SL
 }
 
+enum RequestorTypeEnum {
+  CO
+  FF
+}
+
 enum StatusDo {
   Draft
   Submitted
@@ -23,9 +28,15 @@ enum StatusDo {
   Rejected
 }
 
+model RequestorType {
+  id                   Int                    @id @default(autoincrement())
+  name                 RequestorTypeEnum
+  td_do_requestor_form td_do_requestor_form[]
+}
+
 model Role {
   id   Int      @id @default(autoincrement())
-  name UserRole
+  name UserRole @unique
 
   users          User[]
   requestor_form td_do_requestor_form[]
@@ -85,8 +96,10 @@ model td_do_requestor_form {
   created_at          DateTime @default(now())
   created_by          String
 
-  jenis_requestor Role                 @relation(fields: [id_jenis_requestor], references: [id])
+  jenis_requestor RequestorType        @relation(fields: [id_jenis_requestor], references: [id])
   do_req_header   td_reqdo_header_form @relation(fields: [id_reqdo_header], references: [id], onDelete: Cascade)
+  Role            Role?                @relation(fields: [roleId], references: [id])
+  roleId          Int?
 }
 
 // DO REQ FORM

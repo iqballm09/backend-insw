@@ -17,10 +17,14 @@ import {
   td_do_vin,
 } from '@prisma/client';
 import * as moment from 'moment';
+import { UserService } from 'src/user/user.service';
 
 @Injectable()
 export class DeliveryOrderService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private userService: UserService,
+  ) {}
 
   async getAllDo() {
     const data = await this.prisma.td_reqdo_header_form.findMany({
@@ -260,8 +264,13 @@ export class DeliveryOrderService {
   }
 
   // TODO: CREATE NON KONTAINER
-  async createNonKontainer(data: RequestDoDto, status?: StatusDo) {
-    const created_by = 'admin_demo_co';
+  async createNonKontainer(
+    data: RequestDoDto,
+    token: string,
+    status?: StatusDo,
+  ) {
+    const userInfo = await this.userService.getDetail(token);
+    const created_by = userInfo.sub;
     // CHECK IF USER IS FF AND SURAT KUASA EXIST
     if (
       data.requestDetail.requestor.requestorType == '2' &&
@@ -269,19 +278,6 @@ export class DeliveryOrderService {
     ) {
       throw new BadRequestException('Freight Forwarder required surat kuasa');
     }
-
-    const dataNonKontainer = data.cargoDetail.nonContainer.map((item) => {
-      const data: Partial<td_do_nonkontainer_form> = {
-        created_by,
-        gross_weight: item.grossWeight.amount,
-        package_qty: item.packageQuantity.amount,
-        measurement_vol: item.measurementVolume.amount,
-        measurement_unit: item.measurementVolume.unit,
-        good_desc: item.goodsDescription,
-        id_gross_weight_unit: item.grossWeight.unit,
-        id_package_unit: item.packageQuantity.unit,
-      };
-    });
 
     const dataDokumen = data.supportingDocument.documentType.map((item) => {
       const data: Partial<td_do_dok_form> = {
@@ -324,7 +320,19 @@ export class DeliveryOrderService {
         created_by,
         td_do_requestor_form: {
           create: {
-            id_jenis_requestor: +data.requestDetail.requestor.requestorType,
+            jenis_requestor: {
+              connectOrCreate: {
+                create: {
+                  name:
+                    +data.requestDetail.requestor.requestorType === 1
+                      ? 'CO'
+                      : 'FF',
+                },
+                where: {
+                  id: +data.requestDetail.requestor.requestorType,
+                },
+              },
+            },
             alamat: data.requestDetail.requestor.requestorAddress,
             created_by,
             nama: data.requestDetail.requestor.requestorName,
@@ -419,8 +427,9 @@ export class DeliveryOrderService {
     };
   }
 
-  async createKontainer(data: RequestDoDto, status?: StatusDo) {
-    const created_by = 'admin_demo_co';
+  async createKontainer(data: RequestDoDto, token: string, status?: StatusDo) {
+    const userInfo = await this.userService.getDetail(token);
+    const created_by = userInfo.sub;
 
     // CHECK IF USER IS FF AND SURAT KUASA EXIST
     if (
@@ -430,18 +439,6 @@ export class DeliveryOrderService {
       throw new BadRequestException('Freight Forwarder required surat kuasa');
     }
 
-    const dataKontainer = data.cargoDetail.container.map((item) => {
-      const data: Partial<td_do_kontainer_form> = {
-        created_by,
-        gross_weight: item.grossWeight.amount,
-        no_kontainer: item.containerNo,
-        id_sizeType: item.sizeType.size,
-        id_ownership: +item.ownership,
-        id_gross_weight_unit: item.grossWeight.unit,
-      };
-      return data;
-    });
-    
     const dataDokumen = data.supportingDocument.documentType.map((item) => {
       const data: Partial<td_do_dok_form> = {
         created_by,
@@ -475,7 +472,19 @@ export class DeliveryOrderService {
         created_by,
         td_do_requestor_form: {
           create: {
-            id_jenis_requestor: +data.requestDetail.requestor.requestorType,
+            jenis_requestor: {
+              connectOrCreate: {
+                create: {
+                  name:
+                    +data.requestDetail.requestor.requestorType === 1
+                      ? 'CO'
+                      : 'FF',
+                },
+                where: {
+                  id: +data.requestDetail.requestor.requestorType,
+                },
+              },
+            },
             alamat: data.requestDetail.requestor.requestorAddress,
             created_by,
             nama: data.requestDetail.requestor.requestorName,
