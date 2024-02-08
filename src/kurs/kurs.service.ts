@@ -21,6 +21,7 @@ export class KursService {
       const result: KursEntity[] = data.data.map((item) => ({
         kode: item.kdKurs,
         uraian: item.mataUang,
+        display: item.kdKurs + ' | ' + item.mataUang,
       }));
       return {
         data: result,
