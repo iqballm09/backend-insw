@@ -17,6 +17,7 @@ import { TerminalOperatorModule } from './terminal-operator/terminal-operator.mo
 import { SizeTypecodeModule } from './size-typecode/size-typecode.module';
 import { StatusDoModule } from './status-do/status-do.module';
 import { FlagModule } from './flag/flag.module';
+import { PelabuhanModule } from './pelabuhan/pelabuhan.module';
 
 @Module({
   imports: [
@@ -37,6 +38,7 @@ import { FlagModule } from './flag/flag.module';
     SizeTypecodeModule,
     StatusDoModule,
     FlagModule,
+    PelabuhanModule,
   ],
   controllers: [AppController],
   providers: [AuthService, UserService],
