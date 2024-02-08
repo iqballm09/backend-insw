@@ -34,10 +34,14 @@ export class AppController {
     }
 
     res.cookie('access_token', authResult.token, {
+      maxAge: 3600 * 1000,
       httpOnly: true,
-      sameSite: 'none',
-      secure: true,
+      sameSite: 'strict',
+      path: '/',
+      secure: false,
     });
-    res.redirect(process.env.WEB_URI);
+    console.log("ini lewat");
+    
+    return res.redirect(process.env.WEB_URI);
   }
 }
