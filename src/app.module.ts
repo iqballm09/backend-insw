@@ -1,5 +1,5 @@
-import { MiddlewareConsumer, Module } from '@nestjs/common';
-import { BankModule } from './bank/bank.module';
+import { Module } from '@nestjs/common';
+import { BankModule } from './referensi/bank/bank.module';
 import { AuthModule } from './auth/auth.module';
 import { ConfigModule } from '@nestjs/config';
 import { DeliveryOrderModule } from './delivery-order/delivery-order.module';
@@ -9,6 +9,15 @@ import { AppController } from './app.controller';
 import { AuthService } from './auth/auth.service';
 import { UserModule } from './user/user.module';
 import { UserService } from './user/user.service';
+import { KursModule } from './referensi/kurs/kurs.module';
+import { ShippinglineModule } from './referensi/shippingline/shippingline.module';
+import { NegaraModule } from './referensi/negara/negara.module';
+import { KabkotaModule } from './referensi/kabkota/kabkota.module';
+import { TerminalOperatorModule } from './referensi/terminal-operator/terminal-operator.module';
+import { SizeTypecodeModule } from './referensi/size-typecode/size-typecode.module';
+import { StatusDoModule } from './referensi/status-do/status-do.module';
+import { FlagModule } from './referensi/flag/flag.module';
+import { PelabuhanModule } from './referensi/pelabuhan/pelabuhan.module';
 
 @Module({
   imports: [
@@ -21,6 +30,15 @@ import { UserService } from './user/user.service';
     DeliveryOrderModule,
     FilesModule,
     UserModule,
+    KursModule,
+    ShippinglineModule,
+    NegaraModule,
+    KabkotaModule,
+    TerminalOperatorModule,
+    SizeTypecodeModule,
+    StatusDoModule,
+    FlagModule,
+    PelabuhanModule,
   ],
   controllers: [AppController],
   providers: [AuthService, UserService],

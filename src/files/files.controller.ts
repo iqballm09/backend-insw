@@ -1,9 +1,12 @@
 import {
   BadRequestException,
   Controller,
+  Delete,
   FileTypeValidator,
   Get,
   HttpCode,
+  HttpException,
+  HttpStatus,
   MaxFileSizeValidator,
   NotFoundException,
   Param,
@@ -12,38 +15,55 @@ import {
   Query,
   Res,
   UploadedFile,
+  UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { diskStorage } from 'multer';
-import { extname, join } from 'path';
 import { FolderType } from './folder.types';
-import { FileSizeValidationPipe } from 'src/helpers/pipes/file-size-validation.pipe';
-import { FileTypeValidationPipe } from 'src/helpers/pipes/file-type-validation.pipe';
-import { Response } from 'express';
-import * as fs from 'fs';
+import { AuthGuard } from 'src/auth/guard/auth.guard';
+import { multerOptions } from './multer.options';
+import { buildOpenIdClient } from 'src/auth/strategy/oidc.strategy';
+import {
+  ApiBearerAuth,
+  ApiBody,
+  ApiConsumes,
+  ApiQuery,
+  ApiTags,
+} from '@nestjs/swagger';
+import { FilesService } from './files.service';
+import { validateError } from 'src/util';
 
-@Controller('file')
+@Controller('files')
+@ApiTags('Files')
 export class FilesController {
-  @Post('upload')
-  @UseInterceptors(
-    FileInterceptor('file', {
-      storage: diskStorage({
-        destination: (req, file, cb) => {
-          const folderType = req.query.type; // Get folder type from query params
-          const uploadPath = `./uploads/${folderType}`;
-          if (!fs.existsSync(uploadPath)) {
-            fs.mkdirSync(uploadPath, { recursive: true }); // Create the folderType if it doesn't exist
-          }
-          cb(null, uploadPath);
+  constructor(private fileService: FilesService) {}
+
+  @Post('upload?')
+  @HttpCode(201)
+  @UseGuards(AuthGuard)
+  @ApiBearerAuth()
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        file: {
+          type: 'string',
+          format: 'binary',
         },
-        filename: (req, file, cb) => {
-          const randomName = Array(32)
-            .fill(null)
-            .map(() => Math.round(Math.random() * 16).toString(16))
-            .join('');
-          cb(null, `${randomName}${extname(file.originalname)}`);
-        },
+      },
+    },
+  })
+  @ApiQuery({ name: 'type', enum: FolderType })
+  @UseInterceptors(FileInterceptor('file', multerOptions))
+  uploadFile(
+    @Query('type') type: FolderType,
+    @UploadedFile(
+      new ParseFilePipe({
+        validators: [
+          new MaxFileSizeValidator({ maxSize: 10000000 }),
+          new FileTypeValidator({ fileType: 'pdf' }),
+        ],
       }),
       fileFilter: (req, file, cb) => {
         if (file.mimetype !== 'application/pdf') {
@@ -81,5 +101,43 @@ export class FilesController {
     @Res() res: Response,
   ) {
     res.sendFile(filename, { root: 'uploads/' + type });
+  }
+
+  @Get(':name?')
+  @UseGuards(AuthGuard)
+  @ApiQuery({ name: 'type', enum: FolderType })
+  @ApiBearerAuth()
+  showFile(
+    @Param('name') name: string,
+    @Query('type') type: FolderType,
+    @Res() res,
+  ) {
+    return this.fileService.show(res, name, type);
+  }
+
+  @Delete(':name')
+  @ApiQuery({ name: 'type', enum: FolderType })
+  @UseGuards(AuthGuard)
+  @ApiBearerAuth()
+  async deleteFile(
+    @Param('name') name: string,
+    @Query('type') type: FolderType,
+  ): Promise<any> {
+    try {
+      await this.fileService.deleteFile(name, type);
+      return {
+        code: HttpStatus.OK,
+        message: 'File has been deleted!',
+      };
+    } catch (err) {
+      throw new HttpException(
+        {
+          code: err.code || HttpStatus.INTERNAL_SERVER_ERROR,
+          message: 'Failed',
+          error: err.error,
+        },
+        err.code || HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
   }
 }
