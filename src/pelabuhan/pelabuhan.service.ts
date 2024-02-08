@@ -19,7 +19,7 @@ export class PelabuhanService {
           },
         },
       );
-      const result: PelabuhanEntity[] = data.data.map((item) => ({
+      const result: PelabuhanEntity[] = data.data.result.map((item) => ({
         kode: item.KodePelabuhan,
         uraian: item.Pelabuhan,
         display: item.KodePelabuhan + ' | ' + item.Pelabuhan,
