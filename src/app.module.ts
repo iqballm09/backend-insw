@@ -16,6 +16,7 @@ import { KabkotaModule } from './kabkota/kabkota.module';
 import { TerminalOperatorModule } from './terminal-operator/terminal-operator.module';
 import { SizeTypecodeModule } from './size-typecode/size-typecode.module';
 import { StatusDoModule } from './status-do/status-do.module';
+import { FlagModule } from './flag/flag.module';
 
 @Module({
   imports: [
@@ -35,6 +36,7 @@ import { StatusDoModule } from './status-do/status-do.module';
     TerminalOperatorModule,
     SizeTypecodeModule,
     StatusDoModule,
+    FlagModule,
   ],
   controllers: [AppController],
   providers: [AuthService, UserService],
