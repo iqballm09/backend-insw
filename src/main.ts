@@ -2,7 +2,6 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import * as passport from 'passport';
 import * as session from 'express-session';
-import { join } from 'path';
 import { NestExpressApplication } from '@nestjs/platform-express';
 
 async function bootstrap() {
@@ -23,8 +22,7 @@ async function bootstrap() {
   );
   app.use(passport.initialize());
   app.use(passport.session());
-  app.useStaticAssets(join(__dirname, '..', 'assets'));
 
-  await app.listen(5000);
+  await app.listen(process.env.API_PORT);
 }
 bootstrap();

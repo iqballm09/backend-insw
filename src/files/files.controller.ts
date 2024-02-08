@@ -23,23 +23,6 @@ import { FileTypeValidationPipe } from 'src/helpers/pipes/file-type-validation.p
 import { Response } from 'express';
 import * as fs from 'fs';
 
-const storage = diskStorage({
-  destination: (req, file, callback) => {
-    const type = req.query.type;
-    const path = `./assets/upload/${type}`;
-    callback(null, path);
-  },
-  filename: (req, file, callback) => {
-    const name = file.originalname.split('.')[0];
-    const extension = extname(file.originalname);
-    const randomName = Array(32)
-      .fill(null)
-      .map(() => Math.round(Math.random() * 16).toString(16))
-      .join('');
-    callback(null, `${randomName}${extension}`);
-  },
-});
-
 @Controller('file')
 export class FilesController {
   @Post('upload')
@@ -88,7 +71,7 @@ export class FilesController {
     @Query('type') type: FolderType,
   ) {
     // Handle file upload logic
-    return { urlFile: `${process.env.DEV_HOST}/file/${type}/${file.filename}` };
+    return { urlFile: `${process.env.HOST}/file/${type}/${file.filename}` };
   }
 
   @Get(':type/:filename')
