@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import axios from 'axios';
 import { validateError } from 'src/util';
+import { BankEntity } from './entities/bank.entity';
 
 @Injectable()
 export class BankService {
@@ -17,7 +18,14 @@ export class BankService {
           },
         },
       );
-      return data;
+      const result: BankEntity[] = data.data.map((item) => ({
+        kode: item.kodeBank,
+        uraian: item.uraianBank,
+        display: item.kodeBank + ' | ' + item.uraianBank,
+      }));
+      return {
+        data: result,
+      };
     } catch (e) {
       validateError(e);
     }
