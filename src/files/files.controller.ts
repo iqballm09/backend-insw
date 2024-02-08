@@ -61,7 +61,7 @@ export class FilesController {
     @Query('type') type: FolderType,
   ) {
     // Handle file upload logic
-    return { urlFile: `${process.env.HOST}/file/${type}/${file.filename}` };
+    return { urlFile: `${process.env.API_URI}/file/${type}/${file.filename}` };
   }
 
   @Get(':name?')
