@@ -40,8 +40,7 @@ export class AppController {
       path: '/',
       secure: false,
     });
-    console.log("ini lewat");
-    
+
     return res.redirect(process.env.WEB_URI);
   }
 }
