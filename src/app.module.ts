@@ -13,6 +13,7 @@ import { KursModule } from './kurs/kurs.module';
 import { ShippinglineModule } from './shippingline/shippingline.module';
 import { NegaraModule } from './negara/negara.module';
 import { KabkotaModule } from './kabkota/kabkota.module';
+import { TerminalOperatorModule } from './terminal-operator/terminal-operator.module';
 
 @Module({
   imports: [
@@ -29,6 +30,7 @@ import { KabkotaModule } from './kabkota/kabkota.module';
     ShippinglineModule,
     NegaraModule,
     KabkotaModule,
+    TerminalOperatorModule,
   ],
   controllers: [AppController],
   providers: [AuthService, UserService],
