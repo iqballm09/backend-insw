@@ -12,6 +12,7 @@ import { UserService } from './user/user.service';
 import { KursModule } from './kurs/kurs.module';
 import { ShippinglineModule } from './shippingline/shippingline.module';
 import { NegaraModule } from './negara/negara.module';
+import { KabkotaModule } from './kabkota/kabkota.module';
 
 @Module({
   imports: [
@@ -27,6 +28,7 @@ import { NegaraModule } from './negara/negara.module';
     KursModule,
     ShippinglineModule,
     NegaraModule,
+    KabkotaModule,
   ],
   controllers: [AppController],
   providers: [AuthService, UserService],
