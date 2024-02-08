@@ -15,6 +15,7 @@ import { NegaraModule } from './negara/negara.module';
 import { KabkotaModule } from './kabkota/kabkota.module';
 import { TerminalOperatorModule } from './terminal-operator/terminal-operator.module';
 import { SizeTypecodeModule } from './size-typecode/size-typecode.module';
+import { StatusDoModule } from './status-do/status-do.module';
 
 @Module({
   imports: [
@@ -33,6 +34,7 @@ import { SizeTypecodeModule } from './size-typecode/size-typecode.module';
     KabkotaModule,
     TerminalOperatorModule,
     SizeTypecodeModule,
+    StatusDoModule,
   ],
   controllers: [AppController],
   providers: [AuthService, UserService],
