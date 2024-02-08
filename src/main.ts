@@ -29,6 +29,11 @@ async function bootstrap() {
     .setDescription(
       'API Documentation of Indonesia Nasional Single Window (INSW) Berbasis Blockchain',
     )
+    .addBearerAuth({
+      type: 'http',
+      scheme: 'bearer',
+      name: 'Bearer Token',
+    })
     .setVersion('1.0')
     .build();
   const document = SwaggerModule.createDocument(app, config);
