@@ -15,8 +15,6 @@ import {
   ForbiddenException,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
-import { CreateAuthDto } from './dto/create-auth.dto';
-import { UpdateAuthDto } from './dto/update-auth.dto';
 import { OidcGuard } from './guard/oidc.guard';
 import { Request, Response } from 'express';
 import { UserDto } from 'src/user/entities/user.entity';
@@ -30,7 +28,7 @@ export class AuthController {
     private userService: UserService,
   ) {}
 
-  @Post()
+  @Get()
   @UseGuards(AuthGuard)
   checkAuth(@Req() req: any) {
     return this.authService.isAuthenticated(req.token);
@@ -58,9 +56,13 @@ export class AuthController {
 
   @Get('/signout')
   doLogout(@Res() res: Response) {
-    return res.redirect(
-      'https://sso.insw.go.id/connect/session/end?post_logout_redirect_uri=http%3A%2F%2Flocalhost%3A5000&client_id=90b61241-8687-40f8-942d-391b54529936&attempt=ask',
-    );
+    res.cookie('access_token', '', {
+      expires: new Date(0),
+      httpOnly: true,
+      sameSite: 'none',
+      secure: true,
+    });
+    res.redirect(process.env.SSO_LOGOUT_URI);
   }
 
   @UseGuards(OidcGuard)

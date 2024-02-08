@@ -8,6 +8,7 @@ import {
   HttpException,
   HttpStatus,
   MaxFileSizeValidator,
+  NotFoundException,
   Param,
   ParseFilePipe,
   Post,
@@ -64,17 +65,42 @@ export class FilesController {
           new FileTypeValidator({ fileType: 'pdf' }),
         ],
       }),
-    )
-    file: Express.Multer.File,
+      fileFilter: (req, file, cb) => {
+        if (file.mimetype !== 'application/pdf') {
+          return cb(
+            new BadRequestException('Only PDF files are allowed'),
+            false,
+          );
+        }
+        if (file.size > 10 * 1024 * 1024) {
+          // 10MB limit
+          return cb(
+            new BadRequestException('File size must be less than 10MB'),
+            false,
+          );
+        }
+        cb(null, true);
+      },
+      limits: {
+        fileSize: 10 * 1024 * 1024, // 10MB limit
+      },
+    }),
+  )
+  async uploadFile(
+    @UploadedFile() file: Express.Multer.File,
+    @Query('type') type: FolderType,
   ) {
-    const path = `${file.destination}`.slice(1);
-    // console.log(path);
-    const response = {
-      originalName: file.originalname,
-      mimetype: file.mimetype,
-      path: `${process.env.DEV_HOST}${path}/${file.filename}`,
-    };
-    return { data: response };
+    // Handle file upload logic
+    return { urlFile: `${process.env.HOST}/file/${type}/${file.filename}` };
+  }
+
+  @Get(':type/:filename')
+  async serveFile(
+    @Param('filename') filename: string,
+    @Param('type') type: FolderType,
+    @Res() res: Response,
+  ) {
+    res.sendFile(filename, { root: 'uploads/' + type });
   }
 
   @Get(':name?')

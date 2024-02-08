@@ -160,10 +160,8 @@ export class DeliveryOrderService {
       throw new NotFoundException(`${idDo} is not found`);
     }
 
-    // TODO: POPULATE RESPONSE
     const response = {
       requestDetailForm: {
-        // TODO: ADD FIELD
         requestorType: data.td_do_requestor_form.id_jenis_requestor,
         shippingLine: data.td_do_req_form.id_shippingline,
         vesselName: data.td_do_req_form.nama_vessel,
@@ -263,7 +261,7 @@ export class DeliveryOrderService {
     };
   }
 
-  // TODO: CREATE NON KONTAINER
+  //CREATE NON KONTAINER
   async createNonKontainer(
     data: RequestDoDto,
     token: string,
@@ -427,6 +425,7 @@ export class DeliveryOrderService {
     };
   }
 
+  // CREATE KONTAINER
   async createKontainer(data: RequestDoDto, token: string, status?: StatusDo) {
     const userInfo = await this.userService.getDetail(token);
     const created_by = userInfo.sub;

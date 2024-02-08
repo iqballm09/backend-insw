@@ -38,13 +38,13 @@ export class AuthService {
     const form = new URLSearchParams();
     form.append('grant_type', 'authorization_code');
     form.append('code', code);
-    form.append('redirect_uri', 'http://localhost:5000');
+    form.append('redirect_uri', process.env.SSO_CALLBACK_URI);
+    const Authorization = `Basic ${btoa(process.env.SSO_CLIENT_ID + ':' + process.env.SSO_CLIENT_SECRET)}`;
 
     const config = {
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded',
-        Authorization:
-          'Basic OTBiNjEyNDEtODY4Ny00MGY4LTk0MmQtMzkxYjU0NTI5OTM2Ojc3YTFiYWUxLWI0NTItNDZlYS04YWRlLTVmYmE1M2E5MDhmNg==',
+        Authorization,
       },
     };
 
@@ -89,6 +89,8 @@ export class AuthService {
         token: data.access_token,
       };
     } catch (error) {
+      console.log(error);
+
       validateError(error);
     }
   }

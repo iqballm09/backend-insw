@@ -1,6 +1,4 @@
-// oidc.strategy.ts
 import { Injectable, UnauthorizedException } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
 import { PassportStrategy } from '@nestjs/passport';
 import {
   Client,
@@ -13,12 +11,10 @@ import {
 import { AuthService } from '../auth.service';
 
 export const buildOpenIdClient = async () => {
-  const TrustIssuer = await Issuer.discover(
-    `https://sso.insw.go.id/connect/.well-known/openid-configuration`,
-  );
+  const TrustIssuer = await Issuer.discover(process.env.SSO_ISSUE_URL);
   const client = new TrustIssuer.Client({
-    client_id: '90b61241-8687-40f8-942d-391b54529936',
-    client_secret: '77a1bae1-b452-46ea-8ade-5fba53a908f6',
+    client_id: process.env.SSO_CLIENT_ID,
+    client_secret: process.env.SSO_CLIENT_SECRET,
   });
   return client;
 };
@@ -34,8 +30,8 @@ export class OidcStrategy extends PassportStrategy(Strategy, 'oidc') {
     super({
       client: client,
       params: {
-        redirect_uri: 'http://localhost:5000', //TODO: CHANGE REDIRECT URI
-        scope: 'openid + profile + role + organization',
+        redirect_uri: process.env.SSO_CALLBACK_URI,
+        scope: process.env.SSO_SCOPE,
         response_type: 'code',
       },
       passReqToCallback: false,
