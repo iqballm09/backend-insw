@@ -25,6 +25,7 @@ export class StatusDoService {
         .map((item) => ({
           kode: item.kode_proses,
           uraian: item.ur_proses,
+          display: item.kode_proses + ' | ' + item.ur_proses,
         }))
         .sort((a, b) => a.kode - b.kode);
       return {
