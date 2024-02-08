@@ -14,6 +14,7 @@ import { ShippinglineModule } from './shippingline/shippingline.module';
 import { NegaraModule } from './negara/negara.module';
 import { KabkotaModule } from './kabkota/kabkota.module';
 import { TerminalOperatorModule } from './terminal-operator/terminal-operator.module';
+import { SizeTypecodeModule } from './size-typecode/size-typecode.module';
 
 @Module({
   imports: [
@@ -31,6 +32,7 @@ import { TerminalOperatorModule } from './terminal-operator/terminal-operator.mo
     NegaraModule,
     KabkotaModule,
     TerminalOperatorModule,
+    SizeTypecodeModule,
   ],
   controllers: [AppController],
   providers: [AuthService, UserService],
