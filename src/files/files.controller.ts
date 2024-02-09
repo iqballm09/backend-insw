@@ -74,7 +74,7 @@ export class FilesController {
   // @ApiBearerAuth()
   showFile(
     @Param('name') name: string,
-    @Query('type') type: FolderType,
+    @Param('type') type: FolderType,
     @Res() res,
   ) {
     return this.fileService.show(res, name, type);
