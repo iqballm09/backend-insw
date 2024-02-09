@@ -33,14 +33,8 @@ export class AppController {
       );
     }
 
-    res.cookie('access_token', authResult.token, {
-      maxAge: 3600 * 1000,
-      httpOnly: true,
-      sameSite: 'strict',
-      path: '/',
-      secure: false,
-    });
-
-    return res.redirect(process.env.WEB_URI);
+    return res.redirect(
+      `${process.env.WEB_URI}/api/auth/signin?token=${authResult.token}`,
+    );
   }
 }
