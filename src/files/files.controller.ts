@@ -22,7 +22,6 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { FolderType } from './folder.types';
 import { AuthGuard } from 'src/auth/guard/auth.guard';
 import { multerOptions } from './multer.options';
-import { buildOpenIdClient } from 'src/auth/strategy/oidc.strategy';
 import {
   ApiBearerAuth,
   ApiBody,

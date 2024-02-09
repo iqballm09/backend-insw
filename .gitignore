@@ -5,6 +5,8 @@
 /prisma/migrations
 /uploads
 
+.env
+
 # Logs
 logs
 *.log
