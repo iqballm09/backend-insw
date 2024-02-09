@@ -1,4 +1,7 @@
-interface Requestor {
+import { ApiProperty } from '@nestjs/swagger';
+import { containerData, nonContainerData } from '../example/read_data';
+
+class Requestor {
   requestorType: string;
   urlFile: string;
   npwp: string;
@@ -7,21 +10,21 @@ interface Requestor {
   requestorAddress: string;
 }
 
-interface ShippingLine {
+class ShippingLine {
   shippingType: string;
   doExpired: string;
   vesselName: string;
   voyageNumber: string;
 }
 
-interface Document {
+class Document {
   ladingBillNumber: string;
   ladingBillDate: string;
   ladingBillType: string;
   urlFile: string;
 }
 
-interface Parties {
+class Parties {
   shipper: {
     npwp: string;
     name: string;
@@ -36,27 +39,27 @@ interface Parties {
   };
 }
 
-interface SizeType {
+class SizeType {
   size: number;
   type: string;
 }
 
-interface GrossWeight {
+class GrossWeight {
   amount: number;
   unit: string;
 }
 
-interface PackageQuantity {
+class PackageQuantity {
   amount: number;
   unit: string;
 }
 
-interface MeasurementVolume {
+class MeasurementVolume {
   amount: number;
   unit: string;
 }
 
-interface Container {
+class Container {
   containerSeq: number;
   containerNo: string;
   sealNo: string[];
@@ -65,7 +68,7 @@ interface Container {
   ownership: string;
 }
 
-interface NonContainer {
+class NonContainer {
   nonContainerSeq: number;
   goodsDescription: string;
   packageQuantity: PackageQuantity;
@@ -73,13 +76,13 @@ interface NonContainer {
   measurementVolume: MeasurementVolume;
 }
 
-interface LocationType {
+class LocationType {
   location: string;
   countryCode: string;
   portCode: string;
 }
 
-interface Invoice {
+class Invoice {
   invoiceNo: string;
   invoiceDate: string;
   totalAmount: number;
@@ -89,19 +92,19 @@ interface Invoice {
   urlFile: string;
 }
 
-interface DocumentType {
+class DocumentType {
   document: string;
   documentNo: string;
   documentDate: string;
   urlFile: string;
 }
 
-interface VinDetail {
+class VinDetail {
   ladingBillNumber: string;
   vinNumber: string;
 }
 
-export interface RequestDoDto {
+export class RequestDoDto {
   requestType: number;
   requestDetail: {
     requestor: Requestor;
@@ -126,6 +129,16 @@ export interface RequestDoDto {
   };
 }
 
-export interface RequestDO {
+export class NonContainerRequestDO {
+  @ApiProperty({
+    example: nonContainerData,
+  })
+  request: RequestDoDto;
+}
+
+export class ContainerRequestDO {
+  @ApiProperty({
+    example: containerData,
+  })
   request: RequestDoDto;
 }

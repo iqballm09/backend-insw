@@ -20,8 +20,10 @@ import { Request, Response } from 'express';
 import { UserDto } from 'src/user/entities/user.entity';
 import { UserService } from 'src/user/user.service';
 import { AuthGuard } from './guard/auth.guard';
+import { ApiBearerAuth, ApiBody, ApiTags } from '@nestjs/swagger';
 
 @Controller('auth')
+@ApiTags('Auth')
 export class AuthController {
   constructor(
     private readonly authService: AuthService,
@@ -29,12 +31,16 @@ export class AuthController {
   ) {}
 
   @Get()
+  @ApiBearerAuth()
   @UseGuards(AuthGuard)
   checkAuth(@Req() req: any) {
     return this.authService.isAuthenticated(req.token);
   }
 
   @Post('signup')
+  @ApiBody({
+    type: UserDto,
+  })
   async signUp(@Query('token') token: string, @Body() user: UserDto) {
     if (!token) {
       throw new BadRequestException('Query token is required');
