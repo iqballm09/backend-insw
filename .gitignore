@@ -5,6 +5,8 @@
 /prisma/migrations
 /uploads
 
+docker-compose.yaml
+
 # Logs
 logs
 *.log

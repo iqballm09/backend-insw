@@ -4,6 +4,7 @@ import { validateError } from 'src/util';
 import * as fs from 'fs';
 import * as path from 'path';
 import { NotFoundError } from 'rxjs';
+import { UserService } from 'src/user/user.service';
 
 @Injectable()
 export class FilesService {

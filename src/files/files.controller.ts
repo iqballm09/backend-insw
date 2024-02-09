@@ -13,6 +13,7 @@ import {
   ParseFilePipe,
   Post,
   Query,
+  Req,
   Res,
   UploadedFile,
   UseGuards,
@@ -32,6 +33,7 @@ import {
 } from '@nestjs/swagger';
 import { FilesService } from './files.service';
 import { validateError } from 'src/util';
+import { extname } from 'path';
 
 @Controller('files')
 @ApiTags('Files')
@@ -61,13 +63,15 @@ export class FilesController {
     @Query('type') type: FolderType,
   ) {
     // Handle file upload logic
-    return { urlFile: `${process.env.API_URI}/file/${type}/${file.filename}` };
+    return {
+      urlFile: `${process.env.API_URI}/files/${type}/${file.filename.split('.')[0]}`,
+    };
   }
 
-  @Get(':name?')
-  @UseGuards(AuthGuard)
+  @Get(':type/:name')
+  // @UseGuards(AuthGuard)
   @ApiQuery({ name: 'type', enum: FolderType })
-  @ApiBearerAuth()
+  // @ApiBearerAuth()
   showFile(
     @Param('name') name: string,
     @Query('type') type: FolderType,
