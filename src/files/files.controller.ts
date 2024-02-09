@@ -56,51 +56,12 @@ export class FilesController {
   })
   @ApiQuery({ name: 'type', enum: FolderType })
   @UseInterceptors(FileInterceptor('file', multerOptions))
-  uploadFile(
-    @Query('type') type: FolderType,
-    @UploadedFile(
-      new ParseFilePipe({
-        validators: [
-          new MaxFileSizeValidator({ maxSize: 10000000 }),
-          new FileTypeValidator({ fileType: 'pdf' }),
-        ],
-      }),
-      fileFilter: (req, file, cb) => {
-        if (file.mimetype !== 'application/pdf') {
-          return cb(
-            new BadRequestException('Only PDF files are allowed'),
-            false,
-          );
-        }
-        if (file.size > 10 * 1024 * 1024) {
-          // 10MB limit
-          return cb(
-            new BadRequestException('File size must be less than 10MB'),
-            false,
-          );
-        }
-        cb(null, true);
-      },
-      limits: {
-        fileSize: 10 * 1024 * 1024, // 10MB limit
-      },
-    }),
-  )
   async uploadFile(
     @UploadedFile() file: Express.Multer.File,
     @Query('type') type: FolderType,
   ) {
     // Handle file upload logic
-    return { urlFile: `${process.env.HOST}/file/${type}/${file.filename}` };
-  }
-
-  @Get(':type/:filename')
-  async serveFile(
-    @Param('filename') filename: string,
-    @Param('type') type: FolderType,
-    @Res() res: Response,
-  ) {
-    res.sendFile(filename, { root: 'uploads/' + type });
+    return { urlFile: `${process.env.API_URI}/file/${type}/${file.filename}` };
   }
 
   @Get(':name?')
