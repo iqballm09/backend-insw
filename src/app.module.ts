@@ -18,7 +18,7 @@ import { SizeTypecodeModule } from './referensi/size-typecode/size-typecode.modu
 import { StatusDoModule } from './referensi/status-do/status-do.module';
 import { FlagModule } from './referensi/flag/flag.module';
 import { PelabuhanModule } from './referensi/pelabuhan/pelabuhan.module';
-import { SupportingDocumentModule } from './supporting-document/supporting-document.module';
+import { SupportingDocumentModule } from './referensi/supporting-document/supporting-document.module';
 
 @Module({
   imports: [

@@ -1,0 +1,34 @@
+{
+    "data": [
+        {
+            "id_dokumen": "0400380",
+            "uraian_dokumen": "Invoice",
+            "display": "0400380 | Invoice"
+        },
+        {
+            "id_dokumen": "0500004",
+            "uraian_dokumen": "Letter of Indemnity (LOI)",
+            "display": "0500004 | Letter of Indemnity (LOI)"
+        },
+        {
+            "id_dokumen": "0500005",
+            "uraian_dokumen": "Surat Peminjaman Kontainer",
+            "display": "0500005 | Surat Peminjaman Kontainer"
+        },
+        {
+            "id_dokumen": "0500006",
+            "uraian_dokumen": "ID Penerima Kuasa",
+            "display": "0500006 | ID Penerima Kuasa"
+        },
+        {
+            "id_dokumen": "0500970",
+            "uraian_dokumen": "Surat Kuasa",
+            "display": "0500970 | Surat Kuasa"
+        },
+        {
+            "id_dokumen": "0500999",
+            "uraian_dokumen": "Dokumen Lainnya",
+            "display": "0500999 | Dokumen Lainnya"
+        }
+    ]
+}
