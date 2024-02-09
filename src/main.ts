@@ -33,7 +33,7 @@ async function bootstrap() {
   const config = new DocumentBuilder()
     .setTitle('INSW API Documentation')
     .setDescription(
-      'API Documentation of Indonesia Nasional Single Window (INSW) Berbasis Blockchain',
+      'Dokumentasi API Indonesia Nasional Single Window (INSW) Berbasis Blockchain',
     )
     .addBearerAuth({
       type: 'http',

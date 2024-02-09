@@ -1,0 +1,129 @@
+{
+    "requestType": 1,
+    "requestDetail": {
+        "requestor": {
+            "requestorType": "1",
+            "urlFile": "",
+            "npwp": "320187908001000",
+            "nib": "138908679716",
+            "requestorName": "PT. SINAR JAYA",
+            "requestorAddress": "JAKARTA PUSAT"
+        },
+        "shippingLine": {
+            "shippingType": "PIL",
+            "doExpired": "2019-10-12",
+            "vesselName": "NAVIOS DELIGHT",
+            "voyageNumber": "0KRH3W"
+        },
+        "payment": "2",
+        "document": {
+            "ladingBillNumber": "121020190001",
+            "ladingBillDate": "2019-10-12",
+            "ladingBillType": "1",
+            "urlFile": "assets/upload/billing/bl01.pdf"
+        }
+    },
+    "parties": {
+        "shipper": {
+            "npwp": "12355613459876",
+            "name": "PT SHIPPER"
+        },
+        "consignee": {
+            "npwp": "12355613451234",
+            "name": "PT CONSIGNEE"
+        },
+        "notifyParty": {
+            "npwp": "12312312312321",
+            "name": "PT NOTIFY"
+        }
+    },
+    "cargoDetail": {
+        "container": [
+            {
+                "containerSeq": 1,
+                "containerNo": "MSKU0198252",
+                "sealNo": ["SEAL13102019005", "SEAL123456789"],
+                "sizeType": {
+                    "size": 42,
+                    "type": "G0"
+                },
+                "grossWeight": {
+                    "amount": 8890.00,
+                    "unit": "KGM"
+                },
+                "ownership": "2"
+            },
+            {
+                "containerSeq": 2,
+                "containerNo": "AGKU0198252",
+                "sealNo": ["SEAL13102090081"],
+                "sizeType": {
+                    "size": 42,
+                    "type": "G0"
+                },
+                "grossWeight": {
+                    "amount": 8871.00,
+                    "unit": "KGM"
+                },
+                "ownership": "2"
+            }
+        ]
+    },
+    "location": {
+        "locationType": [
+            {
+                "location": "0",
+                "countryCode": "AG",
+                "portCode": "AGBBQ"
+            },
+            {
+                "location": "1",
+                "countryCode": "ID",
+                "portCode": "IDAEG"
+            },
+            {
+                "location": "2",
+                "countryCode": "ID",
+                "portCode": "IDAKE"
+            }
+        ]
+    },
+    "paymentDetail": {
+        "invoice": [
+            {
+                "invoiceNo": "INV1232021",
+                "invoiceDate": "2019-10-11",
+                "totalAmount": 100000000.00,
+                "bankId": "002",
+                "currency": "IDR",
+                "accountNo": "80123123123123",
+                "urlFile": "assets/upload/payment/15712185291.pdf"
+            },
+            {
+                "currency": "IDR",
+                "invoiceNo": "INV9872021",
+                "invoiceDate": "2019-11-12",
+                "totalAmount": 900000000.00,
+                "bankId": "002",
+                "accountNo": "80123123123123",
+                "urlFile": "assets/upload/payment/inv.pdf"
+            }
+        ]
+    },
+    "supportingDocument": {
+        "documentType": [
+            {
+                "document": "1",
+                "documentNo": "CON012019",
+                "documentDate": "2019-11-21",
+                "urlFile": "assets/upload/document/Con1.pdf"
+            },
+            {
+                "document": "2",
+                "documentNo": "CON022019",
+                "documentDate": "2019-10-02",
+                "urlFile": "assets/upload/document/Con2.pdf"
+            }
+        ]
+    }
+}

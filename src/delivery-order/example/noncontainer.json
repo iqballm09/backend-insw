@@ -1,0 +1,147 @@
+{
+    "requestType": 2,
+    "requestDetail": {
+        "requestor": {
+            "requestorType": "2",
+            "urlFile": "assets/upload/payment/inv.pdf",
+            "npwp": "320187908001000",
+            "nib": "138908679716",
+            "requestorName": "UNKNOWN",
+            "requestorAddress": "JAKARTA PUSAT"
+        },
+        "shippingLine": {
+            "shippingType": "PIL",
+            "doExpired": "2019-10-12",
+            "vesselName": "NAVIOS DELIGHT",
+            "voyageNumber": "0KRH3W"
+        },
+        "payment": "2",
+        "document": {
+            "ladingBillNumber": "121020190001",
+            "ladingBillDate": "2019-10-12",
+            "ladingBillType": "1",
+            "urlFile": "assets/upload/billing/bl01.pdf"
+        }
+    },
+    "parties": {
+        "shipper": {
+            "npwp": "12355613459876",
+            "name": "PT SHIPPER"
+        },
+        "consignee": {
+            "npwp": "12355613451234",
+            "name": "PT CONSIGNEE"
+        },
+        "notifyParty": {
+            "npwp": "12312312312321",
+            "name": "PT NOTIFY"
+        }
+    },
+    "cargoDetail": {
+        "nonContainer": [
+            {
+                "nonContainerSeq": 1,
+                "goodsDescription": "PARTS FOR GEAR UNITS",
+                "packageQuantity": {
+                    "amount": 88,
+                    "unit": "UNIT"
+                },
+                "grossWeight": {
+                    "amount": 8890.00,
+                    "unit": "KGM"
+                },
+                "measurementVolume": {
+                    "amount": 71.00,
+                    "unit": "M3"
+                }
+            },
+            {
+                "nonContainerSeq": 2,
+                "goodsDescription": "PARTS FOR BICYLE UNITS",
+                "packageQuantity": {
+                    "amount": 98,
+                    "unit": "UNIT"
+                },
+                "grossWeight": {
+                    "amount": 8890.00,
+                    "unit": "KGM"
+                },
+                "measurementVolume": {
+                    "amount": 72.00,
+                    "unit": "M3"
+                }
+            }
+        ]
+    },
+    "vinDetail": [
+        {
+            "ladingBillNumber": "121020190055",
+            "vinNumber": "1HGCM82633A123456"
+        },
+        {
+            "ladingBillNumber":"121020190055", 
+            "vinNumber":"2T3DFREV5EW123789"
+        },
+        {
+            "ladingBillNumber":"121020190001",
+            "vinNumber":"JH4DC2382RS567890"
+        }
+    ],
+    "location": {
+        "locationType": [
+            {
+                "location": "0",
+                "countryCode": "AG",
+                "portCode": "AGBBQ"
+            },
+            {
+                "location": "1",
+                "countryCode": "ID",
+                "portCode": "IDAEG"
+            },
+            {
+                "location": "2",
+                "countryCode": "ID",
+                "portCode": "IDAKE"
+            }
+        ]
+    },
+    "paymentDetail": {
+        "invoice": [
+            {
+                "invoiceNo": "INV1232021",
+                "invoiceDate": "2019-10-11",
+                "totalAmount": 100000000.00,
+                "bankId": "002",
+                "currency": "IDR",
+                "accountNo": "80123123123123",
+                "urlFile": "assets/upload/payment/15712185291.pdf"
+            },
+            {
+                "currency": "IDR",
+                "invoiceNo": "INV9872021",
+                "invoiceDate": "2019-11-12",
+                "totalAmount": 900000000.00,
+                "bankId": "002",
+                "accountNo": "80123123123123",
+                "urlFile": "assets/upload/payment/inv.pdf"
+            }
+        ]
+    },
+    "supportingDocument": {
+        "documentType": [
+            {
+                "document": "1",
+                "documentNo": "CON012019",
+                "documentDate": "2019-11-21",
+                "urlFile": "assets/upload/document/Con1.pdf"
+            },
+            {
+                "document": "2",
+                "documentNo": "CON022019",
+                "documentDate": "2019-10-02",
+                "urlFile": "assets/upload/document/Con2.pdf"
+            }
+        ]
+    }
+}
