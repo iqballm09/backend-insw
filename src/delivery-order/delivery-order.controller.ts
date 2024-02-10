@@ -36,8 +36,8 @@ export class DeliveryOrderController {
   @Get()
   @UseGuards(AuthGuard)
   @ApiBearerAuth()
-  getAllDo() {
-    return this.deliveryOrderService.getAllDo();
+  getAllCOReqDo(@Req() req: any) {
+    return this.deliveryOrderService.getAllDo(req.token);
   }
 
   @Get(':id')
