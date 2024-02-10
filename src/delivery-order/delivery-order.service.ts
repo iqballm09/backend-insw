@@ -604,7 +604,7 @@ export class DeliveryOrderService {
     const promises = data.cargoDetail.container.map((item) => {
       return this.prisma.td_do_kontainer_form.create({
         data: {
-          id_reqdo_header: updateDo.id,
+          id_reqdo_header: idDO,
           updated_by,
           created_by: updated_by,
           updated_at: new Date(),
