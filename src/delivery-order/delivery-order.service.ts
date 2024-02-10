@@ -114,6 +114,7 @@ export class DeliveryOrderService {
         td_do_requestor_form: {
           select: {
             id_jenis_requestor: true,
+            filepath_suratkuasa: true,
           },
         },
         td_do_bl_form: {
@@ -198,6 +199,7 @@ export class DeliveryOrderService {
     const response = {
       requestDetailForm: {
         requestorType: data.td_do_requestor_form.id_jenis_requestor,
+        requestorFile: data.td_do_requestor_form.filepath_suratkuasa,
         shippingLine: data.td_do_req_form.id_shippingline,
         vesselName: data.td_do_req_form.nama_vessel,
         voyageNumber: data.td_do_req_form.no_voyage,
@@ -814,12 +816,174 @@ export class DeliveryOrderService {
   }
 
   // UPDATE NON KONTAINER
-  async updateNonKontainer(data: RequestDoDto, status?: StatusDo) {
+  async updateNonKontainer(
+    idDO: number,
+    data: RequestDoDto,
+    token: string,
+    status?: StatusDo,
+  ) {
+    const userInfo = await this.userService.getDetail(token);
+    const updated_by = userInfo.sub;
+
     // CHECK IF REQUEST TYPE = 2
     if (data.requestType !== 2) {
       throw new BadRequestException(
         'Tidak dapat melakukan create DO non kontainer, requestType != 2',
       );
     }
+
+    // CHECK IF USER IS FF AND SURAT KUASA EXIST
+    if (
+      data.requestDetail.requestor.requestorType == '2' &&
+      !data.requestDetail.requestor.urlFile
+    ) {
+      throw new BadRequestException('Freight Forwarder required surat kuasa');
+    }
+
+    // CHECK IF DO EXIST
+    const doData = await this.getDoDetail(idDO);
+    if (!doData) {
+      throw new BadRequestException(`DO by id = ${idDO} not found.`);
+    }
+
+    const dataNonKontainer = data.cargoDetail.nonContainer.map((item) => {
+      const data: Partial<td_do_nonkontainer_form> = {
+        created_by: updated_by,
+        updated_by,
+        updated_at: new Date(),
+        good_desc: item.goodsDescription,
+        gross_weight: item.grossWeight.amount,
+        id_gross_weight_unit: item.grossWeight.unit,
+        measurement_unit: item.measurementVolume.unit,
+        measurement_vol: item.measurementVolume.amount,
+        package_qty: item.packageQuantity.amount,
+        id_package_unit: item.packageQuantity.unit,
+      };
+      return data;
+    });
+
+    const dataDokumen = data.supportingDocument.documentType.map((item) => {
+      const data: Partial<td_do_dok_form> = {
+        created_by: updated_by,
+        updated_by,
+        updated_at: new Date(),
+        id_jenis_dok: +item.document,
+        filepath_dok: item.urlFile,
+        no_dok: item.documentNo,
+        tgl_dok: new Date(item.documentDate),
+      };
+      return data;
+    });
+
+    const dataInvoice = data.paymentDetail.invoice.map((item) => {
+      const data: Partial<td_do_invoice_form> = {
+        created_by: updated_by,
+        updated_by,
+        updated_at: new Date(),
+        no_invoice: item.invoiceNo,
+        id_bank: +item.bankId,
+        filepath_buktibayar: item.urlFile,
+        tgl_invoice: new Date(item.invoiceDate),
+        no_rekening: item.accountNo,
+        total_payment: item.totalAmount,
+        id_currency: item.currency,
+      };
+      return data;
+    });
+
+    const dataVin = data.vinDetail.map((item) => {
+      const data = {
+        no_bl: item.ladingBillNumber,
+        no_vin: item.vinNumber,
+      };
+      return data;
+    });
+
+    const updatedDo = await this.prisma.td_reqdo_header_form.update({
+      where: {
+        id: idDO,
+      },
+      data: {
+        td_do_requestor_form: {
+          update: {
+            jenis_requestor: {
+              update: {
+                name: +data.requestDetail.requestor.requestorType ? 'CO' : 'FF',
+              },
+            },
+            filepath_suratkuasa: data.requestDetail.requestor.urlFile,
+          },
+        },
+        td_do_bl_form: {
+          update: {
+            updated_by,
+            updated_at: new Date(),
+            filepath_dok: data.requestDetail.document.urlFile,
+            no_bl: data.requestDetail.document.ladingBillNumber,
+            tgl_bl: new Date(data.requestDetail.document.ladingBillDate),
+          },
+        },
+        td_do_req_form: {
+          update: {
+            updated_by,
+            updated_at: new Date(),
+            id_metode_bayar: +data.requestDetail.payment,
+            id_shippingline: data.requestDetail.shippingLine.shippingType,
+            nama_vessel: data.requestDetail.shippingLine.vesselName,
+            no_voyage: data.requestDetail.shippingLine.voyageNumber,
+            tgl_reqdo_exp: new Date(data.requestDetail.shippingLine.doExpired),
+          },
+        },
+        td_parties_detail_form: {
+          update: {
+            updated_by,
+            updated_at: new Date(),
+            id_negara_loading: data.location.locationType[0].countryCode,
+            id_port_loading: data.location.locationType[0].portCode,
+            id_port_discharge: data.location.locationType[1].portCode,
+            id_port_destination: data.location.locationType[2].portCode,
+            nama_consignee: data.parties.consignee.name,
+            nama_notifyparty: data.parties.notifyParty.name,
+            nama_shipper: data.parties.shipper.name,
+            npwp_consignee: data.parties.consignee.npwp,
+            npwp_notifyparty: data.parties.notifyParty.npwp,
+          },
+        },
+        td_do_dok_form: {
+          deleteMany: {},
+          createMany: {
+            data: dataDokumen as td_do_dok_form[],
+          },
+        },
+        td_do_invoice_form: {
+          deleteMany: {},
+          createMany: {
+            data: dataInvoice as td_do_invoice_form[],
+          },
+        },
+        td_do_vin: {
+          deleteMany: {},
+          createMany: {
+            data: dataVin as td_do_vin[],
+          },
+        },
+        td_do_nonkontainer_form: {
+          deleteMany: {},
+          createMany: {
+            data: dataNonKontainer as td_do_nonkontainer_form[],
+          },
+        },
+        td_reqdo_status: {
+          create: {
+            name: status ?? 'Draft',
+          },
+        },
+      },
+    });
+
+    return {
+      messsage: 'success',
+      data: updatedDo,
+    };
   }
 }

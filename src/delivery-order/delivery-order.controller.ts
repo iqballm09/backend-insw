@@ -18,6 +18,7 @@ import {
   CreateContainerRequestDO,
   CreateNonContainerRequestDO,
   UpdateContainerRequestDO,
+  UpdateNonContainerRequestDO,
 } from './dto/create-do.dto';
 
 @ApiTags('Delivery Order')
@@ -59,6 +60,40 @@ export class DeliveryOrderController {
     );
   }
 
+  @Post('non-kontainer')
+  @UseGuards(AuthGuard)
+  @ApiBody({
+    type: CreateNonContainerRequestDO,
+  })
+  @ApiBearerAuth()
+  createDoNonKontainer(
+    @Body() payload: CreateNonContainerRequestDO,
+    @Req() req: any,
+  ) {
+    return this.deliveryOrderService.createNonKontainer(
+      payload.request,
+      req.token,
+    );
+  }
+
+  @Put('non-kontainer/:id')
+  @UseGuards(AuthGuard)
+  @ApiBody({
+    type: UpdateNonContainerRequestDO,
+  })
+  @ApiBearerAuth()
+  updateDoNonContainer(
+    @Param('id') id: number,
+    @Body() payload: UpdateNonContainerRequestDO,
+    @Req() req: any,
+  ) {
+    return this.deliveryOrderService.updateNonKontainer(
+      +id,
+      payload.request,
+      req.token,
+    );
+  }
+
   @Get()
   @UseGuards(AuthGuard)
   @ApiBearerAuth()
@@ -78,21 +113,5 @@ export class DeliveryOrderController {
   @ApiBearerAuth()
   deleteModel(@Param('id') id: string) {
     return this.deliveryOrderService.deleteDo(+id);
-  }
-
-  @Post('non-kontainer')
-  @UseGuards(AuthGuard)
-  @ApiBody({
-    type: CreateNonContainerRequestDO,
-  })
-  @ApiBearerAuth()
-  createDoNonKontainer(
-    @Body() payload: CreateNonContainerRequestDO,
-    @Req() req: any,
-  ) {
-    return this.deliveryOrderService.createNonKontainer(
-      payload.request,
-      req.token,
-    );
   }
 }
