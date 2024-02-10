@@ -15,6 +15,7 @@ import {
   td_do_kontainer_seal,
   td_do_nonkontainer_form,
   td_do_vin,
+  User,
 } from '@prisma/client';
 import * as moment from 'moment';
 import { UserService } from 'src/user/user.service';
@@ -27,7 +28,8 @@ export class DeliveryOrderService {
     private userService: UserService,
   ) {}
 
-  async getAllDo() {
+  async getAllDo(token: string) {
+    const userInfo = await this.userService.getDetail(token);
     const data = await this.prisma.td_reqdo_header_form.findMany({
       include: {
         td_do_bl_form: {
@@ -58,6 +60,9 @@ export class DeliveryOrderService {
       },
       orderBy: {
         created_at: 'desc',
+      },
+      where: {
+        created_by: userInfo.sub,
       },
     });
 
