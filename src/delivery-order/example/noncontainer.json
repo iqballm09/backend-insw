@@ -10,7 +10,7 @@
             "requestorAddress": "JAKARTA PUSAT"
         },
         "shippingLine": {
-            "shippingType": "PIL",
+            "shippingType": "YML",
             "doExpired": "2019-10-12",
             "vesselName": "NAVIOS DELIGHT",
             "voyageNumber": "0KRH3W"
