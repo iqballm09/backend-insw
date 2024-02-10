@@ -48,6 +48,11 @@ export class DeliveryOrderService {
             id_shippingline: true,
           },
         },
+        td_parties_detail_form: {
+          select: {
+            id_port_discharge: true,
+          },
+        },
         td_reqdo_status: {
           select: {
             name: true,
@@ -61,22 +66,36 @@ export class DeliveryOrderService {
       orderBy: {
         created_at: 'desc',
       },
-      where: {
-        created_by: userInfo.sub,
-      },
     });
 
-    return data.map((item) => ({
-      id: item.id,
-      requestNumber: item.no_reqdo,
-      requestTime: moment(item.tgl_reqdo).format('DD-MM-YYYY HH:mm:ss'),
-      blNumber: item.td_do_bl_form.no_bl,
-      blDate: moment(item.td_do_bl_form.tgl_bl).format('DD-MM-YYYY'),
-      requestName: item.td_do_requestor_form.nama,
-      shippingLine: item.td_do_req_form.id_shippingline,
-      status: item.td_reqdo_status[0].name,
-      isContainer: item.request_type == 1,
-    }));
+    if (!userInfo.profile.details.kd_detail_ga) {
+      return data
+        .filter((item) => item.created_by === userInfo.sub)
+        .map((item) => ({
+          id: item.id,
+          requestNumber: item.no_reqdo,
+          requestTime: moment(item.tgl_reqdo).format('DD-MM-YYYY HH:mm:ss'),
+          blNumber: item.td_do_bl_form.no_bl,
+          blDate: moment(item.td_do_bl_form.tgl_bl).format('DD-MM-YYYY'),
+          requestName: item.td_do_requestor_form.nama,
+          shippingLine: item.td_do_req_form.id_shippingline,
+          status: item.td_reqdo_status[0].name,
+          isContainer: item.request_type == 1,
+        }));
+    } else {
+      return data.map((item) => ({
+        id: item.id,
+        requestNumber: item.no_reqdo,
+        requestTime: moment(item.tgl_reqdo).format('DD-MM-YYYY HH:mm:ss'),
+        blNumber: item.td_do_bl_form.no_bl,
+        blDate: moment(item.td_do_bl_form.tgl_bl).format('DD-MM-YYYY'),
+        requestName: item.td_do_requestor_form.nama,
+        shippingLine: item.td_do_req_form.id_shippingline,
+        pod: item.td_parties_detail_form.id_port_discharge,
+        status: item.td_reqdo_status[0].name,
+        isContainer: item.request_type == 1,
+      }));
+    }
   }
 
   async getDoDetail(idDo: number) {
