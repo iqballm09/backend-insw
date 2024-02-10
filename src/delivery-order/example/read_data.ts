@@ -1,9 +1,29 @@
 import * as fs from 'fs';
 
-export const containerData = JSON.parse(
-  fs.readFileSync('./src/delivery-order/example/container.json', 'utf-8'),
+export const createContainerData = JSON.parse(
+  fs.readFileSync(
+    './src/delivery-order/example/create-container.json',
+    'utf-8',
+  ),
 );
 
-export const nonContainerData = JSON.parse(
-  fs.readFileSync('./src/delivery-order/example/noncontainer.json', 'utf-8'),
+export const updateContainerData = JSON.parse(
+  fs.readFileSync(
+    './src/delivery-order/example/update-container.json',
+    'utf-8',
+  ),
+);
+
+export const createNonContainerData = JSON.parse(
+  fs.readFileSync(
+    './src/delivery-order/example/create-noncontainer.json',
+    'utf-8',
+  ),
+);
+
+export const updateNonContainerData = JSON.parse(
+  fs.readFileSync(
+    './src/delivery-order/example/update-noncontainer.json',
+    'utf-8',
+  ),
 );

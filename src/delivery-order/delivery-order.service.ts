@@ -296,7 +296,351 @@ export class DeliveryOrderService {
     };
   }
 
-  //CREATE NON KONTAINER
+  // CREATE KONTAINER
+  async createKontainer(data: RequestDoDto, token: string, status?: StatusDo) {
+    const userInfo = await this.userService.getDetail(token);
+    const created_by = userInfo.sub;
+
+    // CHECK IF REQUEST TYPE = 1
+    if (data.requestType !== 1) {
+      throw new BadRequestException(
+        'Tidak dapat melakukan create DO kontainer, requestType != 1',
+      );
+    }
+
+    // CHECK IF USER IS FF AND SURAT KUASA EXIST
+    if (
+      data.requestDetail.requestor.requestorType == '2' &&
+      !data.requestDetail.requestor.urlFile
+    ) {
+      throw new BadRequestException('Freight Forwarder required surat kuasa');
+    }
+
+    const dataDokumen = data.supportingDocument.documentType.map((item) => {
+      const data: Partial<td_do_dok_form> = {
+        created_by,
+        id_jenis_dok: +item.document,
+        filepath_dok: item.urlFile,
+        no_dok: item.documentNo,
+        tgl_dok: new Date(item.documentDate),
+      };
+
+      return data;
+    });
+
+    const dataInvoice = data.paymentDetail.invoice.map((item) => {
+      const data: Partial<td_do_invoice_form> = {
+        created_by,
+        filepath_buktibayar: item.urlFile,
+        id_bank: +item.bankId,
+        no_invoice: item.invoiceNo,
+        tgl_invoice: new Date(item.invoiceDate),
+        no_rekening: item.accountNo,
+        total_payment: item.totalAmount,
+        id_currency: item.currency, //TODO: ADD CURRENCY JSON
+      };
+
+      return data;
+    });
+
+    const createdDo = await this.prisma.td_reqdo_header_form.create({
+      data: {
+        request_type: data.requestType,
+        no_reqdo: generateNoReq(data.requestDetail.shippingLine.shippingType),
+        created_by,
+        td_do_requestor_form: {
+          create: {
+            jenis_requestor: {
+              connectOrCreate: {
+                create: {
+                  name:
+                    +data.requestDetail.requestor.requestorType === 1
+                      ? 'CO'
+                      : 'FF',
+                },
+                where: {
+                  id: +data.requestDetail.requestor.requestorType,
+                },
+              },
+            },
+            alamat: data.requestDetail.requestor.requestorAddress,
+            created_by,
+            nama: data.requestDetail.requestor.requestorName,
+            nib: data.requestDetail.requestor.nib,
+            filepath_suratkuasa: data.requestDetail.requestor.urlFile,
+          },
+        },
+        td_do_bl_form: {
+          create: {
+            created_by,
+            filepath_dok: data.requestDetail.document.urlFile,
+            id_jenis_bl: +data.requestDetail.document.ladingBillType,
+            no_bl: data.requestDetail.document.ladingBillNumber,
+            tgl_bl: new Date(data.requestDetail.document.ladingBillDate),
+          },
+        },
+        td_do_req_form: {
+          create: {
+            created_by,
+            id_metode_bayar: +data.requestDetail.payment,
+            id_shippingline: data.requestDetail.shippingLine.shippingType,
+            nama_vessel: data.requestDetail.shippingLine.vesselName,
+            no_voyage: data.requestDetail.shippingLine.voyageNumber,
+            tgl_reqdo_exp: new Date(data.requestDetail.shippingLine.doExpired),
+          },
+        },
+
+        td_parties_detail_form: {
+          create: {
+            created_by,
+            id_negara_loading: data.location.locationType[0].countryCode,
+            id_port_loading: data.location.locationType[0].portCode,
+            id_port_discharge: data.location.locationType[1].portCode,
+            id_port_destination: data.location.locationType[2].portCode,
+            nama_consignee: data.parties.consignee.name,
+            nama_notifyparty: data.parties.notifyParty.name,
+            nama_shipper: data.parties.shipper.name,
+            npwp_consignee: data.parties.shipper.npwp,
+            npwp_notifyparty: data.parties.notifyParty.npwp,
+          },
+        },
+        td_do_dok_form: {
+          createMany: {
+            data: dataDokumen as td_do_dok_form[],
+          },
+        },
+        td_do_invoice_form: {
+          createMany: {
+            data: dataInvoice as td_do_invoice_form[],
+          },
+        },
+        td_reqdo_status: {
+          create: {
+            name: status ?? 'Draft',
+          },
+        },
+      },
+    });
+
+    // TODO: POPULATE DATA SEAL TO CONTAINER ITEM
+    const promises = data.cargoDetail.container.map((item) => {
+      return this.prisma.td_do_kontainer_form.create({
+        data: {
+          id_reqdo_header: createdDo.id,
+          created_by,
+          gross_weight: item.grossWeight.amount,
+          no_kontainer: item.containerNo,
+          id_sizeType: item.sizeType.size,
+          id_ownership: +item.ownership,
+          id_gross_weight_unit: item.grossWeight.unit,
+          seals: {
+            create: item.sealNo.map((val) => ({
+              assignedBy: created_by,
+              seal: {
+                create: {
+                  no_seal: val,
+                },
+              },
+            })),
+          },
+        },
+      });
+    });
+
+    // Using Promise.all to wait for all promises to resolve
+    Promise.all(promises)
+      .then((results) => {
+        console.log('All promises resolved successfully');
+      })
+      .catch((error) => {
+        console.error('Error in one or more promises:', error);
+      });
+
+    return {
+      messsage: 'success',
+      data: createdDo,
+    };
+  }
+
+  // UPDATE KONTAINER
+  async updateKontainer(
+    idDO: number,
+    data: RequestDoDto,
+    token: string,
+    status?: StatusDo,
+  ) {
+    const userInfo = await this.userService.getDetail(token);
+    const updated_by = userInfo.sub;
+
+    // CHECK IF REQUEST TYPE = 1
+    if (data.requestType !== 1) {
+      throw new BadRequestException(
+        'Tidak dapat melakukan create DO kontainer, requestType != 1',
+      );
+    }
+
+    // CHECK IF USER IS FF AND SURAT KUASA EXIST
+    if (
+      data.requestDetail.requestor.requestorType == '2' &&
+      !data.requestDetail.requestor.urlFile
+    ) {
+      throw new BadRequestException('Freight Forwarder required surat kuasa');
+    }
+
+    const dataDokumen = data.supportingDocument.documentType.map((item) => {
+      const data: Partial<td_do_dok_form> = {
+        updated_by,
+        created_by: updated_by,
+        updated_at: new Date(),
+        id_jenis_dok: +item.document,
+        filepath_dok: item.urlFile,
+        no_dok: item.documentNo,
+        tgl_dok: new Date(item.documentDate),
+      };
+      return data;
+    });
+
+    const dataInvoice = data.paymentDetail.invoice.map((item) => {
+      const data: Partial<td_do_invoice_form> = {
+        updated_by,
+        created_by: updated_by,
+        updated_at: new Date(),
+        filepath_buktibayar: item.urlFile,
+        id_bank: +item.bankId,
+        no_invoice: item.invoiceNo,
+        tgl_invoice: new Date(item.invoiceDate),
+        no_rekening: item.accountNo,
+        total_payment: item.totalAmount,
+        id_currency: item.currency, //TODO: ADD CURRENCY JSON
+      };
+      return data;
+    });
+
+    // CHECK IF DO already exist
+    const doData = await this.getDoDetail(+idDO);
+    if (!doData) {
+      throw new NotFoundException(`DO with id = ${idDO} not found`);
+    }
+
+    const updateDo = await this.prisma.td_reqdo_header_form.update({
+      where: {
+        id: idDO,
+      },
+      data: {
+        td_do_requestor_form: {
+          update: {
+            jenis_requestor: {
+              update: {
+                name:
+                  +data.requestDetail.requestor.requestorType === 1
+                    ? 'CO'
+                    : 'FF',
+              },
+            },
+            filepath_suratkuasa: data.requestDetail.requestor.urlFile,
+          },
+        },
+        td_do_bl_form: {
+          update: {
+            updated_by,
+            updated_at: new Date(),
+            filepath_dok: data.requestDetail.document.urlFile,
+            id_jenis_bl: +data.requestDetail.document.ladingBillType,
+            no_bl: data.requestDetail.document.ladingBillNumber,
+            tgl_bl: new Date(data.requestDetail.document.ladingBillDate),
+          },
+        },
+        td_do_req_form: {
+          update: {
+            updated_by,
+            updated_at: new Date(),
+            id_metode_bayar: +data.requestDetail.payment,
+            id_shippingline: data.requestDetail.shippingLine.shippingType,
+            nama_vessel: data.requestDetail.shippingLine.vesselName,
+            no_voyage: data.requestDetail.shippingLine.voyageNumber,
+            tgl_reqdo_exp: new Date(data.requestDetail.shippingLine.doExpired),
+          },
+        },
+        td_parties_detail_form: {
+          update: {
+            updated_by,
+            updated_at: new Date(),
+            id_negara_loading: data.location.locationType[0].countryCode,
+            id_port_loading: data.location.locationType[0].portCode,
+            id_port_discharge: data.location.locationType[1].portCode,
+            id_port_destination: data.location.locationType[2].portCode,
+            nama_consignee: data.parties.consignee.name,
+            nama_notifyparty: data.parties.notifyParty.name,
+            nama_shipper: data.parties.shipper.name,
+            npwp_consignee: data.parties.consignee.npwp,
+            npwp_notifyparty: data.parties.notifyParty.npwp,
+          },
+        },
+        td_do_dok_form: {
+          deleteMany: {},
+          createMany: {
+            data: dataDokumen as td_do_dok_form[],
+          },
+        },
+        td_do_invoice_form: {
+          deleteMany: {},
+          createMany: {
+            data: dataInvoice as td_do_invoice_form[],
+          },
+        },
+        td_do_kontainer_form: {
+          deleteMany: {},
+        },
+        td_reqdo_status: {
+          create: {
+            name: status ?? 'Draft',
+          },
+        },
+      },
+    });
+
+    const promises = data.cargoDetail.container.map((item) => {
+      return this.prisma.td_do_kontainer_form.create({
+        data: {
+          id_reqdo_header: updateDo.id,
+          updated_by,
+          created_by: updated_by,
+          updated_at: new Date(),
+          gross_weight: item.grossWeight.amount,
+          no_kontainer: item.containerNo,
+          id_sizeType: item.sizeType.size,
+          id_ownership: +item.ownership,
+          id_gross_weight_unit: item.grossWeight.unit,
+          seals: {
+            create: item.sealNo.map((val) => ({
+              assignedBy: updated_by,
+              seal: {
+                create: {
+                  no_seal: val,
+                },
+              },
+            })),
+          },
+        },
+      });
+    });
+
+    // Using Promise.all to wait for all promises to resolve
+    Promise.all(promises)
+      .then((results) => {
+        console.log('All promises resolved successfully');
+      })
+      .catch((error) => {
+        console.error('Error in one or more promises:', error);
+      });
+
+    return {
+      messsage: 'success',
+      data: updateDo,
+    };
+  }
+
+  // CREATE NON KONTAINER
   async createNonKontainer(
     data: RequestDoDto,
     token: string,
@@ -304,6 +648,14 @@ export class DeliveryOrderService {
   ) {
     const userInfo = await this.userService.getDetail(token);
     const created_by = userInfo.sub;
+
+    // CHECK IF REQUEST TYPE = 2
+    if (data.requestType !== 2) {
+      throw new BadRequestException(
+        'Tidak dapat melakukan create DO non kontainer, requestType != 2',
+      );
+    }
+
     // CHECK IF USER IS FF AND SURAT KUASA EXIST
     if (
       data.requestDetail.requestor.requestorType == '2' &&
@@ -461,166 +813,13 @@ export class DeliveryOrderService {
     };
   }
 
-  // CREATE KONTAINER
-  async createKontainer(data: RequestDoDto, token: string, status?: StatusDo) {
-    const userInfo = await this.userService.getDetail(token);
-    const created_by = userInfo.sub;
-
-    // CHECK IF USER IS FF AND SURAT KUASA EXIST
-    if (
-      data.requestDetail.requestor.requestorType == '2' &&
-      !data.requestDetail.requestor.urlFile
-    ) {
-      throw new BadRequestException('Freight Forwarder required surat kuasa');
+  // UPDATE NON KONTAINER
+  async updateNonKontainer(data: RequestDoDto, status?: StatusDo) {
+    // CHECK IF REQUEST TYPE = 2
+    if (data.requestType !== 2) {
+      throw new BadRequestException(
+        'Tidak dapat melakukan create DO non kontainer, requestType != 2',
+      );
     }
-
-    const dataDokumen = data.supportingDocument.documentType.map((item) => {
-      const data: Partial<td_do_dok_form> = {
-        created_by,
-        id_jenis_dok: +item.document,
-        filepath_dok: item.urlFile,
-        no_dok: item.documentNo,
-        tgl_dok: new Date(item.documentDate),
-      };
-
-      return data;
-    });
-
-    const dataInvoice = data.paymentDetail.invoice.map((item) => {
-      const data: Partial<td_do_invoice_form> = {
-        created_by,
-        filepath_buktibayar: item.urlFile,
-        id_bank: +item.bankId,
-        no_invoice: item.invoiceNo,
-        tgl_invoice: new Date(item.invoiceDate),
-        no_rekening: item.accountNo,
-        total_payment: item.totalAmount,
-        id_currency: item.currency, //TODO: ADD CURRENCY JSON
-      };
-
-      return data;
-    });
-
-    const createdDo = await this.prisma.td_reqdo_header_form.create({
-      data: {
-        request_type: data.requestType,
-        no_reqdo: generateNoReq(data.requestDetail.shippingLine.shippingType),
-        created_by,
-        td_do_requestor_form: {
-          create: {
-            jenis_requestor: {
-              connectOrCreate: {
-                create: {
-                  name:
-                    +data.requestDetail.requestor.requestorType === 1
-                      ? 'CO'
-                      : 'FF',
-                },
-                where: {
-                  id: +data.requestDetail.requestor.requestorType,
-                },
-              },
-            },
-            alamat: data.requestDetail.requestor.requestorAddress,
-            created_by,
-            nama: data.requestDetail.requestor.requestorName,
-            nib: data.requestDetail.requestor.nib,
-            filepath_suratkuasa: data.requestDetail.requestor.urlFile,
-          },
-        },
-        td_do_bl_form: {
-          create: {
-            created_by,
-            filepath_dok: data.requestDetail.document.urlFile,
-            id_jenis_bl: +data.requestDetail.document.ladingBillType,
-            no_bl: data.requestDetail.document.ladingBillNumber,
-            tgl_bl: new Date(data.requestDetail.document.ladingBillDate),
-          },
-        },
-        td_do_req_form: {
-          create: {
-            created_by,
-            id_metode_bayar: +data.requestDetail.payment,
-            id_shippingline: data.requestDetail.shippingLine.shippingType,
-            nama_vessel: data.requestDetail.shippingLine.vesselName,
-            no_voyage: data.requestDetail.shippingLine.voyageNumber,
-            tgl_reqdo_exp: new Date(data.requestDetail.shippingLine.doExpired),
-          },
-        },
-
-        td_parties_detail_form: {
-          create: {
-            created_by,
-            id_negara_loading: data.location.locationType[0].countryCode,
-            id_port_loading: data.location.locationType[0].portCode,
-            id_port_discharge: data.location.locationType[1].portCode,
-            id_port_destination: data.location.locationType[2].portCode,
-            nama_consignee: data.parties.consignee.name,
-            nama_notifyparty: data.parties.notifyParty.name,
-            nama_shipper: data.parties.shipper.name,
-            npwp_consignee: data.parties.shipper.npwp,
-            npwp_notifyparty: data.parties.notifyParty.npwp,
-          },
-        },
-        td_do_dok_form: {
-          createMany: {
-            data: dataDokumen as td_do_dok_form[],
-          },
-        },
-        td_do_invoice_form: {
-          createMany: {
-            data: dataInvoice as td_do_invoice_form[],
-          },
-        },
-        td_reqdo_status: {
-          create: {
-            name: status ?? 'Draft',
-          },
-        },
-      },
-    });
-
-    // TODO: POPULATE DATA SEAL TO CONTAINER ITEM
-    const promises = data.cargoDetail.container.map((item) => {
-      return this.prisma.td_do_kontainer_form.create({
-        data: {
-          id_reqdo_header: createdDo.id,
-          created_by,
-          gross_weight: item.grossWeight.amount,
-          no_kontainer: item.containerNo,
-          id_sizeType: item.sizeType.size,
-          id_ownership: +item.ownership,
-          id_gross_weight_unit: item.grossWeight.unit,
-          seals: {
-            create: item.sealNo.map((val) => ({
-              assignedBy: created_by,
-              seal: {
-                create: {
-                  no_seal: val,
-                },
-              },
-            })),
-          },
-        },
-      });
-    });
-
-    // Using Promise.all to wait for all promises to resolve
-    Promise.all(promises)
-      .then((results) => {
-        console.log('All promises resolved successfully');
-      })
-      .catch((error) => {
-        console.error('Error in one or more promises:', error);
-      });
-
-    return {
-      messsage: 'success',
-      data: createdDo,
-    };
   }
-
-  async updateKontainer(data: RequestDoDto, status?: StatusDo) {}
-
-  async updateNonKontainer(data: RequestDoDto, status?: StatusDo) {}
 }

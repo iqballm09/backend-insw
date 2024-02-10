@@ -1,5 +1,10 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { containerData, nonContainerData } from '../example/read_data';
+import {
+  createContainerData,
+  createNonContainerData,
+  updateContainerData,
+  updateNonContainerData,
+} from '../example/read_data';
 
 class Requestor {
   requestorType: string;
@@ -129,16 +134,30 @@ export class RequestDoDto {
   };
 }
 
-export class NonContainerRequestDO {
+export class CreateNonContainerRequestDO {
   @ApiProperty({
-    example: nonContainerData,
+    example: createNonContainerData,
   })
   request: RequestDoDto;
 }
 
-export class ContainerRequestDO {
+export class UpdateNonContainerRequestDO {
   @ApiProperty({
-    example: containerData,
+    example: updateNonContainerData,
+  })
+  request: RequestDoDto;
+}
+
+export class CreateContainerRequestDO {
+  @ApiProperty({
+    example: createContainerData,
+  })
+  request: RequestDoDto;
+}
+
+export class UpdateContainerRequestDO {
+  @ApiProperty({
+    example: updateContainerData,
   })
   request: RequestDoDto;
 }

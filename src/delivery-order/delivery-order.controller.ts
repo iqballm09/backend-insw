@@ -5,15 +5,20 @@ import {
   Get,
   Param,
   Post,
+  Put,
   Query,
   Req,
   UseGuards,
 } from '@nestjs/common';
 import { DeliveryOrderService } from './delivery-order.service';
-import { ContainerRequestDO, NonContainerRequestDO } from './dto/create-do.dto';
 import { StatusDo } from '@prisma/client';
 import { AuthGuard } from 'src/auth/guard/auth.guard';
 import { ApiBearerAuth, ApiBody, ApiTags } from '@nestjs/swagger';
+import {
+  CreateContainerRequestDO,
+  CreateNonContainerRequestDO,
+  UpdateContainerRequestDO,
+} from './dto/create-do.dto';
 
 @ApiTags('Delivery Order')
 @Controller('do')
@@ -24,10 +29,31 @@ export class DeliveryOrderController {
   @UseGuards(AuthGuard)
   @ApiBearerAuth()
   @ApiBody({
-    type: ContainerRequestDO,
+    type: CreateContainerRequestDO,
   })
-  createDoKontainer(@Body() payload: ContainerRequestDO, @Req() req: any) {
+  createDoKontainer(
+    @Body() payload: CreateContainerRequestDO,
+    @Req() req: any,
+  ) {
     return this.deliveryOrderService.createKontainer(
+      payload.request,
+      req.token,
+    );
+  }
+
+  @Put('kontainer/:id')
+  @UseGuards(AuthGuard)
+  @ApiBearerAuth()
+  @ApiBody({
+    type: UpdateContainerRequestDO,
+  })
+  updateDoKontainer(
+    @Param('id') id: number,
+    @Body() payload: UpdateContainerRequestDO,
+    @Req() req: any,
+  ) {
+    return this.deliveryOrderService.updateKontainer(
+      +id,
       payload.request,
       req.token,
     );
@@ -57,11 +83,11 @@ export class DeliveryOrderController {
   @Post('non-kontainer')
   @UseGuards(AuthGuard)
   @ApiBody({
-    type: NonContainerRequestDO,
+    type: CreateNonContainerRequestDO,
   })
   @ApiBearerAuth()
   createDoNonKontainer(
-    @Body() payload: NonContainerRequestDO,
+    @Body() payload: CreateNonContainerRequestDO,
     @Req() req: any,
   ) {
     return this.deliveryOrderService.createNonKontainer(
