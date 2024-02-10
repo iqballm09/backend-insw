@@ -20,12 +20,15 @@ import {
 import * as moment from 'moment';
 import { UserService } from 'src/user/user.service';
 import { generateNoReq } from 'src/util';
+import axios from 'axios';
+import { ShippinglineService } from 'src/referensi/shippingline/shippingline.service';
 
 @Injectable()
 export class DeliveryOrderService {
   constructor(
     private prisma: PrismaService,
     private userService: UserService,
+    private shippinglineService: ShippinglineService,
   ) {}
 
   async getAllDo(token: string) {
@@ -83,18 +86,25 @@ export class DeliveryOrderService {
           isContainer: item.request_type == 1,
         }));
     } else {
-      return data.map((item) => ({
-        id: item.id,
-        requestNumber: item.no_reqdo,
-        requestTime: moment(item.tgl_reqdo).format('DD-MM-YYYY HH:mm:ss'),
-        blNumber: item.td_do_bl_form.no_bl,
-        blDate: moment(item.td_do_bl_form.tgl_bl).format('DD-MM-YYYY'),
-        requestName: item.td_do_requestor_form.nama,
-        shippingLine: item.td_do_req_form.id_shippingline,
-        pod: item.td_parties_detail_form.id_port_discharge,
-        status: item.td_reqdo_status[0].name,
-        isContainer: item.request_type == 1,
-      }));
+      const sl_data = (await this.shippinglineService.findAll(token)).data
+        .filter(
+          (sl) => sl.kd_detail_ga === userInfo.profile.details.kd_detail_ga,
+        )
+        .map((sl) => sl.kode);
+      return data
+        .filter((item) => sl_data.includes(item.td_do_req_form.id_shippingline))
+        .map((item) => ({
+          id: item.id,
+          requestNumber: item.no_reqdo,
+          requestTime: moment(item.tgl_reqdo).format('DD-MM-YYYY HH:mm:ss'),
+          blNumber: item.td_do_bl_form.no_bl,
+          blDate: moment(item.td_do_bl_form.tgl_bl).format('DD-MM-YYYY'),
+          requestName: item.td_do_requestor_form.nama,
+          shippingLine: item.td_do_req_form.id_shippingline,
+          pod: item.td_parties_detail_form.id_port_discharge,
+          status: item.td_reqdo_status[0].name,
+          isContainer: item.request_type == 1,
+        }));
     }
   }
 
