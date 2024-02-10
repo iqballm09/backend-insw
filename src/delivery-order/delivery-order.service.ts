@@ -18,6 +18,7 @@ import {
 } from '@prisma/client';
 import * as moment from 'moment';
 import { UserService } from 'src/user/user.service';
+import { generateNoReq } from 'src/util';
 
 @Injectable()
 export class DeliveryOrderService {
@@ -315,6 +316,7 @@ export class DeliveryOrderService {
     const createdDo = await this.prisma.td_reqdo_header_form.create({
       data: {
         request_type: data.requestType,
+        no_reqdo: generateNoReq(data.requestDetail.shippingLine.shippingType),
         created_by,
         td_do_requestor_form: {
           create: {
@@ -468,6 +470,7 @@ export class DeliveryOrderService {
     const createdDo = await this.prisma.td_reqdo_header_form.create({
       data: {
         request_type: data.requestType,
+        no_reqdo: generateNoReq(data.requestDetail.shippingLine.shippingType),
         created_by,
         td_do_requestor_form: {
           create: {

@@ -1,4 +1,5 @@
 import { HttpException, HttpStatus } from '@nestjs/common';
+import * as moment from 'moment';
 
 export function validateError(error) {
   // Handle specific error cases if needed
@@ -31,4 +32,14 @@ export function validateError(error) {
       HttpStatus.INTERNAL_SERVER_ERROR,
     );
   }
+}
+
+export function generateNoReq(shippingType: string) {
+  const randomNo = Math.floor(Math.random() * 10000) + 10000;
+  const noReq =
+    'LNSW' +
+    moment(new Date()).format('YYYYMMDD').toString() +
+    shippingType +
+    randomNo.toString();
+  return noReq;
 }
