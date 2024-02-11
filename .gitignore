@@ -2,7 +2,6 @@
 /dist
 /node_modules
 /assets
-/prisma/migrations
 /uploads
 # Logs
 logs

@@ -74,9 +74,14 @@ export class AuthService {
             : ('CO' as UserRole),
         };
         this.userService.create(userInfo.sub, role);
+        return {
+          redirect: true,
+          username: userInfo.sub,
+          token: data.access_token,
+        };
       }
 
-      // IF USER NOT HAVE PASSWORD, REDIRECT TO SIGN UP PAGE
+      // IF USER STILL NOT HAVE PASSWORD, REDIRECT TO SIGN UP PAGE
       if (!userExist.hash) {
         return {
           redirect: true,
