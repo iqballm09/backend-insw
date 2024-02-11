@@ -398,6 +398,13 @@ export class DeliveryOrderService {
     const userInfo = await this.userService.getDetail(token);
     const created_by = userInfo.sub;
 
+    // CHECK IF USER ROLE IS CO
+    if (userInfo.profile.details.kd_detail_ga) {
+      throw new BadRequestException(
+        'Cannot create DO container, Role is not CO',
+      );
+    }
+
     // CHECK IF REQUEST TYPE = 1
     if (data.requestType !== 1) {
       throw new BadRequestException(
@@ -568,6 +575,13 @@ export class DeliveryOrderService {
   ) {
     const userInfo = await this.userService.getDetail(token);
     const updated_by = userInfo.sub;
+
+    // CHECK IF USER ROLE IS CO
+    if (userInfo.profile.details.kd_detail_ga) {
+      throw new BadRequestException(
+        'Cannot update DO container, Role is not CO',
+      );
+    }
 
     // CHECK IF REQUEST TYPE = 1
     if (data.requestType !== 1) {
@@ -746,6 +760,13 @@ export class DeliveryOrderService {
     const userInfo = await this.userService.getDetail(token);
     const created_by = userInfo.sub;
 
+    // CHECK IF USER ROLE IS CO
+    if (userInfo.profile.details.kd_detail_ga) {
+      throw new BadRequestException(
+        'Cannot create DO non container, Role is not CO',
+      );
+    }
+
     // CHECK IF REQUEST TYPE = 2
     if (data.requestType !== 2) {
       throw new BadRequestException(
@@ -919,6 +940,13 @@ export class DeliveryOrderService {
   ) {
     const userInfo = await this.userService.getDetail(token);
     const updated_by = userInfo.sub;
+
+    // CHECK IF USER ROLE IS CO
+    if (userInfo.profile.details.kd_detail_ga) {
+      throw new BadRequestException(
+        'Cannot update DO non container, Role is not CO',
+      );
+    }
 
     // CHECK IF REQUEST TYPE = 2
     if (data.requestType !== 2) {
