@@ -16,6 +16,7 @@ import {
   td_do_nonkontainer_form,
   td_do_vin,
   User,
+  td_depo,
 } from '@prisma/client';
 import * as moment from 'moment';
 import { UserService } from 'src/user/user.service';
@@ -301,7 +302,8 @@ export class DeliveryOrderService {
   // UPDATE DO - SHIPPINGLINE
   async updateDoSL(idDO: number, data: UpdateDoSLDto, token: string) {
     const userInfo = await this.userService.getDetail(token);
-    const update_by = userInfo.sub;
+    const updated_by = userInfo.sub;
+    const updated_at = new Date();
 
     const updatedDo = await this.prisma.td_reqdo_header_form.update({
       where: {
@@ -316,10 +318,64 @@ export class DeliveryOrderService {
             no_do_release: data.doReleaseNo,
             tgl_do_release: data.doReleaseDate,
             tgl_do_exp: data.doExpiredDate,
+            id_terminal_op: data.terminalOperator,
           },
         },
       },
     });
+
+    const promises = data.cargoDetailSL.map((item) => {
+      return this.prisma.td_do_kontainer_form.update({
+        where: {
+          id: item.containerId,
+        },
+        data: {
+          updated_by,
+          updated_at,
+          no_kontainer: item.containerNo,
+          id_sizeType: item.sizeType,
+          td_depo: {
+            upsert: {
+              where: {
+                id: item.depoDetail.idDepo,
+              },
+              create: {
+                kode_depo: item.depoDetail.depoName,
+                deskripsi: item.depoDetail.depoName,
+                npwp: item.depoDetail.depoNpwp,
+                alamat: item.depoDetail.alamat,
+                kode_pos: item.depoDetail.kodePos,
+                no_telp: item.depoDetail.noTelp,
+                id_kabkota: +item.depoDetail.kotaDepo,
+              },
+              update: {
+                kode_depo: item.depoDetail.depoName,
+                deskripsi: item.depoDetail.depoName,
+                npwp: item.depoDetail.depoNpwp,
+                alamat: item.depoDetail.alamat,
+                kode_pos: item.depoDetail.kodePos,
+                no_telp: item.depoDetail.noTelp,
+                id_kabkota: +item.depoDetail.kotaDepo,
+              },
+            },
+          },
+        },
+      });
+    });
+
+    // Using Promise.all to wait for all promises to resolve
+    Promise.all(promises)
+      .then((results) => {
+        console.log('All promises resolved successfully');
+      })
+      .catch((error) => {
+        console.error('Error in one or more promises:', error);
+      });
+
+    return {
+      message: 'success',
+      data: updatedDo,
+    };
   }
 
   // CREATE KONTAINER
@@ -456,7 +512,7 @@ export class DeliveryOrderService {
           created_by,
           gross_weight: item.grossWeight.amount,
           no_kontainer: item.containerNo,
-          id_sizeType: item.sizeType.size,
+          id_sizeType: item.sizeType.size, // perbaiki
           id_ownership: +item.ownership,
           id_gross_weight_unit: item.grossWeight.unit,
           seals: {

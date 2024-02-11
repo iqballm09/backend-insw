@@ -153,7 +153,7 @@ model td_do_kontainer_form {
   id                   Int      @id @default(autoincrement())
   id_reqdo_header      Int
   id_depo              Int?
-  id_sizeType          Int
+  id_sizeType          String
   id_ownership         Int
   id_gross_weight_unit String
   no_kontainer         String   @db.VarChar(20)
@@ -183,7 +183,6 @@ model sealsOnKontainers {
 model td_depo {
   id         Int    @id @default(autoincrement())
   id_kabkota Int
-  kode_depo  String @db.VarChar(30)
   npwp       String @db.VarChar(15)
   deskripsi  String @db.VarChar(255)
   alamat     String @db.VarChar(1025)

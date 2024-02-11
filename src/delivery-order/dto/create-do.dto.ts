@@ -135,6 +135,7 @@ export class RequestDoDto {
 }
 
 export class DepoDto {
+  idDepo?: number;
   depoName: string;
   depoNpwp: string;
   noTelp: string;
@@ -144,6 +145,7 @@ export class DepoDto {
 }
 
 export class CargoDetailSL {
+  containerId: number;
   containerNo: string;
   sizeType: string;
   depoDetail: DepoDto;
