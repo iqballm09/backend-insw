@@ -106,7 +106,7 @@ model td_do_requestor_form {
 model td_do_req_form {
   id              Int       @id @default(autoincrement())
   id_reqdo_header Int       @unique
-  id_terminal_op  Int?
+  id_terminal_op  String?
   id_shippingline String
   id_metode_bayar Int
   nama_vessel     String    @db.VarChar(45)

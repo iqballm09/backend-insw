@@ -4,7 +4,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { RequestDoDto } from './dto/create-do.dto';
+import { RequestDoDto, UpdateDoSLDto } from './dto/create-do.dto';
 import { PrismaService } from 'src/prisma/prisma.service';
 import {
   StatusDo,
@@ -296,6 +296,30 @@ export class DeliveryOrderService {
       message: 'success',
       data: deleted,
     };
+  }
+
+  // UPDATE DO - SHIPPINGLINE
+  async updateDoSL(idDO: number, data: UpdateDoSLDto, token: string) {
+    const userInfo = await this.userService.getDetail(token);
+    const update_by = userInfo.sub;
+
+    const updatedDo = await this.prisma.td_reqdo_header_form.update({
+      where: {
+        id: idDO,
+      },
+      data: {
+        td_do_req_form: {
+          update: {
+            nama_vessel: data.vesselName,
+            no_voyage: data.voyageNo,
+            call_sign: data.callSign,
+            no_do_release: data.doReleaseNo,
+            tgl_do_release: data.doReleaseDate,
+            tgl_do_exp: data.doExpiredDate,
+          },
+        },
+      },
+    });
   }
 
   // CREATE KONTAINER

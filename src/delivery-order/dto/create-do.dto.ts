@@ -134,6 +134,32 @@ export class RequestDoDto {
   };
 }
 
+export class DepoDto {
+  depoName: string;
+  depoNpwp: string;
+  noTelp: string;
+  alamat: string;
+  kotaDepo: string;
+  kodePos: string;
+}
+
+export class CargoDetailSL {
+  containerNo: string;
+  sizeType: string;
+  depoDetail: DepoDto;
+}
+
+export class UpdateDoSLDto {
+  vesselName: string;
+  voyageNo: string;
+  callSign: string;
+  doReleaseNo: string;
+  doReleaseDate: string;
+  doExpiredDate: string;
+  terminalOperator: string;
+  cargoDetailSL: CargoDetailSL[];
+}
+
 export class CreateNonContainerRequestDO {
   @ApiProperty({
     example: createNonContainerData,
@@ -160,4 +186,9 @@ export class UpdateContainerRequestDO {
     example: updateContainerData,
   })
   request: RequestDoDto;
+}
+
+export class UpdateCargoDetailSL {
+  @ApiProperty()
+  request: UpdateDoSLDto;
 }

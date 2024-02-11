@@ -8,6 +8,7 @@ import {
   Put,
   Query,
   Req,
+  UnsupportedMediaTypeException,
   UseGuards,
 } from '@nestjs/common';
 import { DeliveryOrderService } from './delivery-order.service';
@@ -17,7 +18,9 @@ import { ApiBearerAuth, ApiBody, ApiTags } from '@nestjs/swagger';
 import {
   CreateContainerRequestDO,
   CreateNonContainerRequestDO,
+  UpdateCargoDetailSL,
   UpdateContainerRequestDO,
+  UpdateDoSLDto,
   UpdateNonContainerRequestDO,
 } from './dto/create-do.dto';
 
@@ -88,6 +91,23 @@ export class DeliveryOrderController {
     @Req() req: any,
   ) {
     return this.deliveryOrderService.updateNonKontainer(
+      +id,
+      payload.request,
+      req.token,
+    );
+  }
+
+  @Put('shipping-line/:id')
+  @UseGuards(AuthGuard)
+  @ApiBody({
+    type: UpdateDoSLDto,
+  })
+  updateDoSL(
+    @Param('id') id: number,
+    @Body() payload: UpdateCargoDetailSL,
+    @Req() req: any,
+  ) {
+    return this.deliveryOrderService.updateDoSL(
       +id,
       payload.request,
       req.token,
