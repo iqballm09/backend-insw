@@ -27,3 +27,7 @@ export const updateNonContainerData = JSON.parse(
     'utf-8',
   ),
 );
+
+export const updateDoSLData = JSON.parse(
+  fs.readFileSync('./src/delivery-order/example/update-cargo-sl.json', 'utf-8'),
+);

@@ -99,8 +99,9 @@ export class DeliveryOrderController {
 
   @Put('shipping-line/:id')
   @UseGuards(AuthGuard)
+  @ApiBearerAuth()
   @ApiBody({
-    type: UpdateDoSLDto,
+    type: UpdateCargoDetailSL,
   })
   updateDoSL(
     @Param('id') id: number,

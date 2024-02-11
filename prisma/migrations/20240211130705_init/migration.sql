@@ -122,7 +122,7 @@ CREATE TABLE "td_do_kontainer_form" (
     "id" SERIAL NOT NULL,
     "id_reqdo_header" INTEGER NOT NULL,
     "id_depo" INTEGER,
-    "id_sizeType" INTEGER NOT NULL,
+    "id_sizeType" TEXT NOT NULL,
     "id_ownership" INTEGER NOT NULL,
     "id_gross_weight_unit" TEXT NOT NULL,
     "no_kontainer" VARCHAR(20) NOT NULL,
@@ -149,7 +149,6 @@ CREATE TABLE "sealsOnKontainers" (
 CREATE TABLE "td_depo" (
     "id" SERIAL NOT NULL,
     "id_kabkota" INTEGER NOT NULL,
-    "kode_depo" VARCHAR(30) NOT NULL,
     "npwp" VARCHAR(15) NOT NULL,
     "deskripsi" VARCHAR(255) NOT NULL,
     "alamat" VARCHAR(1025) NOT NULL,

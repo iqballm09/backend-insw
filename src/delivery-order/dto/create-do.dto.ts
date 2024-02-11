@@ -3,6 +3,7 @@ import {
   createContainerData,
   createNonContainerData,
   updateContainerData,
+  updateDoSLData,
   updateNonContainerData,
 } from '../example/read_data';
 
@@ -135,7 +136,7 @@ export class RequestDoDto {
 }
 
 export class DepoDto {
-  idDepo?: number;
+  depoId?: number;
   depoName: string;
   depoNpwp: string;
   noTelp: string;
@@ -158,8 +159,8 @@ export class UpdateDoSLDto {
   doReleaseNo: string;
   doReleaseDate: string;
   doExpiredDate: string;
-  terminalOperator: string;
-  cargoDetailSL?: CargoDetailSL[];
+  terminalOp: string;
+  cargoDetail?: CargoDetailSL[];
 }
 
 export class CreateNonContainerRequestDO {
@@ -191,6 +192,8 @@ export class UpdateContainerRequestDO {
 }
 
 export class UpdateCargoDetailSL {
-  @ApiProperty()
+  @ApiProperty({
+    example: updateDoSLData,
+  })
   request: UpdateDoSLDto;
 }

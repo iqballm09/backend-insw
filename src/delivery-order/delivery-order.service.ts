@@ -208,15 +208,15 @@ export class DeliveryOrderService {
         blDate: moment(data.td_do_bl_form.tgl_bl).format('YYYY-MM-DD'),
         blType: data.td_do_bl_form.id_jenis_bl,
         blFile: data.td_do_bl_form.filepath_dok,
-        bc11Date: data.td_do_req_form.tanggal_bc11,
+        bc11Date: moment(data.td_do_req_form.tanggal_bc11).format('YYYY-MM-DD'),
         bc11Number: data.td_do_req_form.no_bc11,
         kodePos: data.td_do_req_form.kode_pos,
-        reqdoExp: data.td_do_req_form.tgl_reqdo_exp,
+        reqdoExp: moment(data.td_do_req_form.tgl_reqdo_exp).format('YYYY-MM-DD'),
         metodeBayar: data.td_do_req_form.id_metode_bayar,
         callSign: data.td_do_req_form.call_sign,
-        doReleaseDate: data.td_do_req_form.tgl_do_release,
+        doReleaseDate: moment(data.td_do_req_form.tgl_do_release).format('YYYY-MM-DD'),
         doReleaseNumber: data.td_do_req_form.no_do_release,
-        doExp: data.td_do_req_form.tgl_do_exp,
+        doExp: moment(data.td_do_req_form.tgl_do_exp).format('YYYY-MM-DD'),
         terminalOp: data.td_do_req_form.id_terminal_op,
       },
       partiesDetailForm: {
@@ -238,7 +238,7 @@ export class DeliveryOrderService {
         grossWeightUnit: data.id_gross_weight_unit,
         ownership: data.id_ownership,
         depoForm: {
-          nama: data.td_depo?.kode_depo,
+          nama: data.td_depo?.deskripsi,
           npwp: data.td_depo?.npwp,
           alamat: data.td_depo?.alamat,
           noTelp: data.td_depo?.no_telp,
@@ -261,7 +261,7 @@ export class DeliveryOrderService {
       })),
       paymentDetailForm: data.td_do_invoice_form.map((inv) => ({
         invoiceNumber: inv.no_invoice,
-        invoiceDate: inv.tgl_invoice,
+        invoiceDate: moment(inv.tgl_invoice).format('YYYY-MM-DD'),
         currency: inv.id_currency,
         totalPayment: inv.total_payment,
         bank: inv.id_bank,
@@ -271,7 +271,7 @@ export class DeliveryOrderService {
       supportingDocumentForm: data.td_do_dok_form.map((dok) => ({
         documentType: dok.id_jenis_dok,
         documentNumber: dok.no_dok,
-        documentDate: dok.tgl_dok,
+        documentDate: moment(dok.tgl_dok).format('YYYY-MM-DD'),
         urlFile: dok.filepath_dok,
       })),
     };
@@ -305,6 +305,13 @@ export class DeliveryOrderService {
     const updated_by = userInfo.sub;
     const updated_at = new Date();
 
+    // CHECK IF ROLE IS SHIPPING LINE
+    if (!userInfo.profile.details.kd_detail_ga) {
+      throw new BadRequestException(
+        'Cannot Update DO - Shippingline, Role is not SL',
+      );
+    }
+
     const updatedDo = await this.prisma.td_reqdo_header_form.update({
       where: {
         id: idDO,
@@ -316,15 +323,15 @@ export class DeliveryOrderService {
             no_voyage: data.voyageNo,
             call_sign: data.callSign,
             no_do_release: data.doReleaseNo,
-            tgl_do_release: data.doReleaseDate,
-            tgl_do_exp: data.doExpiredDate,
-            id_terminal_op: data.terminalOperator,
+            tgl_do_release: new Date(data.doReleaseDate),
+            tgl_do_exp: new Date(data.doExpiredDate),
+            id_terminal_op: data.terminalOp,
           },
         },
       },
     });
 
-    const promises = data.cargoDetailSL.map((item) => {
+    const promises = data.cargoDetail.map((item) => {
       return this.prisma.td_do_kontainer_form.update({
         where: {
           id: item.containerId,
@@ -337,10 +344,9 @@ export class DeliveryOrderService {
           td_depo: {
             upsert: {
               where: {
-                id: item.depoDetail.idDepo,
+                id: item.depoDetail.depoId,
               },
               create: {
-                kode_depo: item.depoDetail.depoName,
                 deskripsi: item.depoDetail.depoName,
                 npwp: item.depoDetail.depoNpwp,
                 alamat: item.depoDetail.alamat,
@@ -349,7 +355,6 @@ export class DeliveryOrderService {
                 id_kabkota: +item.depoDetail.kotaDepo,
               },
               update: {
-                kode_depo: item.depoDetail.depoName,
                 deskripsi: item.depoDetail.depoName,
                 npwp: item.depoDetail.depoNpwp,
                 alamat: item.depoDetail.alamat,
@@ -512,7 +517,7 @@ export class DeliveryOrderService {
           created_by,
           gross_weight: item.grossWeight.amount,
           no_kontainer: item.containerNo,
-          id_sizeType: item.sizeType.size, // perbaiki
+          id_sizeType: item.sizeType.size.toString() + item.sizeType.type,
           id_ownership: +item.ownership,
           id_gross_weight_unit: item.grossWeight.unit,
           seals: {
@@ -690,7 +695,7 @@ export class DeliveryOrderService {
           updated_at: new Date(),
           gross_weight: item.grossWeight.amount,
           no_kontainer: item.containerNo,
-          id_sizeType: item.sizeType.size,
+          id_sizeType: item.sizeType.size.toString() + item.sizeType.type,
           id_ownership: +item.ownership,
           id_gross_weight_unit: item.grossWeight.unit,
           seals: {
