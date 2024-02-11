@@ -132,7 +132,7 @@ export class DeliveryOrderController {
   @Delete(':id')
   @UseGuards(AuthGuard)
   @ApiBearerAuth()
-  deleteModel(@Param('id') id: string) {
-    return this.deliveryOrderService.deleteDo(+id);
+  deleteModel(@Param('id') id: string, @Req() req: any) {
+    return this.deliveryOrderService.deleteDo(+id, req.token);
   }
 }

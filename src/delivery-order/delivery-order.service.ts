@@ -211,10 +211,14 @@ export class DeliveryOrderService {
         bc11Date: moment(data.td_do_req_form.tanggal_bc11).format('YYYY-MM-DD'),
         bc11Number: data.td_do_req_form.no_bc11,
         kodePos: data.td_do_req_form.kode_pos,
-        reqdoExp: moment(data.td_do_req_form.tgl_reqdo_exp).format('YYYY-MM-DD'),
+        reqdoExp: moment(data.td_do_req_form.tgl_reqdo_exp).format(
+          'YYYY-MM-DD',
+        ),
         metodeBayar: data.td_do_req_form.id_metode_bayar,
         callSign: data.td_do_req_form.call_sign,
-        doReleaseDate: moment(data.td_do_req_form.tgl_do_release).format('YYYY-MM-DD'),
+        doReleaseDate: moment(data.td_do_req_form.tgl_do_release).format(
+          'YYYY-MM-DD',
+        ),
         doReleaseNumber: data.td_do_req_form.no_do_release,
         doExp: moment(data.td_do_req_form.tgl_do_exp).format('YYYY-MM-DD'),
         terminalOp: data.td_do_req_form.id_terminal_op,
@@ -278,7 +282,13 @@ export class DeliveryOrderService {
     return response;
   }
 
-  async deleteDo(idDo: number) {
+  async deleteDo(idDo: number, token: string) {
+    const userInfo = await this.userService.getDetail(token);
+    // CHECK IF USER ROLE IS CO OR SL
+    if (userInfo.profile.details.kd_detail_ga) {
+      throw new BadRequestException('Failed to delete DO, Role is not CO');
+    }
+
     const data = await this.prisma.td_reqdo_header_form.findUnique({
       where: {
         id: idDo,
