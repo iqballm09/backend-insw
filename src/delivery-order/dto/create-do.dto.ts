@@ -159,7 +159,7 @@ export class UpdateDoSLDto {
   doReleaseDate: string;
   doExpiredDate: string;
   terminalOperator: string;
-  cargoDetailSL: CargoDetailSL[];
+  cargoDetailSL?: CargoDetailSL[];
 }
 
 export class CreateNonContainerRequestDO {
