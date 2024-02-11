@@ -62,6 +62,9 @@ export class FilesController {
     @Query('type') type: FolderType,
   ) {
     // Handle file upload logic
+    if (!!!file) {
+      throw new BadRequestException('File required');
+    }
     return {
       urlFile: `${process.env.API_URI}/files/${type}/${file.filename.split('.')[0]}`,
     };

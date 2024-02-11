@@ -2,6 +2,7 @@ import { diskStorage } from 'multer';
 import { extname } from 'path';
 import * as fs from 'fs';
 import { buildOpenIdClient } from 'src/auth/strategy/oidc.strategy';
+import { BadRequestException } from '@nestjs/common';
 
 export const multerOptions = {
   storage: diskStorage({
@@ -17,8 +18,11 @@ export const multerOptions = {
       callback(null, dirpath);
     },
     filename: (req, file, callback) => {
+      // CHECK if FILE HAS BEEN UPLOADED
+      if (!!!file) {
+        throw new BadRequestException('File required');
+      }
       const name = file.originalname.split('.')[0];
-
       const extension = extname(file.originalname);
       const randomName = Array(32)
         .fill(null)
