@@ -137,12 +137,12 @@ export class RequestDoDto {
 
 export class DepoDto {
   depoId?: number;
-  depoName: string;
-  depoNpwp: string;
-  noTelp: string;
-  alamat: string;
-  kotaDepo: string;
-  kodePos: string;
+  depoName?: string;
+  depoNpwp?: string;
+  noTelp?: string;
+  alamat?: string;
+  kotaDepo?: string;
+  kodePos?: string;
 }
 
 export class CargoDetailSL {

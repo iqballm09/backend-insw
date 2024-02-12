@@ -1,6 +1,8 @@
 import {
   BadRequestException,
   ForbiddenException,
+  HttpException,
+  HttpStatus,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -20,9 +22,11 @@ import {
 } from '@prisma/client';
 import * as moment from 'moment';
 import { UserService } from 'src/user/user.service';
-import { generateNoReq } from 'src/util';
+import { generateNoReq, validateError } from 'src/util';
 import axios from 'axios';
 import { ShippinglineService } from 'src/referensi/shippingline/shippingline.service';
+import { NotFoundError } from 'rxjs';
+import { DepoService } from 'src/referensi/depo/depo.service';
 
 @Injectable()
 export class DeliveryOrderService {
@@ -30,6 +34,7 @@ export class DeliveryOrderService {
     private prisma: PrismaService,
     private userService: UserService,
     private shippinglineService: ShippinglineService,
+    private depoService: DepoService,
   ) {}
 
   async getAllDo(token: string) {
@@ -322,6 +327,11 @@ export class DeliveryOrderService {
       );
     }
 
+    const isDoExist = await this.getDoDetail(idDO);
+    if (!isDoExist) {
+      throw new NotFoundException(`DO by id = ${idDO} not found.`);
+    }
+
     const updatedDo = await this.prisma.td_reqdo_header_form.update({
       where: {
         id: idDO,
@@ -341,55 +351,62 @@ export class DeliveryOrderService {
       },
     });
 
-    const promises = data.cargoDetail.map((item) => {
-      return this.prisma.td_do_kontainer_form.update({
+    let results = [];
+    for (const item of data.cargoDetail) {
+      const isCargoExist = await this.prisma.td_do_kontainer_form.findUnique({
         where: {
-          id: item.containerId,
+          id: +item.containerId,
+        },
+      });
+      if (!!!isCargoExist) {
+        throw new NotFoundException(
+          `Kontainer DO by id = ${item.containerId} not found`,
+        );
+      }
+
+      let depoData;
+      if (!item.depoDetail.depoId) {
+        depoData = await this.depoService.createDepo(
+          item.depoDetail,
+          updated_by,
+        );
+      } else {
+        // check if depo exist
+        const isDepoExist = await this.prisma.td_depo.findUnique({
+          where: {
+            id: +item.depoDetail.depoId,
+          },
+        });
+        if (!isDepoExist) {
+          throw new NotFoundException(
+            `Depo by id = ${+item.depoDetail.depoId} not found`,
+          );
+        }
+
+        depoData = this.depoService.updateDepo(
+          +item.depoDetail.depoId,
+          item.depoDetail,
+          updated_by,
+        );
+      }
+
+      const result = await this.prisma.td_do_kontainer_form.update({
+        where: {
+          id: +item.containerId,
         },
         data: {
           updated_by,
           updated_at,
           no_kontainer: item.containerNo,
           id_sizeType: item.sizeType,
-          td_depo: {
-            upsert: {
-              where: {
-                id: item.depoDetail.depoId,
-              },
-              create: {
-                deskripsi: item.depoDetail.depoName,
-                npwp: item.depoDetail.depoNpwp,
-                alamat: item.depoDetail.alamat,
-                kode_pos: item.depoDetail.kodePos,
-                no_telp: item.depoDetail.noTelp,
-                id_kabkota: +item.depoDetail.kotaDepo,
-              },
-              update: {
-                deskripsi: item.depoDetail.depoName,
-                npwp: item.depoDetail.depoNpwp,
-                alamat: item.depoDetail.alamat,
-                kode_pos: item.depoDetail.kodePos,
-                no_telp: item.depoDetail.noTelp,
-                id_kabkota: +item.depoDetail.kotaDepo,
-              },
-            },
-          },
+          td_depoId: depoData.depoId,
         },
       });
-    });
-
-    // Using Promise.all to wait for all promises to resolve
-    Promise.all(promises)
-      .then((results) => {
-        console.log('All promises resolved successfully');
-      })
-      .catch((error) => {
-        console.error('Error in one or more promises:', error);
-      });
-
+      results.push(result);
+    }
     return {
       message: 'success',
-      data: updatedDo,
+      result: results,
     };
   }
 

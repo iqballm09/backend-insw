@@ -20,7 +20,7 @@ export const multerOptions = {
     filename: (req, file, callback) => {
       // CHECK if FILE HAS BEEN UPLOADED
       if (!!!file) {
-        throw new BadRequestException('File required');
+        throw new BadRequestException('File is required');
       }
       const name = file.originalname.split('.')[0];
       const extension = extname(file.originalname);

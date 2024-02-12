@@ -63,7 +63,7 @@ export class FilesController {
   ) {
     // Handle file upload logic
     if (!!!file) {
-      throw new BadRequestException('File required');
+      throw new BadRequestException('File is required');
     }
     return {
       urlFile: `${process.env.API_URI}/files/${type}/${file.filename.split('.')[0]}`,

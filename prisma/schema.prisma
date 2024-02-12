@@ -50,6 +50,7 @@ model User {
 
   role    Role                   @relation(fields: [roleId], references: [id])
   reqdo   td_reqdo_header_form[]
+  depo    td_depo[]
   session Session[]
 }
 
@@ -162,10 +163,11 @@ model td_do_kontainer_form {
   updated_at           DateTime @updatedAt
   created_at           DateTime @default(now())
   created_by           String
+  td_depoId            Int?
 
   seals         sealsOnKontainers[]
   do_req_header td_reqdo_header_form @relation(fields: [id_reqdo_header], references: [id], onDelete: Cascade)
-  td_depo       td_depo?
+  td_depo       td_depo?             @relation(fields: [td_depoId], references: [id])
 }
 
 model sealsOnKontainers {
@@ -183,14 +185,15 @@ model sealsOnKontainers {
 model td_depo {
   id         Int    @id @default(autoincrement())
   id_kabkota Int
+  created_by String @db.VarChar(255)
   npwp       String @db.VarChar(15)
   deskripsi  String @db.VarChar(255)
   alamat     String @db.VarChar(1025)
   kode_pos   String @db.VarChar(5)
   no_telp    String @db.VarChar(20)
 
-  do_kontainer_item      td_do_kontainer_form? @relation(fields: [td_do_kontainer_formId], references: [id], onDelete: Cascade)
-  td_do_kontainer_formId Int?                  @unique
+  author            User                  @relation(fields: [created_by], references: [name], onDelete: Cascade)
+  do_kontainer_item td_do_kontainer_form[]
 }
 
 // KONTAINER SEAL

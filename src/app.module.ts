@@ -19,6 +19,7 @@ import { StatusDoModule } from './referensi/status-do/status-do.module';
 import { FlagModule } from './referensi/flag/flag.module';
 import { PelabuhanModule } from './referensi/pelabuhan/pelabuhan.module';
 import { SupportingDocumentModule } from './referensi/supporting-document/supporting-document.module';
+import { DepoModule } from './referensi/depo/depo.module';
 
 @Module({
   imports: [
@@ -41,6 +42,7 @@ import { SupportingDocumentModule } from './referensi/supporting-document/suppor
     FlagModule,
     PelabuhanModule,
     SupportingDocumentModule,
+    DepoModule,
   ],
   controllers: [AppController],
   providers: [AuthService, UserService],
