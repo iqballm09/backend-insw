@@ -6,7 +6,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { RequestDoDto, UpdateDoSLDto } from './dto/create-do.dto';
+import { DepoDto, RequestDoDto, UpdateDoSLDto } from './dto/create-do.dto';
 import { PrismaService } from 'src/prisma/prisma.service';
 import {
   StatusDo,
@@ -364,8 +364,8 @@ export class DeliveryOrderService {
         );
       }
 
-      let depoData;
-      if (!item.depoDetail.depoId) {
+      let depoData: DepoDto;
+      if (!!!item.depoDetail.depoId) {
         depoData = await this.depoService.createDepo(
           item.depoDetail,
           updated_by,
@@ -383,7 +383,7 @@ export class DeliveryOrderService {
           );
         }
 
-        depoData = this.depoService.updateDepo(
+        depoData = await this.depoService.updateDepo(
           +item.depoDetail.depoId,
           item.depoDetail,
           updated_by,

@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { NotFoundError } from 'rxjs';
 import { DepoDto } from 'src/delivery-order/dto/create-do.dto';
 import { PrismaService } from 'src/prisma/prisma.service';
@@ -64,6 +68,12 @@ export class DepoService {
 
   async getAllDepo(token: string) {
     const userInfo = await this.userService.getDetail(token);
+
+    // CHECK IF USER ROLE IS SL
+    if (!userInfo.profile.details.kd_detail_ga) {
+      throw new BadRequestException(`Failed to get all depo, role is not SL`);
+    }
+
     const data = await this.prisma.td_depo.findMany({
       where: {
         created_by: userInfo.sub,
