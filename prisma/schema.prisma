@@ -287,7 +287,7 @@ model td_do_dok_form {
 model td_reqdo_status {
   id              Int      @id @default(autoincrement())
   id_reqdo_header Int
-  name            StatusDo @unique
+  name            StatusDo
   datetime_status DateTime @default(now())
 
   do_req_header td_reqdo_header_form @relation(fields: [id_reqdo_header], references: [id], onDelete: Cascade)

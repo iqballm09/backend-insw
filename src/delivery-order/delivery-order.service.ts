@@ -353,19 +353,6 @@ export class DeliveryOrderService {
             id_terminal_op: data.terminalOp,
           },
         },
-        td_reqdo_status: {
-          upsert: {
-            where: {
-              name: status,
-            },
-            update: {
-              datetime_status: new Date(),
-            },
-            create: {
-              name: status,
-            },
-          },
-        },
       },
     });
 
@@ -640,7 +627,7 @@ export class DeliveryOrderService {
       throw new BadRequestException('Freight Forwarder required surat kuasa');
     }
 
-    // CHECK IF STATUS REQDO Draft or Submitted
+    // CHECK IF STATUS DO IS DRAFT OR SUBMITTED
     if (!['Draft', 'Submitted'].includes(status)) {
       throw new BadRequestException(
         'Status DO of Create DO must be Draft or Submitted',
@@ -751,19 +738,6 @@ export class DeliveryOrderService {
         td_do_kontainer_form: {
           deleteMany: {},
         },
-        td_reqdo_status: {
-          upsert: {
-            where: {
-              name: status,
-            },
-            update: {
-              datetime_status: new Date(),
-            },
-            create: {
-              name: status,
-            },
-          },
-        },
       },
     });
 
@@ -802,9 +776,12 @@ export class DeliveryOrderService {
         console.error('Error in one or more promises:', error);
       });
 
+    // UPDATE STATUS DO
+    const updatedStatus = await this.updateStatusDo(idDO, token, status);
+
     return {
       messsage: 'success',
-      data: updateDo,
+      data: [updateDo, updatedStatus],
     };
   }
 
@@ -1167,28 +1144,70 @@ export class DeliveryOrderService {
             data: dataNonKontainer as td_do_nonkontainer_form[],
           },
         },
-        td_reqdo_status: {
-          upsert: {
-            where: {
-              name: status,
-            },
-            update: {
-              datetime_status: new Date(),
-            },
-            create: {
-              name: status,
-            },
-          },
-        },
       },
     });
 
+    // UPDATE STATUS REQDO
+    const updatedStatus = await this.updateStatusDo(idDO, token, status);
+
     return {
       messsage: 'success',
-      data: updatedDo,
+      data: [updatedDo, updatedStatus],
     };
   }
 
-  // UPDATE STATUS REQDO
-  
+  // GET ALL STATUS REQDO
+  async getAllStatus(idDO: number) {
+    const isDOExist = await this.getDoDetail(idDO);
+    if (!isDOExist) {
+      throw new NotFoundException(`DO Request by id = ${idDO} not found`);
+    }
+    const data = await this.prisma.td_reqdo_status.findMany({
+      where: {
+        id_reqdo_header: idDO,
+      },
+    });
+
+    const result = data.map((item) => ({
+      status: item.name,
+      datetime: moment(item.datetime_status).format('DD-MM-YYYY HH:mm:ss'),
+    }));
+
+    return {
+      message: 'success',
+      data: result,
+    };
+  }
+
+  // UPDATE STATUS DO
+  async updateStatusDo(idDO: number, token: string, status: StatusDo) {
+    const userInfo = await this.userService.getDetail(token);
+
+    const statusDO = await this.prisma.td_reqdo_status.findFirst({
+      where: {
+        id_reqdo_header: idDO,
+        name: status,
+      },
+    });
+
+    if (!statusDO) {
+      const updatedStatus = await this.prisma.td_reqdo_status.create({
+        data: {
+          name: status,
+          id_reqdo_header: idDO,
+        },
+      });
+      return updatedStatus;
+    } else {
+      const updatedStatus = await this.prisma.td_reqdo_status.update({
+        where: {
+          id: statusDO.id,
+        },
+        data: {
+          datetime_status: new Date(),
+        },
+      });
+      return updatedStatus;
+    }
+  }
 }

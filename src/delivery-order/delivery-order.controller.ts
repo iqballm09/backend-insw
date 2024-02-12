@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Delete,
@@ -12,7 +13,6 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { DeliveryOrderService } from './delivery-order.service';
-import { StatusDo } from '@prisma/client';
 import { AuthGuard } from 'src/auth/guard/auth.guard';
 import { ApiBearerAuth, ApiBody, ApiQuery, ApiTags } from '@nestjs/swagger';
 import {
@@ -24,6 +24,7 @@ import {
   UpdateNonContainerRequestDO,
 } from './dto/create-do.dto';
 import { Stats } from 'fs';
+import { StatusDo } from '@prisma/client';
 
 @ApiTags('Delivery Order')
 @Controller('do')
@@ -136,6 +137,11 @@ export class DeliveryOrderController {
   @ApiBearerAuth()
   getAllDo(@Req() req: any) {
     return this.deliveryOrderService.getAllDo(req.token);
+  }
+
+  @Get('status-reqdo/:id')
+  getAllStatusDo(@Param('id') id: number) {
+    return this.deliveryOrderService.getAllStatus(+id);
   }
 
   @Get(':id')
