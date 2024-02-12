@@ -315,7 +315,12 @@ export class DeliveryOrderService {
   }
 
   // UPDATE DO - SHIPPINGLINE
-  async updateDoSL(idDO: number, data: UpdateDoSLDto, token: string) {
+  async updateDoSL(
+    idDO: number,
+    data: UpdateDoSLDto,
+    token: string,
+    status?: StatusDo,
+  ) {
     const userInfo = await this.userService.getDetail(token);
     const updated_by = userInfo.sub;
     const updated_at = new Date();
@@ -346,6 +351,19 @@ export class DeliveryOrderService {
             tgl_do_release: new Date(data.doReleaseDate),
             tgl_do_exp: new Date(data.doExpiredDate),
             id_terminal_op: data.terminalOp,
+          },
+        },
+        td_reqdo_status: {
+          upsert: {
+            where: {
+              name: status,
+            },
+            update: {
+              datetime_status: new Date(),
+            },
+            create: {
+              name: status,
+            },
           },
         },
       },
@@ -435,6 +453,13 @@ export class DeliveryOrderService {
       !data.requestDetail.requestor.urlFile
     ) {
       throw new BadRequestException('Freight Forwarder required surat kuasa');
+    }
+
+    // CHECK IF STATUS REQDO Draft or Submitted
+    if (!['Draft', 'Submitted'].includes(status)) {
+      throw new BadRequestException(
+        'Status DO of Create DO must be Draft or Submitted',
+      );
     }
 
     const dataDokumen = data.supportingDocument.documentType.map((item) => {
@@ -615,6 +640,13 @@ export class DeliveryOrderService {
       throw new BadRequestException('Freight Forwarder required surat kuasa');
     }
 
+    // CHECK IF STATUS REQDO Draft or Submitted
+    if (!['Draft', 'Submitted'].includes(status)) {
+      throw new BadRequestException(
+        'Status DO of Create DO must be Draft or Submitted',
+      );
+    }
+
     const dataDokumen = data.supportingDocument.documentType.map((item) => {
       const data: Partial<td_do_dok_form> = {
         updated_by,
@@ -720,8 +752,16 @@ export class DeliveryOrderService {
           deleteMany: {},
         },
         td_reqdo_status: {
-          create: {
-            name: status ?? 'Draft',
+          upsert: {
+            where: {
+              name: status,
+            },
+            update: {
+              datetime_status: new Date(),
+            },
+            create: {
+              name: status,
+            },
           },
         },
       },
@@ -797,6 +837,13 @@ export class DeliveryOrderService {
       !data.requestDetail.requestor.urlFile
     ) {
       throw new BadRequestException('Freight Forwarder required surat kuasa');
+    }
+
+    // CHECK IF STATUS REQDO Draft or Submitted
+    if (!['Draft', 'Submitted'].includes(status)) {
+      throw new BadRequestException(
+        'Status DO of Create DO must be Draft or Submitted',
+      );
     }
 
     const dataDokumen = data.supportingDocument.documentType.map((item) => {
@@ -986,6 +1033,13 @@ export class DeliveryOrderService {
       throw new BadRequestException(`DO by id = ${idDO} not found.`);
     }
 
+    // CHECK IF STATUS REQDO Draft or Submitted
+    if (!['Draft', 'Submitted'].includes(status)) {
+      throw new BadRequestException(
+        'Status DO of Create DO must be Draft or Submitted',
+      );
+    }
+
     const dataNonKontainer = data.cargoDetail.nonContainer.map((item) => {
       const data: Partial<td_do_nonkontainer_form> = {
         created_by: updated_by,
@@ -1114,8 +1168,16 @@ export class DeliveryOrderService {
           },
         },
         td_reqdo_status: {
-          create: {
-            name: status ?? 'Draft',
+          upsert: {
+            where: {
+              name: status,
+            },
+            update: {
+              datetime_status: new Date(),
+            },
+            create: {
+              name: status,
+            },
           },
         },
       },
@@ -1126,4 +1188,7 @@ export class DeliveryOrderService {
       data: updatedDo,
     };
   }
+
+  // UPDATE STATUS REQDO
+  
 }

@@ -14,7 +14,7 @@ import {
 import { DeliveryOrderService } from './delivery-order.service';
 import { StatusDo } from '@prisma/client';
 import { AuthGuard } from 'src/auth/guard/auth.guard';
-import { ApiBearerAuth, ApiBody, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiBody, ApiQuery, ApiTags } from '@nestjs/swagger';
 import {
   CreateContainerRequestDO,
   CreateNonContainerRequestDO,
@@ -23,95 +23,111 @@ import {
   UpdateDoSLDto,
   UpdateNonContainerRequestDO,
 } from './dto/create-do.dto';
+import { Stats } from 'fs';
 
 @ApiTags('Delivery Order')
 @Controller('do')
 export class DeliveryOrderController {
   constructor(private readonly deliveryOrderService: DeliveryOrderService) {}
 
-  @Post('kontainer')
+  @Post('kontainer?')
   @UseGuards(AuthGuard)
   @ApiBearerAuth()
   @ApiBody({
     type: CreateContainerRequestDO,
   })
+  @ApiQuery({ name: 'status', enum: StatusDo })
   createDoKontainer(
     @Body() payload: CreateContainerRequestDO,
+    @Query('status') status: StatusDo,
     @Req() req: any,
   ) {
     return this.deliveryOrderService.createKontainer(
       payload.request,
       req.token,
+      status,
     );
   }
 
-  @Put('kontainer/:id')
+  @Put('kontainer/:id?')
   @UseGuards(AuthGuard)
   @ApiBearerAuth()
   @ApiBody({
     type: UpdateContainerRequestDO,
   })
+  @ApiQuery({ name: 'status', enum: StatusDo })
   updateDoKontainer(
     @Param('id') id: number,
     @Body() payload: UpdateContainerRequestDO,
+    @Query('status') status: StatusDo,
     @Req() req: any,
   ) {
     return this.deliveryOrderService.updateKontainer(
       +id,
       payload.request,
       req.token,
+      status,
     );
   }
 
-  @Post('non-kontainer')
+  @Post('non-kontainer?')
   @UseGuards(AuthGuard)
   @ApiBody({
     type: CreateNonContainerRequestDO,
   })
+  @ApiQuery({ name: 'status', enum: StatusDo })
   @ApiBearerAuth()
   createDoNonKontainer(
     @Body() payload: CreateNonContainerRequestDO,
     @Req() req: any,
+    @Query('status') status: StatusDo,
   ) {
     return this.deliveryOrderService.createNonKontainer(
       payload.request,
       req.token,
+      status,
     );
   }
 
-  @Put('non-kontainer/:id')
+  @Put('non-kontainer/:id?')
   @UseGuards(AuthGuard)
   @ApiBody({
     type: UpdateNonContainerRequestDO,
   })
+  @ApiQuery({ name: 'status', enum: StatusDo })
   @ApiBearerAuth()
   updateDoNonContainer(
     @Param('id') id: number,
     @Body() payload: UpdateNonContainerRequestDO,
     @Req() req: any,
+    @Query('status') status: StatusDo,
   ) {
     return this.deliveryOrderService.updateNonKontainer(
       +id,
       payload.request,
       req.token,
+      status,
     );
   }
 
-  @Put('shipping-line/:id')
+  @Put('shipping-line/:id?')
   @UseGuards(AuthGuard)
   @ApiBearerAuth()
+  @ApiQuery({ name: 'status', enum: StatusDo })
   @ApiBody({
     type: UpdateCargoDetailSL,
   })
   updateDoSL(
     @Param('id') id: number,
     @Body() payload: UpdateCargoDetailSL,
+    @Query('status') status: StatusDo,
     @Req() req: any,
   ) {
     return this.deliveryOrderService.updateDoSL(
       +id,
       payload.request,
       req.token,
+      status,
     );
   }
 
