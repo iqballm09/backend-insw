@@ -634,6 +634,12 @@ export class DeliveryOrderService {
       );
     }
 
+    if (status === 'Submitted') {
+      throw new BadRequestException(
+        `Cannot update container DO, has been submitted!`,
+      );
+    }
+
     const dataDokumen = data.supportingDocument.documentType.map((item) => {
       const data: Partial<td_do_dok_form> = {
         updated_by,
@@ -1014,6 +1020,12 @@ export class DeliveryOrderService {
     if (!['Draft', 'Submitted'].includes(status)) {
       throw new BadRequestException(
         'Status DO of Create DO must be Draft or Submitted',
+      );
+    }
+
+    if (status === 'Submitted') {
+      throw new BadRequestException(
+        `Cannot update non container DO, has been submitted!`,
       );
     }
 
