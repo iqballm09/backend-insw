@@ -36,6 +36,13 @@ export class FlagController {
     return this.flagService.findAll(req.token, 'weight_uom');
   }
 
+  @Get('measurement')
+  @ApiBearerAuth()
+  @UseGuards(AuthGuard)
+  findAllMeasurementUnits(@Req() req: any) {
+    return this.flagService.findAll(req.token, 'measurement_uom');
+  }
+
   @Get('package-unit')
   @ApiBearerAuth()
   @UseGuards(AuthGuard)
