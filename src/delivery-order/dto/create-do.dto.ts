@@ -28,6 +28,8 @@ class Document {
   ladingBillDate: string;
   ladingBillType: string;
   urlFile: string;
+  bc11Number?: string;
+  bc11Date?: string;
 }
 
 class Parties {

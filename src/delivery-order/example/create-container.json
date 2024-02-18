@@ -20,7 +20,9 @@
             "ladingBillNumber": "121020190001",
             "ladingBillDate": "2019-10-12",
             "ladingBillType": "1",
-            "urlFile": "assets/upload/billing/bl01.pdf"
+            "urlFile": "assets/upload/billing/bl01.pdf",
+            "bc11Number": "BC123XYU7I555",
+            "bc11Date": "2019-10-12"
         }
     },
     "parties": {
