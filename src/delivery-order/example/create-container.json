@@ -22,7 +22,8 @@
             "ladingBillType": "1",
             "urlFile": "assets/upload/billing/bl01.pdf",
             "bc11Number": "BC123XYU7I555",
-            "bc11Date": "2019-10-12"
+            "bc11Date": "2019-10-12",
+            "postalCode": "16113"
         }
     },
     "parties": {

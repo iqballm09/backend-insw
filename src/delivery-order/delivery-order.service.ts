@@ -276,7 +276,9 @@ export class DeliveryOrderService {
       })),
       paymentDetailForm: data.td_do_invoice_form.map((inv) => ({
         invoiceNumber: inv.no_invoice,
-        invoiceDate: inv.tgl_invoice ? moment(inv.tgl_invoice).format('YYYY-MM-DD') : null,
+        invoiceDate: inv.tgl_invoice
+          ? moment(inv.tgl_invoice).format('YYYY-MM-DD')
+          : null,
         currency: inv.id_currency,
         totalPayment: inv.total_payment,
         bank: inv.id_bank,
@@ -286,7 +288,9 @@ export class DeliveryOrderService {
       supportingDocumentForm: data.td_do_dok_form.map((dok) => ({
         documentType: dok.id_jenis_dok,
         documentNumber: dok.no_dok,
-        documentDate: dok.tgl_dok ? moment(dok.tgl_dok).format('YYYY-MM-DD') : null,
+        documentDate: dok.tgl_dok
+          ? moment(dok.tgl_dok).format('YYYY-MM-DD')
+          : null,
         urlFile: dok.filepath_dok,
       })),
     };
@@ -525,6 +529,7 @@ export class DeliveryOrderService {
             id_shippingline: data.requestDetail.shippingLine.shippingType,
             nama_vessel: data.requestDetail.shippingLine.vesselName,
             no_voyage: data.requestDetail.shippingLine.voyageNumber,
+            kode_pos: data.requestDetail.document.postalCode,
             tgl_reqdo_exp: new Date(data.requestDetail.shippingLine.doExpired),
             no_bc11: data.requestDetail.document.bc11Number || null,
             tanggal_bc11: data.requestDetail.document.bc11Date
@@ -726,6 +731,7 @@ export class DeliveryOrderService {
             tanggal_bc11: data.requestDetail.document.bc11Date
               ? new Date(data.requestDetail.document.bc11Date)
               : null,
+            kode_pos: data.requestDetail.document.postalCode,
           },
         },
         td_parties_detail_form: {
@@ -917,6 +923,7 @@ export class DeliveryOrderService {
             tanggal_bc11: data.requestDetail.document.bc11Date
               ? new Date(data.requestDetail.document.bc11Date)
               : null,
+            kode_pos: data.requestDetail.document.postalCode,
           },
         },
         td_parties_detail_form: {
@@ -1137,6 +1144,7 @@ export class DeliveryOrderService {
             tanggal_bc11: data.requestDetail.document.bc11Date
               ? new Date(data.requestDetail.document.bc11Date)
               : null,
+            kode_pos: data.requestDetail.document.postalCode,
           },
         },
         td_parties_detail_form: {

@@ -30,6 +30,7 @@ class Document {
   urlFile: string;
   bc11Number?: string;
   bc11Date?: string;
+  postalCode?: string;
 }
 
 class Parties {
