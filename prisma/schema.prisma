@@ -185,7 +185,7 @@ model sealsOnKontainers {
 // DEPO
 model td_depo {
   id         Int    @id @default(autoincrement())
-  id_kabkota Int
+  id_kabkota String
   created_by String @db.VarChar(255)
   npwp       String @db.VarChar(15)
   deskripsi  String @db.VarChar(255)

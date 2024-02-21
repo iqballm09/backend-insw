@@ -87,17 +87,17 @@
             {
                 "location": "0",
                 "countryCode": "AG",
-                "portCode": "AGBBQ"
+                "portCode": "AGBBQ | Barbuda"
             },
             {
                 "location": "1",
                 "countryCode": "ID",
-                "portCode": "IDAEG"
+                "portCode": "IDAEG | Aekgodang"
             },
             {
                 "location": "2",
                 "countryCode": "ID",
-                "portCode": "IDAKE"
+                "portCode": "IDAKE | Akeselaka"
             }
         ]
     },
@@ -107,7 +107,7 @@
                 "invoiceNo": "INV1232021",
                 "invoiceDate": "2019-10-11",
                 "totalAmount": 100000000.00,
-                "bankId": "002",
+                "bankId": "002 | BRI",
                 "currency": "IDR",
                 "accountNo": "80123123123123",
                 "urlFile": "assets/upload/payment/15712185291.pdf"
@@ -117,7 +117,7 @@
                 "invoiceNo": "INV9872021",
                 "invoiceDate": "2019-11-12",
                 "totalAmount": 900000000.00,
-                "bankId": "002",
+                "bankId": "002 | BRI",
                 "accountNo": "80123123123123",
                 "urlFile": "assets/upload/payment/inv.pdf"
             }

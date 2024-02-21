@@ -230,9 +230,9 @@ export class DeliveryOrderService {
           : null,
         bc11Number: data.td_do_req_form.no_bc11 || '',
         kodePos: data.td_do_req_form.kode_pos || '',
-        reqdoExp: moment(data.td_do_req_form.tgl_reqdo_exp).format(
+        reqdoExp: data.td_do_req_form.tgl_reqdo_exp ? moment(data.td_do_req_form.tgl_reqdo_exp).format(
           'YYYY-MM-DD',
-        ),
+        ) : null,
         metodeBayar: data.td_do_req_form.id_metode_bayar,
         callSign: data.td_do_req_form.call_sign,
         doReleaseDate: data.td_do_req_form.tgl_do_release
