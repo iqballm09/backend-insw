@@ -19,7 +19,7 @@ export class DepoService {
       data: {
         alamat: data.alamat,
         deskripsi: data.depoName,
-        id_kabkota: +data.kotaDepo,
+        id_kabkota: data.kotaDepo,
         kode_pos: data.kodePos,
         no_telp: data.noTelp,
         npwp: data.depoNpwp,
@@ -46,7 +46,7 @@ export class DepoService {
       data: {
         alamat: data.alamat,
         deskripsi: data.depoName,
-        id_kabkota: +data.kotaDepo,
+        id_kabkota: data.kotaDepo,
         kode_pos: data.kodePos,
         no_telp: data.noTelp,
         npwp: data.depoNpwp,
