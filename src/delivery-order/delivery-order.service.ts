@@ -83,11 +83,15 @@ export class DeliveryOrderService {
         .map((item) => ({
           id: item.id,
           requestNumber: item.no_reqdo,
-          requestTime: moment(item.tgl_reqdo).format('DD-MM-YYYY HH:mm:ss'),
+          requestTime: moment(item.tgl_reqdo.toLocaleString()).format(
+            'DD-MM-YYYY HH:mm:ss',
+          ),
           blNumber: item.td_do_bl_form.no_bl,
           blDate: item.td_do_bl_form.tgl_bl
-            ? moment(item.td_do_bl_form.tgl_bl).format('DD-MM-YYYY')
-            : null,
+            ? moment(item.td_do_bl_form.tgl_bl.toLocaleString()).format(
+                'DD-MM-YYYY',
+              )
+            : '',
           requestName: item.td_do_requestor_form.nama,
           shippingLine: item.td_do_req_form.id_shippingline,
           status: item.td_reqdo_status[0].name,
@@ -221,26 +225,36 @@ export class DeliveryOrderService {
         voyageNumber: data.td_do_req_form.no_voyage,
         blNumber: data.td_do_bl_form.no_bl,
         blDate: data.td_do_bl_form.tgl_bl
-          ? moment(data.td_do_bl_form.tgl_bl).format('YYYY-MM-DD')
+          ? moment(data.td_do_bl_form.tgl_bl.toLocaleString()).format(
+              'YYYY-MM-DD',
+            )
           : null,
         blType: data.td_do_bl_form.id_jenis_bl,
         blFile: data.td_do_bl_form.filepath_dok,
         bc11Date: data.td_do_req_form.tanggal_bc11
-          ? moment(data.td_do_req_form.tanggal_bc11).format('YYYY-MM-DD')
+          ? moment(data.td_do_req_form.tanggal_bc11.toLocaleString()).format(
+              'YYYY-MM-DD',
+            )
           : null,
         bc11Number: data.td_do_req_form.no_bc11 || '',
         kodePos: data.td_do_req_form.kode_pos || '',
-        reqdoExp: data.td_do_req_form.tgl_reqdo_exp ? moment(data.td_do_req_form.tgl_reqdo_exp).format(
-          'YYYY-MM-DD',
-        ) : null,
+        reqdoExp: data.td_do_req_form.tgl_reqdo_exp
+          ? moment(data.td_do_req_form.tgl_reqdo_exp.toLocaleString()).format(
+              'YYYY-MM-DD',
+            )
+          : null,
         metodeBayar: data.td_do_req_form.id_metode_bayar,
         callSign: data.td_do_req_form.call_sign,
         doReleaseDate: data.td_do_req_form.tgl_do_release
-          ? moment(data.td_do_req_form.tgl_do_release).format('YYYY-MM-DD')
+          ? moment(data.td_do_req_form.tgl_do_release.toLocaleString()).format(
+              'YYYY-MM-DD',
+            )
           : null,
         doReleaseNumber: data.td_do_req_form.no_do_release,
         doExp: data.td_do_req_form.tgl_do_exp
-          ? moment(data.td_do_req_form.tgl_do_exp).format('YYYY-MM-DD')
+          ? moment(data.td_do_req_form.tgl_do_exp.toLocaleString()).format(
+              'YYYY-MM-DD',
+            )
           : null,
         terminalOp: data.td_do_req_form.id_terminal_op,
       },
@@ -287,7 +301,7 @@ export class DeliveryOrderService {
       paymentDetailForm: data.td_do_invoice_form.map((inv) => ({
         invoiceNumber: inv.no_invoice,
         invoiceDate: inv.tgl_invoice
-          ? moment(inv.tgl_invoice).format('YYYY-MM-DD')
+          ? moment(inv.tgl_invoice.toLocaleString()).format('YYYY-MM-DD')
           : null,
         currency: inv.id_currency,
         totalPayment: inv.total_payment,
@@ -299,7 +313,7 @@ export class DeliveryOrderService {
         documentType: dok.id_jenis_dok,
         documentNumber: dok.no_dok,
         documentDate: dok.tgl_dok
-          ? moment(dok.tgl_dok).format('YYYY-MM-DD')
+          ? moment(dok.tgl_dok.toLocaleString()).format('YYYY-MM-DD')
           : null,
         urlFile: dok.filepath_dok,
       })),
