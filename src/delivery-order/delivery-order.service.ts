@@ -85,7 +85,9 @@ export class DeliveryOrderService {
           requestNumber: item.no_reqdo,
           requestTime: moment(item.tgl_reqdo).format('DD-MM-YYYY HH:mm:ss'),
           blNumber: item.td_do_bl_form.no_bl,
-          blDate: moment(item.td_do_bl_form.tgl_bl).format('DD-MM-YYYY'),
+          blDate: item.td_do_bl_form.tgl_bl
+            ? moment(item.td_do_bl_form.tgl_bl).format('DD-MM-YYYY')
+            : null,
           requestName: item.td_do_requestor_form.nama,
           shippingLine: item.td_do_req_form.id_shippingline,
           status: item.td_reqdo_status[0].name,
@@ -121,6 +123,10 @@ export class DeliveryOrderService {
           select: {
             id_jenis_requestor: true,
             filepath_suratkuasa: true,
+            nama: true,
+            npwp: true,
+            nib: true,
+            alamat: true,
           },
         },
         td_do_bl_form: {
@@ -205,6 +211,10 @@ export class DeliveryOrderService {
     const response = {
       requestDetailForm: {
         requestorType: data.td_do_requestor_form.id_jenis_requestor,
+        requestorName: data.td_do_requestor_form.nama,
+        requestorNib: data.td_do_requestor_form.nib,
+        requestorNpwp: data.td_do_requestor_form.npwp,
+        requestorAlamat: data.td_do_requestor_form.alamat,
         requestorFile: data.td_do_requestor_form.filepath_suratkuasa,
         shippingLine: data.td_do_req_form.id_shippingline,
         vesselName: data.td_do_req_form.nama_vessel,
@@ -218,8 +228,8 @@ export class DeliveryOrderService {
         bc11Date: data.td_do_req_form.tanggal_bc11
           ? moment(data.td_do_req_form.tanggal_bc11).format('YYYY-MM-DD')
           : null,
-        bc11Number: data.td_do_req_form.no_bc11 || null,
-        kodePos: data.td_do_req_form.kode_pos,
+        bc11Number: data.td_do_req_form.no_bc11 || '',
+        kodePos: data.td_do_req_form.kode_pos || '',
         reqdoExp: moment(data.td_do_req_form.tgl_reqdo_exp).format(
           'YYYY-MM-DD',
         ),
@@ -510,6 +520,7 @@ export class DeliveryOrderService {
             created_by,
             nama: data.requestDetail.requestor.requestorName,
             nib: data.requestDetail.requestor.nib,
+            npwp: data.requestDetail.requestor.npwp,
             filepath_suratkuasa: data.requestDetail.requestor.urlFile,
           },
         },
@@ -531,7 +542,7 @@ export class DeliveryOrderService {
             no_voyage: data.requestDetail.shippingLine.voyageNumber,
             kode_pos: data.requestDetail.document.postalCode,
             tgl_reqdo_exp: new Date(data.requestDetail.shippingLine.doExpired),
-            no_bc11: data.requestDetail.document.bc11Number || null,
+            no_bc11: data.requestDetail.document.bc11Number,
             tanggal_bc11: data.requestDetail.document.bc11Date
               ? new Date(data.requestDetail.document.bc11Date)
               : null,
@@ -908,6 +919,7 @@ export class DeliveryOrderService {
             created_by,
             nama: data.requestDetail.requestor.requestorName,
             nib: data.requestDetail.requestor.nib,
+            npwp: data.requestDetail.requestor.npwp,
             filepath_suratkuasa: data.requestDetail.requestor.urlFile,
           },
         },

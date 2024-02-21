@@ -92,6 +92,7 @@ model td_do_requestor_form {
   id_jenis_requestor  Int
   nama                String   @db.VarChar(255)
   nib                 String   @db.VarChar(15)
+  npwp                String   @db.VarChar(16)
   alamat              String   @db.VarChar(255)
   filepath_suratkuasa String?
   created_at          DateTime @default(now())
