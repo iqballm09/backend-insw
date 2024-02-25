@@ -104,7 +104,11 @@ export class DeliveryOrderService {
         )
         .map((sl) => sl.kode);
       return data
-        .filter((item) => sl_data.includes(item.td_do_req_form.id_shippingline))
+        .filter((item) =>
+          sl_data.includes(
+            item.td_do_req_form.id_shippingline.split('|')[0].trim(),
+          ),
+        )
         .map((item) => ({
           id: item.id,
           requestNumber: item.no_reqdo,
@@ -513,7 +517,9 @@ export class DeliveryOrderService {
     const createdDo = await this.prisma.td_reqdo_header_form.create({
       data: {
         request_type: data.requestType,
-        no_reqdo: generateNoReq(data.requestDetail.shippingLine.shippingType),
+        no_reqdo: generateNoReq(
+          data.requestDetail.shippingLine.shippingType.split('|')[0].trim(),
+        ),
         created_by,
         td_do_requestor_form: {
           create: {
@@ -912,7 +918,9 @@ export class DeliveryOrderService {
     const createdDo = await this.prisma.td_reqdo_header_form.create({
       data: {
         request_type: data.requestType,
-        no_reqdo: generateNoReq(data.requestDetail.shippingLine.shippingType),
+        no_reqdo: generateNoReq(
+          data.requestDetail.shippingLine.shippingType.split('|')[0].trim(),
+        ),
         created_by,
         td_do_requestor_form: {
           create: {
