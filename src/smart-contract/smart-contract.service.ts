@@ -1,4 +1,4 @@
-import { BadRequestException, Head, Injectable } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { CreateUserDto } from './dto/create-actor.dto';
 import axios from 'axios';
@@ -19,8 +19,8 @@ export class SmartContractService {
       const response = await axios.post(
         `${this.configService.get('API_SMART_CONTRACT')}/user/enroll`,
         {
-          id: this.configService.get('SC_ADMIN_ID'),
-          secret: this.configService.get('SC_ADMIN_SECRET'),
+          id: 'admin',
+          secret: 'adminpw',
         },
       );
       return {
@@ -74,11 +74,11 @@ export class SmartContractService {
     }
   }
 
-  async createUser(payload: CreateUserDto, tokenAdmin: string) {
+  async createUser(userData: any, tokenAdmin: string) {
     // check if user already exists
     const listUsers = (await this.getAllUsers(tokenAdmin)).data;
     for (const user of listUsers) {
-      if (user.id === payload.id) {
+      if (user.id === userData.name) {
         return;
       }
     }
@@ -87,8 +87,8 @@ export class SmartContractService {
       const response = await axios.post(
         `${this.configService.get('API_SMART_CONTRACT')}/user/register`,
         {
-          id: payload.id,
-          secret: payload.secret,
+          id: userData.name,
+          secret: userData.hash,
         },
         {
           headers: {
@@ -110,25 +110,21 @@ export class SmartContractService {
     // generate user token
     const userToken = (await this.enrollUser(userData, tokenAdmin)).token;
     // send do to smart contract
-    try {
-      const response = await axios.post(
-        `${this.configService.get('API_SMART_CONTRACT')}`,
-        {
-          method: 'request',
-          args: [JSON.stringify(payload)],
-          transient: {
-            status: statusDo,
-          },
+    const response = await axios.post(
+      `${this.configService.get('API_SMART_CONTRACT')}/invoke/do-channel/chaincode1`,
+      {
+        method: 'request',
+        args: [JSON.stringify(payload)],
+        transient: {
+          status: statusDo,
         },
-        {
-          headers: {
-            Authorization: `Bearer ${userToken}`,
-          },
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${userToken}`,
         },
-      );
-      return response.data;
-    } catch (e) {
-      validateError(e);
-    }
+      },
+    );
+    return response.data;
   }
 }

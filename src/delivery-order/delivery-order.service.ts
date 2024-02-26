@@ -481,7 +481,7 @@ export class DeliveryOrderService {
 
     // CASE 1: IF SUBMITTED, SEND PAYLOAD TO SMART CONTRACT
     if (status === 'Submitted') {
-      data.requestorId = created_by;
+      data.requestorId = userInfo.sub;
       const result = await this.smartContractService.requestDO(data, status);
       return result;
     }
