@@ -42,10 +42,7 @@
                 "containerSeq": 1,
                 "containerNo": "MSKU0198252",
                 "sealNo": ["SEAL13102019005", "SEAL123456789"],
-                "sizeType": {
-                    "size": 42,
-                    "type": "G0"
-                },
+                "sizeType": "42GP",
                 "grossWeight": {
                     "amount": 8890.00,
                     "unit": "KGM"
@@ -56,10 +53,7 @@
                 "containerSeq": 2,
                 "containerNo": "AGKU0198252",
                 "sealNo": ["SEAL13102090081"],
-                "sizeType": {
-                    "size": 42,
-                    "type": "G0"
-                },
+                "sizeType": "42GP",
                 "grossWeight": {
                     "amount": 8871.00,
                     "unit": "KGM"
@@ -70,10 +64,7 @@
                 "containerSeq": 3,
                 "containerNo": "SABH0197865",
                 "sealNo": ["SEAL131020560871", "SEAL131020560873"],
-                "sizeType": {
-                    "size": 42,
-                    "type": "G0"
-                },
+                "sizeType": "42GP",
                 "grossWeight": {
                     "amount": 8871.00,
                     "unit": "KGM"

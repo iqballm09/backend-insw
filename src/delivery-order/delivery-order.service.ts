@@ -609,7 +609,7 @@ export class DeliveryOrderService {
           created_by,
           gross_weight: item.grossWeight.amount,
           no_kontainer: item.containerNo,
-          id_sizeType: String(item.sizeType.size) + item.sizeType.type,
+          id_sizeType: item.sizeType.kodeSize,
           id_ownership: +item.ownership,
           id_gross_weight_unit: item.grossWeight.unit,
           seals: {
@@ -673,16 +673,18 @@ export class DeliveryOrderService {
       throw new BadRequestException('Freight Forwarder required surat kuasa');
     }
 
-    // CHECK IF STATUS DO IS DRAFT OR SUBMITTED
-    if (!['Draft', 'Submitted'].includes(status)) {
+    // find the last status DO
+    const lastStatus = (await this.getAllStatus(idDO)).data.pop().status;
+    if (lastStatus !== 'Draft') {
       throw new BadRequestException(
-        'Status DO of Create DO must be Draft or Submitted',
+        `Cannot update container DO, the last status DO is not draft!`,
       );
     }
 
-    if (status === 'Submitted') {
+    // CHECK IF STATUS REQDO Draft or Submitted
+    if (!['Draft', 'Submitted'].includes(status)) {
       throw new BadRequestException(
-        `Cannot update container DO, has been submitted!`,
+        'Status DO of Update DO must be Draft or Submitted',
       );
     }
 
@@ -807,7 +809,7 @@ export class DeliveryOrderService {
           updated_at: new Date(),
           gross_weight: item.grossWeight.amount,
           no_kontainer: item.containerNo,
-          id_sizeType: String(item.sizeType.size) + item.sizeType.type,
+          id_sizeType: item.sizeType.kodeSize,
           id_ownership: +item.ownership,
           id_gross_weight_unit: item.grossWeight.unit,
           seals: {
@@ -1075,16 +1077,18 @@ export class DeliveryOrderService {
       throw new BadRequestException(`DO by id = ${idDO} not found.`);
     }
 
-    // CHECK IF STATUS REQDO Draft or Submitted
-    if (!['Draft', 'Submitted'].includes(status)) {
+    // find the last status DO
+    const lastStatus = (await this.getAllStatus(idDO)).data.pop().status;
+    if (lastStatus !== 'Draft') {
       throw new BadRequestException(
-        'Status DO of Create DO must be Draft or Submitted',
+        `Cannot update non container DO, the last status DO is not draft!`,
       );
     }
 
-    if (status === 'Submitted') {
+    // CHECK IF STATUS REQDO Draft or Submitted
+    if (!['Draft', 'Submitted'].includes(status)) {
       throw new BadRequestException(
-        `Cannot update non container DO, has been submitted!`,
+        'Status DO of Update DO must be Draft or Submitted',
       );
     }
 
