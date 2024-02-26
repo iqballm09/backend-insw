@@ -609,7 +609,7 @@ export class DeliveryOrderService {
           created_by,
           gross_weight: item.grossWeight.amount,
           no_kontainer: item.containerNo,
-          id_sizeType: String(item.sizeType.size) + item.sizeType.type,
+          id_sizeType: item.sizeType.kodeSize,
           id_ownership: +item.ownership,
           id_gross_weight_unit: item.grossWeight.unit,
           seals: {
@@ -807,7 +807,7 @@ export class DeliveryOrderService {
           updated_at: new Date(),
           gross_weight: item.grossWeight.amount,
           no_kontainer: item.containerNo,
-          id_sizeType: String(item.sizeType.size) + item.sizeType.type,
+          id_sizeType: item.sizeType.kodeSize,
           id_ownership: +item.ownership,
           id_gross_weight_unit: item.grossWeight.unit,
           seals: {
