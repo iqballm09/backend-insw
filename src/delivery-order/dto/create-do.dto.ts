@@ -49,8 +49,7 @@ class Parties {
 }
 
 class SizeType {
-  size: number;
-  type: string;
+  kodeSize: string;
 }
 
 class GrossWeight {

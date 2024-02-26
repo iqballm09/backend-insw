@@ -11,10 +11,13 @@ pnpm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 lerna-debug.log*
+pg-data
+
 # OS
 .DS_Store
 
 .env
+docker-compose.yaml
 
 # Tests
 /coverage
