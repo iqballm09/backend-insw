@@ -114,6 +114,7 @@ class VinDetail {
 
 export class RequestDoDto {
   requestType: number;
+  requestorId?: string;
   requestDetail: {
     requestor: Requestor;
     shippingLine: ShippingLine;

@@ -7,6 +7,7 @@ WORKDIR /app
 # SET ENVIRONMENT VARIABLE
 # SSO ENV
 ENV API_REF_BASE_URL=https://api.insw.go.id/api/ref/v2
+ENV API_SMART_CONTRACT=http://10.239.54.32:8801
 ENV SSO_CLIENT_ID="90b61241-8687-40f8-942d-391b54529936"
 ENV SSO_CLIENT_SECRET="77a1bae1-b452-46ea-8ade-5fba53a908f6"
 ENV SSO_ISSUE_URL=https://sso.insw.go.id/connect/.well-known/openid-configuration
@@ -20,7 +21,8 @@ ENV API_HOST=10.239.54.34
 ENV API_PORT=5000
 ENV API_URI="http://${API_HOST}:${API_PORT}"
 ENV DATABASE_URL="postgresql://myuser:mysecret@insw_db_temp:5432/db_temp_do_req?schema=public&connect_timeout=60"
-
+ENV SC_ADMIN_ID = 'admin'
+ENV SC_ADMIN_SECRET = 'adminpw'
 ENV NODE_ENV=production
 # Copy package.json and package-lock.json to the working directory
 COPY package*.json ./

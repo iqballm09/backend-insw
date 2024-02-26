@@ -20,6 +20,7 @@ import { FlagModule } from './referensi/flag/flag.module';
 import { PelabuhanModule } from './referensi/pelabuhan/pelabuhan.module';
 import { SupportingDocumentModule } from './referensi/supporting-document/supporting-document.module';
 import { DepoModule } from './referensi/depo/depo.module';
+import { SmartContractModule } from './smart-contract/smart-contract.module';
 
 @Module({
   imports: [
@@ -43,6 +44,7 @@ import { DepoModule } from './referensi/depo/depo.module';
     PelabuhanModule,
     SupportingDocumentModule,
     DepoModule,
+    SmartContractModule,
   ],
   controllers: [AppController],
   providers: [AuthService, UserService],
