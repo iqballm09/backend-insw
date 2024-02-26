@@ -38,3 +38,6 @@ docker-compose.yaml
 !.vscode/tasks.json
 !.vscode/launch.json
 !.vscode/extensions.json
+
+
+test1.js
