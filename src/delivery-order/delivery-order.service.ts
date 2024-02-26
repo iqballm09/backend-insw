@@ -517,6 +517,7 @@ export class DeliveryOrderService {
     const createdDo = await this.prisma.td_reqdo_header_form.create({
       data: {
         request_type: data.requestType,
+        order_id: '',
         no_reqdo: generateNoReq(
           data.requestDetail.shippingLine.shippingType.split('|')[0].trim(),
         ),
@@ -881,7 +882,14 @@ export class DeliveryOrderService {
         'Status DO of Create DO must be Draft or Submitted',
       );
     }
+    // CASE 1: IF SUBMITTED, SEND PAYLOAD TO SMART CONTRACT
+    if (status === 'Submitted') {
+      data.requestorId = userInfo.sub;
+      const result = await this.smartContractService.requestDO(data, status);
+      return result;
+    }
 
+    // CASE 2: IF DRAFT, SAVE TO RELATIONAL DATABASE
     const dataDokumen = data.supportingDocument.documentType.map((item) => {
       const data: Partial<td_do_dok_form> = {
         created_by,
@@ -920,6 +928,7 @@ export class DeliveryOrderService {
     const createdDo = await this.prisma.td_reqdo_header_form.create({
       data: {
         request_type: data.requestType,
+        order_id: '',
         no_reqdo: generateNoReq(
           data.requestDetail.shippingLine.shippingType.split('|')[0].trim(),
         ),

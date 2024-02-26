@@ -69,6 +69,7 @@ model td_reqdo_header_form {
   no_reqdo     String   @unique @default(dbgenerated("CONCAT('LNSW', EXTRACT(EPOCH FROM NOW())::Int)::text"))
   tgl_reqdo    DateTime @default(now())
   request_type Int
+  order_id     String
   created_at   DateTime @default(now())
   created_by   String   @db.VarChar(255)
 
