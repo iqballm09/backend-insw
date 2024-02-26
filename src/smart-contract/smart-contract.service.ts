@@ -107,24 +107,48 @@ export class SmartContractService {
     const tokenAdmin = (await this.enrollAdmin()).token;
     // get user info
     const userData = await this.authService.getUserDB(payload.requestorId);
-    console.log(userData);
     // generate user token
     const userToken = (await this.enrollUser(userData, tokenAdmin)).token;
-    console.log(userToken);
     // send do to smart contract
-    const response = await axios.post(
-      `${this.configService.get('API_SMART_CONTRACT')}/invoke/do-channel/chaincode1`,
-      {
-        method: 'request',
-        args: [JSON.stringify(payload)],
-      },
-      {
-        headers: {
-          Authorization: `Bearer ${userToken}`,
+    try {
+      const response = await axios.post(
+        `${this.configService.get('API_SMART_CONTRACT')}/invoke/do-channel/chaincode1`,
+        {
+          method: 'request',
+          args: [JSON.stringify(payload)],
         },
-      },
-    );
-    console.log(response.data);
-    return response.data;
+        {
+          headers: {
+            Authorization: `Bearer ${userToken}`,
+          },
+        },
+      );
+      console.log(response.data);
+      return response.data;
+    } catch (e) {
+      validateError(e);
+    }
+  }
+
+  async getAllDoData() {
+    // generate admin token
+    const tokenAdmin = (await this.enrollAdmin()).token;
+    try {
+      const response = await axios.post(
+        `${this.configService.get('API_SMART_CONTRACT')}/query/do-channel/chaincode1`,
+        {
+          method: 'queryAllOrders',
+          args: [],
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${tokenAdmin}`,
+          },
+        },
+      );
+      return response.data.response;
+    } catch (e) {
+      validateError(e);
+    }
   }
 }
