@@ -490,7 +490,7 @@ export class DeliveryOrderService {
     const dataDokumen = data.supportingDocument.documentType.map((item) => {
       const data: Partial<td_do_dok_form> = {
         created_by,
-        id_jenis_dok: +item.document,
+        id_jenis_dok: item.document,
         filepath_dok: item.urlFile,
         no_dok: item.documentNo,
         tgl_dok: new Date(item.documentDate),
@@ -503,7 +503,7 @@ export class DeliveryOrderService {
       const data: Partial<td_do_invoice_form> = {
         created_by,
         filepath_buktibayar: item.urlFile,
-        id_bank: +item.bankId,
+        id_bank: item.bankId,
         no_invoice: item.invoiceNo,
         tgl_invoice: new Date(item.invoiceDate),
         no_rekening: item.accountNo,
@@ -548,7 +548,7 @@ export class DeliveryOrderService {
           create: {
             created_by,
             filepath_dok: data.requestDetail.document.urlFile,
-            id_jenis_bl: +data.requestDetail.document.ladingBillType,
+            id_jenis_bl: data.requestDetail.document.ladingBillType,
             no_bl: data.requestDetail.document.ladingBillNumber,
             tgl_bl: new Date(data.requestDetail.document.ladingBillDate),
           },
@@ -691,7 +691,7 @@ export class DeliveryOrderService {
         updated_by,
         created_by: updated_by,
         updated_at: new Date(),
-        id_jenis_dok: +item.document,
+        id_jenis_dok: item.document,
         filepath_dok: item.urlFile,
         no_dok: item.documentNo,
         tgl_dok: new Date(item.documentDate),
@@ -705,7 +705,7 @@ export class DeliveryOrderService {
         created_by: updated_by,
         updated_at: new Date(),
         filepath_buktibayar: item.urlFile,
-        id_bank: +item.bankId,
+        id_bank: item.bankId,
         no_invoice: item.invoiceNo,
         tgl_invoice: new Date(item.invoiceDate),
         no_rekening: item.accountNo,
@@ -744,7 +744,7 @@ export class DeliveryOrderService {
             updated_by,
             updated_at: new Date(),
             filepath_dok: data.requestDetail.document.urlFile,
-            id_jenis_bl: +data.requestDetail.document.ladingBillType,
+            id_jenis_bl: data.requestDetail.document.ladingBillType,
             no_bl: data.requestDetail.document.ladingBillNumber,
             tgl_bl: new Date(data.requestDetail.document.ladingBillDate),
           },
@@ -883,7 +883,7 @@ export class DeliveryOrderService {
     const dataDokumen = data.supportingDocument.documentType.map((item) => {
       const data: Partial<td_do_dok_form> = {
         created_by,
-        id_jenis_dok: +item.document,
+        id_jenis_dok: item.document,
         filepath_dok: item.urlFile,
         no_dok: item.documentNo,
         tgl_dok: new Date(item.documentDate),
@@ -896,7 +896,7 @@ export class DeliveryOrderService {
       const data: Partial<td_do_invoice_form> = {
         created_by,
         filepath_buktibayar: item.urlFile,
-        id_bank: +item.bankId,
+        id_bank: item.bankId,
         no_invoice: item.invoiceNo,
         tgl_invoice: new Date(item.invoiceDate),
         no_rekening: item.accountNo,
@@ -978,7 +978,7 @@ export class DeliveryOrderService {
           create: {
             created_by,
             filepath_dok: data.requestDetail.document.urlFile,
-            id_jenis_bl: +data.requestDetail.document.ladingBillType,
+            id_jenis_bl: data.requestDetail.document.ladingBillType,
             no_bl: data.requestDetail.document.ladingBillNumber,
             tgl_bl: new Date(data.requestDetail.document.ladingBillDate),
           },
@@ -1109,7 +1109,7 @@ export class DeliveryOrderService {
         created_by: updated_by,
         updated_by,
         updated_at: new Date(),
-        id_jenis_dok: +item.document,
+        id_jenis_dok: item.document,
         filepath_dok: item.urlFile,
         no_dok: item.documentNo,
         tgl_dok: new Date(item.documentDate),
@@ -1123,7 +1123,7 @@ export class DeliveryOrderService {
         updated_by,
         updated_at: new Date(),
         no_invoice: item.invoiceNo,
-        id_bank: +item.bankId,
+        id_bank: item.bankId,
         filepath_buktibayar: item.urlFile,
         tgl_invoice: new Date(item.invoiceDate),
         no_rekening: item.accountNo,
