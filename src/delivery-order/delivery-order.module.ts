@@ -5,6 +5,7 @@ import { UserService } from 'src/user/user.service';
 import { AuthService } from 'src/auth/auth.service';
 import { ShippinglineService } from 'src/referensi/shippingline/shippingline.service';
 import { DepoService } from 'src/referensi/depo/depo.service';
+import { SmartContractService } from 'src/smart-contract/smart-contract.service';
 
 @Module({
   controllers: [DeliveryOrderController],
@@ -14,6 +15,7 @@ import { DepoService } from 'src/referensi/depo/depo.service';
     AuthService,
     ShippinglineService,
     DepoService,
+    SmartContractService,
   ],
 })
 export class DeliveryOrderModule {}
