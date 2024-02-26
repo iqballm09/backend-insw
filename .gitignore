@@ -16,9 +16,9 @@ pg-data
 # OS
 .DS_Store
 
-.env
-docker-compose.yaml
 
+docker-compose.yaml
+.env
 # Tests
 /coverage
 /.nyc_output

@@ -107,17 +107,16 @@ export class SmartContractService {
     const tokenAdmin = (await this.enrollAdmin()).token;
     // get user info
     const userData = await this.authService.getUserDB(payload.requestorId);
+    console.log(userData);
     // generate user token
     const userToken = (await this.enrollUser(userData, tokenAdmin)).token;
+    console.log(userToken);
     // send do to smart contract
     const response = await axios.post(
       `${this.configService.get('API_SMART_CONTRACT')}/invoke/do-channel/chaincode1`,
       {
         method: 'request',
         args: [JSON.stringify(payload)],
-        transient: {
-          status: statusDo,
-        },
       },
       {
         headers: {
@@ -125,6 +124,7 @@ export class SmartContractService {
         },
       },
     );
+    console.log(response.data);
     return response.data;
   }
 }

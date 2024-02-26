@@ -71,7 +71,11 @@ export class DeliveryOrderService {
 
     if (!userInfo.profile.details.kd_detail_ga) {
       return data
-        .filter((item) => item.created_by === userInfo.sub)
+        .filter(
+          (item) =>
+            item.created_by === userInfo.sub &&
+            item.td_reqdo_status[0].name === 'Draft',
+        )
         .map((item) => ({
           id: item.id,
           requestNumber: item.no_reqdo,
@@ -482,8 +486,27 @@ export class DeliveryOrderService {
     // CASE 1: IF SUBMITTED, SEND PAYLOAD TO SMART CONTRACT
     if (status === 'Submitted') {
       data.requestorId = userInfo.sub;
+      data.requestDoNumber = generateNoReq(
+        data.requestDetail.shippingLine.shippingType.split('|')[0].trim(),
+      );
       const result = await this.smartContractService.requestDO(data, status);
-      return result;
+      const headerDo = await this.prisma.td_reqdo_header_form.create({
+        data: {
+          order_id: result.response.orderId,
+          request_type: data.requestType,
+          no_reqdo: data.requestDoNumber,
+          created_by: data.requestorId,
+          td_reqdo_status: {
+            create: {
+              name: status,
+            },
+          },
+        },
+      });
+      return {
+        result,
+        data: headerDo,
+      };
     }
 
     // CASE 2: IF DRAFT, SAVE TO RELATIONAL DATABASE
@@ -885,8 +908,27 @@ export class DeliveryOrderService {
     // CASE 1: IF SUBMITTED, SEND PAYLOAD TO SMART CONTRACT
     if (status === 'Submitted') {
       data.requestorId = userInfo.sub;
+      data.requestDoNumber = generateNoReq(
+        data.requestDetail.shippingLine.shippingType.split('|')[0].trim(),
+      );
       const result = await this.smartContractService.requestDO(data, status);
-      return result;
+      const headerDo = await this.prisma.td_reqdo_header_form.create({
+        data: {
+          order_id: result.response.orderId,
+          request_type: data.requestType,
+          no_reqdo: data.requestDoNumber,
+          created_by: data.requestorId,
+          td_reqdo_status: {
+            create: {
+              name: status,
+            },
+          },
+        },
+      });
+      return {
+        result,
+        data: headerDo,
+      };
     }
 
     // CASE 2: IF DRAFT, SAVE TO RELATIONAL DATABASE
