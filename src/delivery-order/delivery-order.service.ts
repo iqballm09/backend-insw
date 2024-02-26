@@ -539,8 +539,8 @@ export class DeliveryOrderService {
 
     const createdDo = await this.prisma.td_reqdo_header_form.create({
       data: {
-        request_type: data.requestType,
-        order_id: '',
+        request_type: +data.requestType,
+        order_id: 'order_id',
         no_reqdo: generateNoReq(
           data.requestDetail.shippingLine.shippingType.split('|')[0].trim(),
         ),
@@ -970,7 +970,7 @@ export class DeliveryOrderService {
     const createdDo = await this.prisma.td_reqdo_header_form.create({
       data: {
         request_type: data.requestType,
-        order_id: '',
+        order_id: 'order_id',
         no_reqdo: generateNoReq(
           data.requestDetail.shippingLine.shippingType.split('|')[0].trim(),
         ),
