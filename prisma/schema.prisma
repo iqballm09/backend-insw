@@ -228,7 +228,7 @@ model td_do_nonkontainer_form {
 model td_do_bl_form {
   id              Int      @id @default(autoincrement())
   id_reqdo_header Int      @unique
-  id_jenis_bl     Int
+  id_jenis_bl     String
   no_bl           String   @db.VarChar(50)
   tgl_bl          DateTime
   filepath_dok    String
@@ -254,7 +254,7 @@ model td_do_invoice_form {
   id                  Int      @id @default(autoincrement())
   id_reqdo_header     Int
   id_currency         String
-  id_bank             Int
+  id_bank             String
   no_invoice          String   @db.VarChar(255)
   tgl_invoice         DateTime
   total_payment       Int
@@ -272,7 +272,7 @@ model td_do_invoice_form {
 model td_do_dok_form {
   id              Int      @id @default(autoincrement())
   id_reqdo_header Int
-  id_jenis_dok    Int
+  id_jenis_dok    String
   no_dok          String   @db.VarChar(50)
   tgl_dok         DateTime
   filepath_dok    String
