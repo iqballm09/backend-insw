@@ -3,7 +3,6 @@ import { ConfigService } from '@nestjs/config';
 import { CreateActorDto } from './dto/create-actor.dto';
 import axios from 'axios';
 import { validateError } from 'src/util';
-import { stringify } from 'flatted';
 
 @Injectable()
 export class SmartContractService {
