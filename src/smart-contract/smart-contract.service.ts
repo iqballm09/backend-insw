@@ -4,10 +4,15 @@ import { CreateUserDto } from './dto/create-actor.dto';
 import axios from 'axios';
 import { validateError } from 'src/util';
 import { RequestDoDto } from 'src/delivery-order/dto/create-do.dto';
+import { StatusDo } from '@prisma/client';
+import { AuthService } from 'src/auth/auth.service';
 
 @Injectable()
 export class SmartContractService {
-  constructor(private configService: ConfigService) {}
+  constructor(
+    private configService: ConfigService,
+    private authService: AuthService,
+  ) {}
 
   async enrollAdmin() {
     try {
@@ -26,7 +31,7 @@ export class SmartContractService {
     }
   }
 
-  async enrollUser(userData: CreateUserDto, tokenAdmin: string) {
+  async enrollUser(userData: any, tokenAdmin: string) {
     // create user if not exist
     this.createUser(userData, tokenAdmin);
     // get user token from smart contract
@@ -34,7 +39,8 @@ export class SmartContractService {
       const response = await axios.post(
         `${this.configService.get('API_SMART_CONTRACT')}/user/enroll`,
         {
-          ...userData,
+          id: userData.name,
+          secret: userData.hash,
         },
         {
           headers: {
@@ -96,9 +102,11 @@ export class SmartContractService {
     }
   }
 
-  async requestDO(userData: CreateUserDto, payload: RequestDoDto) {
+  async requestDO(payload: RequestDoDto, statusDo: StatusDo) {
     // generate admin token
     const tokenAdmin = (await this.enrollAdmin()).token;
+    // get user info
+    const userData = await this.authService.getUserDB(payload.requestorId);
     // generate user token
     const userToken = (await this.enrollUser(userData, tokenAdmin)).token;
     // send do to smart contract
@@ -107,7 +115,10 @@ export class SmartContractService {
         `${this.configService.get('API_SMART_CONTRACT')}`,
         {
           method: 'request',
-          args: JSON.stringify(payload),
+          args: [JSON.stringify(payload)],
+          transient: {
+            status: statusDo,
+          },
         },
         {
           headers: {

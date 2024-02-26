@@ -1,4 +1,8 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { CreateAuthDto } from './dto/create-auth.dto';
 import { UpdateAuthDto } from './dto/update-auth.dto';
 import axios from 'axios';
@@ -32,6 +36,18 @@ export class AuthService {
     }
 
     return { success: true, data: { ...userInfo, roleId: userExist.roleId } };
+  }
+
+  async getUserDB(username: string) {
+    const user = await this.prisma.user.findUnique({
+      where: {
+        name: username,
+      },
+    });
+    if (!user) {
+      throw new NotFoundException(`User by Id = ${username} not found on DB!`);
+    }
+    return user;
   }
 
   async exchangeToken(code: string) {

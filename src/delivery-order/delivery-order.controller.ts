@@ -4,6 +4,7 @@ import {
   Controller,
   Delete,
   Get,
+  HttpCode,
   Param,
   Post,
   Put,
@@ -31,6 +32,7 @@ export class DeliveryOrderController {
   constructor(private readonly deliveryOrderService: DeliveryOrderService) {}
 
   @Post('kontainer?')
+  @HttpCode(201)
   @UseGuards(AuthGuard)
   @ApiBearerAuth()
   @ApiBody({
@@ -71,6 +73,7 @@ export class DeliveryOrderController {
   }
 
   @Post('non-kontainer?')
+  @HttpCode(201)
   @UseGuards(AuthGuard)
   @ApiBody({
     type: CreateNonContainerRequestDO,

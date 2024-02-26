@@ -1,8 +1,5 @@
 import {
   BadRequestException,
-  ForbiddenException,
-  HttpException,
-  HttpStatus,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -10,23 +7,17 @@ import { DepoDto, RequestDoDto, UpdateDoSLDto } from './dto/create-do.dto';
 import { PrismaService } from 'src/prisma/prisma.service';
 import {
   StatusDo,
-  sealsOnKontainers,
   td_do_dok_form,
   td_do_invoice_form,
-  td_do_kontainer_form,
-  td_do_kontainer_seal,
   td_do_nonkontainer_form,
   td_do_vin,
-  User,
-  td_depo,
 } from '@prisma/client';
 import * as moment from 'moment';
 import { UserService } from 'src/user/user.service';
 import { generateNoReq, validateError } from 'src/util';
-import axios from 'axios';
 import { ShippinglineService } from 'src/referensi/shippingline/shippingline.service';
-import { NotFoundError } from 'rxjs';
 import { DepoService } from 'src/referensi/depo/depo.service';
+import { SmartContractService } from 'src/smart-contract/smart-contract.service';
 
 @Injectable()
 export class DeliveryOrderService {
@@ -35,6 +26,7 @@ export class DeliveryOrderService {
     private userService: UserService,
     private shippinglineService: ShippinglineService,
     private depoService: DepoService,
+    private smartContractService: SmartContractService,
   ) {}
 
   async getAllDo(token: string) {
@@ -487,6 +479,14 @@ export class DeliveryOrderService {
       );
     }
 
+    // CASE 1: IF SUBMITTED, SEND PAYLOAD TO SMART CONTRACT
+    if (status === 'Submitted') {
+      data.requestorId = created_by;
+      const result = await this.smartContractService.requestDO(data, status);
+      return result;
+    }
+
+    // CASE 2: IF DRAFT, SAVE TO RELATIONAL DATABASE
     const dataDokumen = data.supportingDocument.documentType.map((item) => {
       const data: Partial<td_do_dok_form> = {
         created_by,
