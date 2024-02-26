@@ -21,7 +21,8 @@ ENV API_HOST=10.239.54.34
 ENV API_PORT=5000
 ENV API_URI="http://${API_HOST}:${API_PORT}"
 ENV DATABASE_URL="postgresql://myuser:mysecret@insw_db_temp:5432/db_temp_do_req?schema=public&connect_timeout=60"
-
+ENV SC_ADMIN_ID = 'admin'
+ENV SC_ADMIN_SECRET = 'adminpw'
 ENV NODE_ENV=production
 # Copy package.json and package-lock.json to the working directory
 COPY package*.json ./

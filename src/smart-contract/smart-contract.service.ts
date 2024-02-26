@@ -1,8 +1,9 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { BadRequestException, Head, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { CreateActorDto } from './dto/create-actor.dto';
+import { CreateUserDto } from './dto/create-actor.dto';
 import axios from 'axios';
 import { validateError } from 'src/util';
+import { RequestDoDto } from 'src/delivery-order/dto/create-do.dto';
 
 @Injectable()
 export class SmartContractService {
@@ -13,8 +14,8 @@ export class SmartContractService {
       const response = await axios.post(
         `${this.configService.get('API_SMART_CONTRACT')}/user/enroll`,
         {
-          id: 'admin',
-          secret: 'adminpw',
+          id: this.configService.get('SC_ADMIN_ID'),
+          secret: this.configService.get('SC_ADMIN_SECRET'),
         },
       );
       return {
@@ -25,9 +26,31 @@ export class SmartContractService {
     }
   }
 
-  async getAllActors() {
-    // generate admin token
-    const tokenAdmin = (await this.enrollAdmin()).token;
+  async enrollUser(userData: CreateUserDto, tokenAdmin: string) {
+    // create user if not exist
+    this.createUser(userData, tokenAdmin);
+    // get user token from smart contract
+    try {
+      const response = await axios.post(
+        `${this.configService.get('API_SMART_CONTRACT')}/user/enroll`,
+        {
+          ...userData,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${tokenAdmin}`,
+          },
+        },
+      );
+      return {
+        token: response.data.token,
+      };
+    } catch (e) {
+      validateError(e);
+    }
+  }
+
+  async getAllUsers(tokenAdmin: string) {
     try {
       const response = await axios.get(
         `${this.configService.get('API_SMART_CONTRACT')}/user/identities`,
@@ -45,27 +68,21 @@ export class SmartContractService {
     }
   }
 
-  async createActor(payload: CreateActorDto) {
-    // generate admin token
-    const tokenAdmin = (await this.enrollAdmin()).token;
-
-    // check if actor already exists
-    const listActors = (await this.getAllActors()).data.map(
-      (actor) => actor.id,
-    );
-
-    if (listActors.includes(payload.Id)) {
-      throw new BadRequestException(
-        `Actor by Id = ${payload.Id} already exists!`,
-      );
+  async createUser(payload: CreateUserDto, tokenAdmin: string) {
+    // check if user already exists
+    const listUsers = (await this.getAllUsers(tokenAdmin)).data;
+    for (const user of listUsers) {
+      if (user.id === payload.id) {
+        return;
+      }
     }
 
     try {
       const response = await axios.post(
         `${this.configService.get('API_SMART_CONTRACT')}/user/register`,
         {
-          id: payload.Id,
-          secret: payload.Secret,
+          id: payload.id,
+          secret: payload.secret,
         },
         {
           headers: {
@@ -73,10 +90,32 @@ export class SmartContractService {
           },
         },
       );
+      return;
+    } catch (e) {
+      validateError(e);
+    }
+  }
 
-      return {
-        message: response.data.message,
-      };
+  async requestDO(userData: CreateUserDto, payload: RequestDoDto) {
+    // generate admin token
+    const tokenAdmin = (await this.enrollAdmin()).token;
+    // generate user token
+    const userToken = (await this.enrollUser(userData, tokenAdmin)).token;
+    // send do to smart contract
+    try {
+      const response = await axios.post(
+        `${this.configService.get('API_SMART_CONTRACT')}`,
+        {
+          method: 'request',
+          args: JSON.stringify(payload),
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${userToken}`,
+          },
+        },
+      );
+      return response.data;
     } catch (e) {
       validateError(e);
     }
