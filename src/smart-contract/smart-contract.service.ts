@@ -145,7 +145,32 @@ export class SmartContractService {
           },
         },
       );
-      return response.data.response;
+      return { data: response.data.response };
+    } catch (e) {
+      validateError(e);
+    }
+  }
+
+  async getAllDoCo(coName: string) {
+    const tokenAdmin = (await this.enrollAdmin()).token;
+    // get user info
+    const userData = await this.authService.getUserDB(coName);
+    // generate user token
+    const userToken = (await this.enrollUser(userData, tokenAdmin)).token;
+    try {
+      const response = await axios.post(
+        `${this.configService.get('API_SMART_CONTRACT')}/query/do-channel/chaincode1`,
+        {
+          method: 'queryAllOrdersCO',
+          args: [coName],
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${userToken}`,
+          },
+        },
+      );
+      return { data: response.data.response };
     } catch (e) {
       validateError(e);
     }
