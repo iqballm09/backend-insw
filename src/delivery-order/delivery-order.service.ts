@@ -503,7 +503,7 @@ export class DeliveryOrderService {
 
     const createdDo = await this.prisma.td_reqdo_header_form.create({
       data: {
-        request_type: +data.requestType,
+        request_type: data.requestType,
         order_id: 'order_id',
         no_reqdo: generateNoReq(
           data.requestDetail.shippingLine.shippingType.split('|')[0].trim(),
@@ -511,19 +511,7 @@ export class DeliveryOrderService {
         created_by,
         td_do_requestor_form: {
           create: {
-            jenis_requestor: {
-              connectOrCreate: {
-                create: {
-                  name:
-                    +data.requestDetail.requestor.requestorType === 1
-                      ? 'CO'
-                      : 'FF',
-                },
-                where: {
-                  id: +data.requestDetail.requestor.requestorType,
-                },
-              },
-            },
+            id_jenis_requestor: +data.requestDetail.requestor.requestorType,
             alamat: data.requestDetail.requestor.requestorAddress,
             created_by,
             nama: data.requestDetail.requestor.requestorName,
@@ -719,14 +707,7 @@ export class DeliveryOrderService {
       data: {
         td_do_requestor_form: {
           update: {
-            jenis_requestor: {
-              update: {
-                name:
-                  +data.requestDetail.requestor.requestorType === 1
-                    ? 'CO'
-                    : 'FF',
-              },
-            },
+            id_jenis_requestor: +data.requestDetail.requestor.requestorType,
             filepath_suratkuasa: data.requestDetail.requestor.urlFile,
           },
         },
@@ -942,19 +923,7 @@ export class DeliveryOrderService {
         created_by,
         td_do_requestor_form: {
           create: {
-            jenis_requestor: {
-              connectOrCreate: {
-                create: {
-                  name:
-                    +data.requestDetail.requestor.requestorType === 1
-                      ? 'CO'
-                      : 'FF',
-                },
-                where: {
-                  id: +data.requestDetail.requestor.requestorType,
-                },
-              },
-            },
+            id_jenis_requestor: +data.requestDetail.requestor.requestorType,
             alamat: data.requestDetail.requestor.requestorAddress,
             created_by,
             nama: data.requestDetail.requestor.requestorName,
@@ -1168,11 +1137,7 @@ export class DeliveryOrderService {
       data: {
         td_do_requestor_form: {
           update: {
-            jenis_requestor: {
-              update: {
-                name: +data.requestDetail.requestor.requestorType ? 'CO' : 'FF',
-              },
-            },
+            id_jenis_requestor: +data.requestDetail.requestor.requestorType,
             filepath_suratkuasa: data.requestDetail.requestor.urlFile,
           },
         },
