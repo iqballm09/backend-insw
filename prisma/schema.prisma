@@ -23,7 +23,7 @@ enum RequestorTypeEnum {
 enum StatusDo {
   Draft
   Submitted
-  Checking
+  Processed
   Released
   Rejected
 }

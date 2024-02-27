@@ -123,7 +123,6 @@ export class SmartContractService {
           },
         },
       );
-      console.log(response.data);
       return response.data;
     } catch (e) {
       validateError(e);
