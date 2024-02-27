@@ -138,7 +138,7 @@ export class DeliveryOrderController {
   @UseGuards(AuthGuard)
   @ApiBearerAuth()
   getAllDo(@Req() req: any) {
-    return this.deliveryOrderService.getAllDo(req.token);
+    return this.deliveryOrderService.getAllDoCo(req.token);
   }
 
   @Get('status-reqdo/:id')

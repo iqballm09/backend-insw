@@ -34,6 +34,7 @@
     "axios": "^1.6.7",
     "bcrypt": "^5.1.1",
     "connect-mongo": "^5.1.0",
+    "crypto-js": "^4.2.0",
     "express-session": "^1.18.0",
     "flatted": "^3.3.1",
     "moment": "^2.30.1",

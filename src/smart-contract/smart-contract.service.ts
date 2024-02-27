@@ -33,7 +33,7 @@ export class SmartContractService {
 
   async enrollUser(userData: any, tokenAdmin: string) {
     // create user if not exist
-    this.createUser(userData, tokenAdmin);
+    await this.createUser(userData, tokenAdmin);
     // get user token from smart contract
     try {
       const response = await axios.post(
@@ -96,7 +96,7 @@ export class SmartContractService {
           },
         },
       );
-      return;
+      return response;
     } catch (e) {
       validateError(e);
     }

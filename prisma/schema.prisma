@@ -58,7 +58,7 @@ model td_reqdo_header_form {
   no_reqdo     String   @unique @default(dbgenerated("CONCAT('LNSW', EXTRACT(EPOCH FROM NOW())::Int)::text"))
   tgl_reqdo    DateTime @default(now())
   request_type Int
-  order_id     String
+  order_id     String   @unique
   created_at   DateTime @default(now())
   created_by   String   @db.VarChar(255)
 
@@ -88,9 +88,9 @@ model td_do_requestor_form {
   created_at          DateTime @default(now())
   created_by          String
 
-  do_req_header   td_reqdo_header_form @relation(fields: [id_reqdo_header], references: [id], onDelete: Cascade)
-  Role            Role?                @relation(fields: [roleId], references: [id])
-  roleId          Int?
+  do_req_header td_reqdo_header_form @relation(fields: [id_reqdo_header], references: [id], onDelete: Cascade)
+  Role          Role?                @relation(fields: [roleId], references: [id])
+  roleId        Int?
 }
 
 // DO REQ FORM

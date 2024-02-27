@@ -29,8 +29,15 @@ export class DeliveryOrderService {
     private smartContractService: SmartContractService,
   ) {}
 
-  async getAllDo(token: string) {
+  async getAllDoCo(token: string) {
     const userInfo = await this.userService.getDetail(token);
+
+    if (userInfo.profile.details.kd_detail_ga) {
+      throw new BadRequestException(
+        `Cannot get all DO for CO, Role is not CO!`,
+      );
+    }
+
     const data = await this.prisma.td_reqdo_header_form.findMany({
       include: {
         td_do_bl_form: {
@@ -69,28 +76,49 @@ export class DeliveryOrderService {
       },
     });
 
-    if (!userInfo.profile.details.kd_detail_ga) {
-      return data
-        .filter(
-          (item) =>
-            item.created_by === userInfo.sub &&
-            item.td_reqdo_status[0].name === 'Draft',
-        )
-        .map((item) => ({
-          id: item.id,
-          orderId: item.order_id,
-          requestNumber: item.no_reqdo,
-          requestTime: moment(item.tgl_reqdo).format('DD-MM-YYYY HH:mm:ss'),
-          blNumber: item.td_do_bl_form.no_bl,
-          blDate: item.td_do_bl_form.tgl_bl
-            ? moment(item.td_do_bl_form.tgl_bl).format('DD-MM-YYYY')
-            : '',
-          requestName: item.td_do_requestor_form.nama,
-          shippingLine: item.td_do_req_form.id_shippingline,
-          status: item.td_reqdo_status[0].name,
-          isContainer: item.request_type == 1,
-        }));
-    }
+    return data
+      .filter(
+        (item) =>
+          item.created_by === userInfo.sub &&
+          item.td_reqdo_status[0].name === 'Draft',
+      )
+      .map((item) => ({
+        id: item.id,
+        orderId: item.order_id,
+        requestNumber: item.no_reqdo,
+        requestTime: moment(item.tgl_reqdo).format('DD-MM-YYYY HH:mm:ss'),
+        blNumber: item.td_do_bl_form.no_bl,
+        blDate: item.td_do_bl_form.tgl_bl
+          ? moment(item.td_do_bl_form.tgl_bl).format('DD-MM-YYYY')
+          : null,
+        requestName: item.td_do_requestor_form.nama,
+        shippingLine: item.td_do_req_form.id_shippingline,
+        status: item.td_reqdo_status[0].name,
+        isContainer: item.request_type == 1,
+      }));
+
+    let dataSubmitted = (
+      await this.smartContractService.getAllDoCo(userInfo.sub)
+    ).data.map((item) => ({
+      // id: this.prisma.td_reqdo_header_form.findUnique({
+      //   where: {
+      //     order_id: item.Record.orderId,
+      //   },
+      // }),
+      orderId: item.Record.orderId,
+      requestNumber: item.Record.requestDoNumber,
+      // requestTime,
+      blNumber: item.Record.requestDetail.document.ladingBillNumber,
+      blDate: item.Record.requestDetail.document.ladingBillDate
+        ? moment(item.Record.requestDetail.document.ladingBillDate).format(
+            'DD-MM-YYYY',
+          )
+        : null,
+      requestName: item.Record.requestDetail.requestor.requestorName,
+      shippingLine: item.Record.requestDetail.shippingLine.shippingType,
+      status: item.Record.status,
+      isContainer: item.Record.requestType == 1,
+    }));
   }
 
   async getDoDetail(idDo: number) {
@@ -504,7 +532,7 @@ export class DeliveryOrderService {
     const createdDo = await this.prisma.td_reqdo_header_form.create({
       data: {
         request_type: data.requestType,
-        order_id: 'order_id',
+        order_id: crypto.randomUUID(),
         no_reqdo: generateNoReq(
           data.requestDetail.shippingLine.shippingType.split('|')[0].trim(),
         ),
@@ -916,7 +944,7 @@ export class DeliveryOrderService {
     const createdDo = await this.prisma.td_reqdo_header_form.create({
       data: {
         request_type: data.requestType,
-        order_id: 'order_id',
+        order_id: crypto.randomUUID(),
         no_reqdo: generateNoReq(
           data.requestDetail.shippingLine.shippingType.split('|')[0].trim(),
         ),
