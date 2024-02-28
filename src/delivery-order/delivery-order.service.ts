@@ -129,7 +129,7 @@ export class DeliveryOrderService {
       });
     }
     // merge data draft and data submitted
-    const dataDoCo = dataDraft.concat(dataSubmitted).sort((a, b) => {
+    const dataDoCo = dataDraft.concat(dataSubmitted).sort((b, a) => {
       return a.requestTime.localeCompare(b.requestTime);
     });
     return dataDoCo;
@@ -314,10 +314,10 @@ export class DeliveryOrderService {
       );
     }
 
-    // const isDoExist = await this.getDoDetail(idDO);
-    // if (!isDoExist) {
-    //   throw new NotFoundException(`DO by id = ${idDO} not found.`);
-    // }
+    const isDoExist = await this.getHeaderData(+idDO);
+    if (!isDoExist) {
+      throw new NotFoundException(`DO by id = ${idDO} not found.`);
+    }
 
     const updatedDo = await this.prisma.td_reqdo_header_form.update({
       where: {
@@ -636,7 +636,7 @@ export class DeliveryOrderService {
     }
 
     // find the last status DO
-    const lastStatus = (await this.getAllStatus(idDO)).data.pop().status;
+    const lastStatus = (await this.getAllStatus(+idDO)).data.pop().status;
     if (lastStatus !== 'Draft') {
       throw new BadRequestException(
         `Cannot update container DO, the last status DO is not draft!`,
@@ -680,14 +680,14 @@ export class DeliveryOrderService {
     });
 
     // CHECK IF DO already exist
-    //const doData = await this.getDoDetail(+idDO);
-    // if (!doData) {
-    //   throw new NotFoundException(`DO with id = ${idDO} not found`);
-    // }
+    const doData = await this.getHeaderData(+idDO);
+    if (!doData) {
+      throw new NotFoundException(`DO with id = ${idDO} not found`);
+    }
 
     const updateDo = await this.prisma.td_reqdo_header_form.update({
       where: {
-        id: idDO,
+        id: +idDO,
       },
       data: {
         td_do_requestor_form: {
