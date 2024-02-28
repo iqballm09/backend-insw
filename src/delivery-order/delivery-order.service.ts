@@ -106,6 +106,11 @@ export class DeliveryOrderService {
           order_id: item.Record.orderId,
         },
       });
+      if (!headerData) {
+        throw new NotFoundException(
+          `Header data by orderId = ${item.Record.orderId} not found`,
+        );
+      }
       dataSubmitted.push({
         id: headerData.id,
         orderId: item.Record.orderId,
