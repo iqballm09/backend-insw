@@ -199,7 +199,7 @@ export class DeliveryOrderService {
           ? data.cargoDetail.container.map((item) => ({
               containerNumber: item.containerNo,
               containerSeal: item.sealNo,
-              sizeType: item.sizeType,
+              sizeType: item.sizeType.kodeSize,
               grossWeightAmount: item.grossWeight.amount,
               grossWeightUnit: item.grossWeight.unit,
               ownership: item.ownership,
@@ -650,6 +650,12 @@ export class DeliveryOrderService {
       );
     }
 
+    // CHECK IF DO already exist
+    const doData = await this.getHeaderData(+idDO);
+    if (!doData) {
+      throw new NotFoundException(`DO with id = ${idDO} is not found!`);
+    }
+
     const dataDokumen = data.supportingDocument.documentType.map((item) => {
       const data: Partial<td_do_dok_form> = {
         updated_by,
@@ -663,6 +669,27 @@ export class DeliveryOrderService {
       return data;
     });
 
+    // CASE 1 : IF THE STATUS IS SUBMITTED AFTER UPDATE DO, SEND PAYLOAD DATA TO SMART CONTRACT
+    if (status === 'Submitted') {
+      data.requestDetail.requestorId = userInfo.sub;
+      data.requestDetail.requestDoNumber = generateNoReq(
+        data.requestDetail.shippingLine.shippingType.split('|')[0].trim(),
+      );
+      const result = await this.smartContractService.requestDO(data, status);
+      // get update header data
+      const updatedHeader = await this.updateHeaderData(
+        +idDO,
+        data.requestDetail.requestDoNumber,
+        result.response.orderId,
+        status,
+      );
+      return {
+        result,
+        data: updatedHeader,
+      };
+    }
+
+    // CASE 2 : IF THE STATUS IS STILL DRAFT AFTER UPDATE DO, SAVE TO RELATIONAL DATABASE
     const dataInvoice = data.paymentDetail.invoice.map((item) => {
       const data: Partial<td_do_invoice_form> = {
         updated_by,
@@ -678,12 +705,6 @@ export class DeliveryOrderService {
       };
       return data;
     });
-
-    // CHECK IF DO already exist
-    const doData = await this.getHeaderData(+idDO);
-    if (!doData) {
-      throw new NotFoundException(`DO with id = ${idDO} not found`);
-    }
 
     const updateDo = await this.prisma.td_reqdo_header_form.update({
       where: {
@@ -1267,5 +1288,34 @@ export class DeliveryOrderService {
       throw new NotFoundException(`${idDO} is not found`);
     }
     return data;
+  }
+
+  async updateHeaderData(
+    idDO: number,
+    reqdoNum: string,
+    orderId: string,
+    status: StatusDo,
+  ) {
+    // check if DO exist
+    const headerData = await this.getHeaderData(idDO);
+
+    const updatedHeader = await this.prisma.td_reqdo_header_form.update({
+      where: {
+        id: +idDO,
+      },
+      data: {
+        no_reqdo: reqdoNum,
+        order_id: orderId,
+        tgl_reqdo: new Date(),
+        td_reqdo_status: {
+          create: {
+            name: status,
+            datetime_status: new Date(),
+          },
+        },
+      },
+    });
+
+    return updatedHeader;
   }
 }
