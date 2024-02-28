@@ -106,7 +106,9 @@ export class SmartContractService {
     // generate admin token
     const tokenAdmin = (await this.enrollAdmin()).token;
     // get user info
-    const userData = await this.authService.getUserDB(payload.requestorId);
+    const userData = await this.authService.getUserDB(
+      payload.requestDetail.requestorId,
+    );
     // generate user token
     const userToken = (await this.enrollUser(userData, tokenAdmin)).token;
     // send do to smart contract
@@ -124,6 +126,32 @@ export class SmartContractService {
         },
       );
       return response.data;
+    } catch (e) {
+      validateError(e);
+    }
+  }
+
+  async getDoDetailData(userId: string, orderId: string) {
+    // generate admin token
+    const tokenAdmin = (await this.enrollAdmin()).token;
+    // get user info
+    const userData = await this.authService.getUserDB(userId);
+    // generate user token
+    const userToken = (await this.enrollUser(userData, tokenAdmin)).token;
+    try {
+      const response = await axios.post(
+        `${this.configService.get('API_SMART_CONTRACT')}/query/do-channel/chaincode1`,
+        {
+          method: 'queryOrderById',
+          args: [orderId],
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${userToken}`,
+          },
+        },
+      );
+      return response.data.response;
     } catch (e) {
       validateError(e);
     }

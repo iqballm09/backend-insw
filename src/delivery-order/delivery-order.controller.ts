@@ -137,9 +137,11 @@ export class DeliveryOrderController {
   @Get()
   @UseGuards(AuthGuard)
   @ApiBearerAuth()
-  getAllDo(@Req() req: any) {
+  getAllDoDataCo(@Req() req: any) {
     return this.deliveryOrderService.getAllDoCo(req.token);
   }
+
+  getAllDoDataSl() {}
 
   @Get('status-reqdo/:id')
   getAllStatusDo(@Param('id') id: number) {
@@ -149,8 +151,8 @@ export class DeliveryOrderController {
   @Get(':id')
   @UseGuards(AuthGuard)
   @ApiBearerAuth()
-  getDoDetail(@Param('id') id: string) {
-    return this.deliveryOrderService.getDoDetail(+id);
+  getDoDetail(@Param('id') id: string, @Req() req: any) {
+    return this.deliveryOrderService.getDoDetail(+id, req.token);
   }
 
   @Delete(':id')

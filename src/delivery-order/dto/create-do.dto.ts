@@ -74,6 +74,7 @@ class Container {
   sizeType: SizeType;
   grossWeight: GrossWeight;
   ownership: string;
+  depoDetail?: DepoDto;
 }
 
 class NonContainer {
@@ -114,13 +115,18 @@ class VinDetail {
 
 export class RequestDoDto {
   requestType: number;
-  requestorId?: string;
-  requestDoNumber?: string;
   requestDetail: {
     requestor: Requestor;
     shippingLine: ShippingLine;
     payment: string;
     document: Document;
+    requestorId?: string;
+    requestDoNumber?: string;
+    doReleaseNo?: string;
+    doReleaseDate?: string;
+    doExpiredDate?: string;
+    callSign?: string;
+    terminalOp?: string;
   };
   parties: Parties;
   cargoDetail: {
