@@ -10,6 +10,7 @@ import {
   StatusDo,
   td_do_dok_form,
   td_do_invoice_form,
+  td_do_kontainer_form,
   td_do_nonkontainer_form,
   td_do_vin,
 } from '@prisma/client';
@@ -441,7 +442,7 @@ export class DeliveryOrderService {
         },
         td_reqdo_status: {
           create: {
-            name: status ?? 'Draft',
+            name: 'Draft',
             datetime_status: new Date(),
           },
         },
@@ -540,20 +541,6 @@ export class DeliveryOrderService {
     if (!doData) {
       throw new NotFoundException(`DO with id = ${idDO} is not found!`);
     }
-
-    const dataDokumen = data.supportingDocument.documentType.map((item) => {
-      const data: Partial<td_do_dok_form> = {
-        updated_by,
-        created_by: updated_by,
-        updated_at: new Date(),
-        id_jenis_dok: item.document,
-        filepath_dok: item.urlFile,
-        no_dok: item.documentNo,
-        tgl_dok: new Date(item.documentDate),
-      };
-      return data;
-    });
-
     // CASE 1 : IF THE STATUS IS SUBMITTED AFTER UPDATE DO, SEND PAYLOAD DATA TO SMART CONTRACT
     if (status === 'Submitted') {
       data.requestDetail.requestorId = userInfo.sub;
@@ -568,10 +555,7 @@ export class DeliveryOrderService {
         result.response.orderId,
         status,
       );
-      return {
-        result,
-        data: updatedHeader,
-      };
+      return result;
     }
 
     // CASE 2 : IF THE STATUS IS STILL DRAFT AFTER UPDATE DO, SAVE TO RELATIONAL DATABASE
@@ -591,11 +575,28 @@ export class DeliveryOrderService {
       return data;
     });
 
+    const dataDokumen = data.supportingDocument.documentType.map((item) => {
+      const data: Partial<td_do_dok_form> = {
+        updated_by,
+        created_by: updated_by,
+        updated_at: new Date(),
+        id_jenis_dok: item.document,
+        filepath_dok: item.urlFile,
+        no_dok: item.documentNo,
+        tgl_dok: new Date(item.documentDate),
+      };
+      return data;
+    });
+
     const updateDo = await this.prisma.td_reqdo_header_form.update({
       where: {
         id: +idDO,
       },
       data: {
+        no_reqdo: generateNoReq(
+          data.requestDetail.shippingLine.shippingType.split('|')[0].trim(),
+        ),
+        tgl_reqdo: new Date(),
         td_do_requestor_form: {
           update: {
             id_jenis_requestor: +data.requestDetail.requestor.requestorType,
@@ -701,7 +702,7 @@ export class DeliveryOrderService {
 
     return {
       messsage: 'success',
-      data: [updateDo, updatedStatus],
+      data: updatedStatus,
     };
   }
 
@@ -947,12 +948,6 @@ export class DeliveryOrderService {
       throw new BadRequestException('Freight Forwarder required surat kuasa');
     }
 
-    // CHECK IF DO EXIST
-    //const doData = await this.getDoDetail(idDO);
-    // if (!doData) {
-    //   throw new BadRequestException(`DO by id = ${idDO} not found.`);
-    // }
-
     // find the last status DO
     const lastStatus = (await this.getAllStatus(idDO)).data.pop().status;
     if (lastStatus !== 'Draft') {
@@ -968,6 +963,30 @@ export class DeliveryOrderService {
       );
     }
 
+    // CHECK IF DO EXIST
+    const headerData = await this.getHeaderData(idDO);
+    if (!headerData) {
+      throw new BadRequestException(`DO by id = ${idDO} not found.`);
+    }
+
+    // CASE 1 : IF STATUS DO IS SUBMITTED AFTER UPDATE DO, SEND PAYLOAD DATA TO SMART CONTRACT
+    if (status === 'Submitted') {
+      data.requestDetail.requestorId = userInfo.sub;
+      data.requestDetail.requestDoNumber = generateNoReq(
+        data.requestDetail.shippingLine.shippingType.split('|')[0].trim(),
+      );
+      const result = await this.smartContractService.requestDO(data, status);
+      // update header data
+      const updatedHeader = await this.updateHeaderData(
+        +idDO,
+        data.requestDetail.requestDoNumber,
+        result.response.orderId,
+        status,
+      );
+      return result;
+    }
+
+    // CASE 2 : IF STATUS DO IS STILL DRAFT AFTER UPDATE DO, UPDATE DO DATA ON DB
     const dataNonKontainer = data.cargoDetail.nonContainer.map((item) => {
       const data: Partial<td_do_nonkontainer_form> = {
         created_by: updated_by,
@@ -1026,6 +1045,10 @@ export class DeliveryOrderService {
         id: idDO,
       },
       data: {
+        no_reqdo: generateNoReq(
+          data.requestDetail.shippingLine.shippingType.split('|')[0].trim(),
+        ),
+        tgl_reqdo: new Date(),
         td_do_requestor_form: {
           update: {
             id_jenis_requestor: +data.requestDetail.requestor.requestorType,
@@ -1099,12 +1122,12 @@ export class DeliveryOrderService {
       },
     });
 
-    // UPDATE STATUS REQDO
+    // UPDATE STATUS REQDO FOR DRAFT
     const updatedStatus = await this.updateStatusDo(idDO, token, status);
 
     return {
       messsage: 'success',
-      data: [updatedDo, updatedStatus],
+      data: updatedStatus,
     };
   }
 
