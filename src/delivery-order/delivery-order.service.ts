@@ -139,133 +139,18 @@ export class DeliveryOrderService {
     const userInfo = await this.userService.getDetail(token);
     // get header data by idDo
     const headerData = await this.getHeaderData(idDo);
-    const data = await this.smartContractService.getDoDetailData(
-      userInfo.sub,
-      headerData.order_id,
-    );
-    const response = {
-      requestDetailForm: {
-        requestorType: data.requestDetail.requestor.requestorType,
-        requestorName: data.requestDetail.requestor.requestorName,
-        requestorNib: data.requestDetail.requestor.nib,
-        requestorNpwp: data.requestDetail.requestor.npwp,
-        requestorAlamat: data.requestDetail.requestor.requestorAddress,
-        requestorFile: data.requestDetail.requestor.urlFile,
-        shippingLine: data.requestDetail.shippingLine.shippingType,
-        vesselName: data.requestDetail.shippingLine.vesselName,
-        voyageNumber: data.requestDetail.shippingLine.voyageNumber,
-        blNumber: data.requestDetail.document.ladingBillNumber,
-        blDate: data.requestDetail.document.ladingBillDate
-          ? moment(data.requestDetail.document.ladingBillDate).format(
-              'YYYY-MM-DD',
-            )
-          : null,
-        blType: data.requestDetail.document.ladingBillType,
-        blFile: data.requestDetail.document.urlFile,
-        bc11Date: data.requestDetail.document.bc11Date
-          ? moment(data.requestDetail.document.bc11Date).format('YYYY-MM-DD')
-          : null,
-        bc11Number: data.requestDetail.document.bc11Number || '',
-        kodePos: data.requestDetail.document.postalCode || '',
-        reqdoExp: data.requestDetail.shippingLine.doExpired
-          ? moment(data.requestDetail.shippingLine.doExpired).format(
-              'YYYY-MM-DD',
-            )
-          : null,
-        metodeBayar: data.requestDetail.payment,
-        callSign: data.requestDetail.callSign || '',
-        doReleaseDate: data.requestDetail.doReleaseDate
-          ? moment(data.requestDetail.doReleaseDate).format('YYYY-MM-DD')
-          : null,
-        doReleaseNumber: data.requestDetail.doReleaseNo || '',
-        doExp: data.requestDetail.doExpiredDate
-          ? moment(data.requestDetail.doExpiredDate).format('YYYY-MM-DD')
-          : null,
-        terminalOp: data.requestDetail.terminalOp || '',
-      },
-      partiesDetailForm: {
-        shipperName: data.parties.shipper.name,
-        consigneeName: data.parties.consignee.name,
-        consigneeNpwp: data.parties.consignee.npwp,
-        notifyPartyName: data.parties.notifyParty.name,
-        notifyPartyNpwp: data.parties.notifyParty.npwp,
-        placeLoading: data.location.locationType[0].countryCode,
-        portLoading: data.location.locationType[0].portCode,
-        placeDischarge: data.location.locationType[1].portCode,
-        placeDestination: data.location.locationType[2].portCode,
-      },
-      containerDetailForm:
-        data.cargoDetail.container !== undefined
-          ? data.cargoDetail.container.map((item) => ({
-              containerNumber: item.containerNo,
-              containerSeal: item.sealNo,
-              sizeType: item.sizeType.kodeSize,
-              grossWeightAmount: item.grossWeight.amount,
-              grossWeightUnit: item.grossWeight.unit,
-              ownership: item.ownership,
-              depoForm: {
-                nama:
-                  item.depoDetail && item.depoDetail.depoName !== undefined
-                    ? item.depoDetail.depoName
-                    : '',
-                npwp:
-                  item.depoDetail && item.depoDetail.depoNpwp !== undefined
-                    ? item.depoDetail.depoNpwp
-                    : '',
-                alamat:
-                  item.depoDetail && item.depoDetail.alamat !== undefined
-                    ? item.depoDetail.alamat
-                    : '',
-                noTelp:
-                  item.depoDetail && item.depoDetail.noTelp !== undefined
-                    ? item.depoDetail.noTelp
-                    : '',
-                kota:
-                  item.depoDetail && item.depoDetail.kotaDepo !== undefined
-                    ? item.depoDetail.kotaDepo
-                    : '',
-                kodePos:
-                  item.depoDetail && item.depoDetail.kodePos !== undefined
-                    ? item.depoDetail.kodePos
-                    : '',
-              },
-            }))
-          : [],
-      nonContainerDetailForm:
-        data.cargoDetail.nonContainer !== undefined
-          ? data.cargoDetail.nonContainer.map((item) => ({
-              goodsDescription: item.goodsDescription,
-              packageQuantityAmount: item.packageQuantity.amount,
-              packageQuantityUnit: item.packageQuantity.unit,
-              grossWeightAmount: item.grossWeight.amount,
-              grossWeightUnit: item.grossWeight.unit,
-              measurementVolume: item.measurementVolume.amount,
-              measurementUnit: item.measurementVolume.unit,
-            }))
-          : [],
-      vinDetailForm: data.vinDetail,
-      paymentDetailForm: data.paymentDetail.invoice.map((inv) => ({
-        invoiceNumber: inv.invoiceNo,
-        invoiceDate: inv.invoiceDate
-          ? moment(inv.invoiceDate).format('YYYY-MM-DD')
-          : null,
-        currency: inv.currency,
-        totalPayment: inv.totalAmount,
-        bank: inv.bankId,
-        accountNumber: inv.accountNo,
-        urlFile: inv.urlFile,
-      })),
-      supportingDocumentForm: data.supportingDocument.documentType.map(
-        (dok) => ({
-          documentType: dok.document,
-          documentNumber: dok.documentNo,
-          documentDate: dok.documentDate
-            ? moment(dok.documentDate).format('YYYY-MM-DD')
-            : null,
-          urlFile: dok.urlFile,
-        }),
-      ),
-    };
+    // get last status DO
+    const lastStatus = (await this.getAllStatus(+idDo)).data.pop().status;
+    // CASE 1 : IF LAST STATUS IS NOT DRAFT, GET DO DETAIL FROM SMART CONTRACT
+    if (lastStatus !== 'Draft') {
+      const response = await this.getDoDetailSC(
+        userInfo.sub,
+        headerData.order_id,
+      );
+      return response;
+    }
+    // CASE 2 : IF LAST STATUS IS DRAFT, GET DO DETAIL FROM DB
+    const response = await this.getDoDetailDraft(idDo);
     return response;
   }
 
@@ -1276,6 +1161,330 @@ export class DeliveryOrderService {
       });
       return updatedStatus;
     }
+  }
+
+  // GET DO DETAIL DRAFT
+  async getDoDetailDraft(idDo: number) {
+    const data = await this.prisma.td_reqdo_header_form.findUnique({
+      include: {
+        td_do_requestor_form: {
+          select: {
+            id_jenis_requestor: true,
+            filepath_suratkuasa: true,
+            nama: true,
+            npwp: true,
+            nib: true,
+            alamat: true,
+          },
+        },
+        td_do_bl_form: {
+          select: {
+            id_jenis_bl: true,
+            tgl_bl: true,
+            no_bl: true,
+            filepath_dok: true,
+          },
+        },
+        td_do_req_form: {
+          select: {
+            tgl_reqdo_exp: true,
+            id_metode_bayar: true,
+            call_sign: true,
+            no_do_release: true,
+            tgl_do_release: true,
+            tgl_do_exp: true,
+            id_terminal_op: true,
+            id_shippingline: true,
+            nama_vessel: true,
+            no_voyage: true,
+            no_bc11: true,
+            tanggal_bc11: true,
+            kode_pos: true,
+          },
+        },
+        td_parties_detail_form: {
+          select: {
+            nama_shipper: true,
+            nama_consignee: true,
+            npwp_consignee: true,
+            nama_notifyparty: true,
+            npwp_notifyparty: true,
+            id_negara_loading: true,
+            id_port_discharge: true,
+            id_port_destination: true,
+            id_port_loading: true,
+          },
+        },
+        td_do_kontainer_form: {
+          include: {
+            seals: {
+              include: {
+                seal: true,
+              },
+            },
+            td_depo: true,
+          },
+        },
+        td_do_nonkontainer_form: true,
+        td_do_vin: true,
+        td_do_invoice_form: {
+          select: {
+            no_invoice: true,
+            tgl_invoice: true,
+            no_rekening: true,
+            id_bank: true,
+            id_currency: true,
+            total_payment: true,
+            filepath_buktibayar: true,
+          },
+        },
+        td_do_dok_form: {
+          select: {
+            no_dok: true,
+            tgl_dok: true,
+            id_jenis_dok: true,
+            filepath_dok: true,
+          },
+        },
+      },
+      where: {
+        id: idDo,
+      },
+    });
+
+    if (!data) {
+      throw new NotFoundException(`${idDo} is not found`);
+    }
+
+    const response = {
+      requestDetailForm: {
+        requestorType: data.td_do_requestor_form.id_jenis_requestor,
+        requestorName: data.td_do_requestor_form.nama,
+        requestorNib: data.td_do_requestor_form.nib,
+        requestorNpwp: data.td_do_requestor_form.npwp,
+        requestorAlamat: data.td_do_requestor_form.alamat,
+        requestorFile: data.td_do_requestor_form.filepath_suratkuasa,
+        shippingLine: data.td_do_req_form.id_shippingline,
+        vesselName: data.td_do_req_form.nama_vessel,
+        voyageNumber: data.td_do_req_form.no_voyage,
+        blNumber: data.td_do_bl_form.no_bl,
+        blDate: data.td_do_bl_form.tgl_bl
+          ? moment(data.td_do_bl_form.tgl_bl).format('YYYY-MM-DD')
+          : null,
+        blType: data.td_do_bl_form.id_jenis_bl,
+        blFile: data.td_do_bl_form.filepath_dok,
+        bc11Date: data.td_do_req_form.tanggal_bc11
+          ? moment(data.td_do_req_form.tanggal_bc11).format('YYYY-MM-DD')
+          : null,
+        bc11Number: data.td_do_req_form.no_bc11 || '',
+        kodePos: data.td_do_req_form.kode_pos || '',
+        reqdoExp: data.td_do_req_form.tgl_reqdo_exp
+          ? moment(data.td_do_req_form.tgl_reqdo_exp).format('YYYY-MM-DD')
+          : null,
+        metodeBayar: data.td_do_req_form.id_metode_bayar,
+        callSign: data.td_do_req_form.call_sign,
+        doReleaseDate: data.td_do_req_form.tgl_do_release
+          ? moment(data.td_do_req_form.tgl_do_release).format('YYYY-MM-DD')
+          : null,
+        doReleaseNumber: data.td_do_req_form.no_do_release,
+        doExp: data.td_do_req_form.tgl_do_exp
+          ? moment(data.td_do_req_form.tgl_do_exp).format('YYYY-MM-DD')
+          : null,
+        terminalOp: data.td_do_req_form.id_terminal_op,
+      },
+      partiesDetailForm: {
+        shipperName: data.td_parties_detail_form.nama_shipper,
+        consigneeName: data.td_parties_detail_form.nama_consignee,
+        consigneeNpwp: data.td_parties_detail_form.npwp_consignee,
+        notifyPartyName: data.td_parties_detail_form.nama_notifyparty,
+        notifyPartyNpwp: data.td_parties_detail_form.npwp_notifyparty,
+        placeLoading: data.td_parties_detail_form.id_negara_loading,
+        portLoading: data.td_parties_detail_form.id_port_loading,
+        placeDischarge: data.td_parties_detail_form.id_port_discharge,
+        placeDestination: data.td_parties_detail_form.id_port_destination,
+      },
+      containerDetailForm: data.td_do_kontainer_form.map((data) => ({
+        containerNumber: data.no_kontainer,
+        containerSeal: data.seals.map((item) => item.seal.no_seal),
+        sizeType: data.id_sizeType,
+        grossWeightAmount: data.gross_weight,
+        grossWeightUnit: data.id_gross_weight_unit,
+        ownership: data.id_ownership,
+        depoForm: {
+          nama: data.td_depo?.deskripsi,
+          npwp: data.td_depo?.npwp,
+          alamat: data.td_depo?.alamat,
+          noTelp: data.td_depo?.no_telp,
+          kota: data.td_depo?.id_kabkota,
+          kodePos: data.td_depo?.kode_pos,
+        },
+      })),
+      nonContainerDetailForm: data.td_do_nonkontainer_form.map((data) => ({
+        goodsDescription: data.good_desc,
+        packageQuantityAmount: data.package_qty,
+        packageQuantityUnit: data.id_package_unit,
+        grossWeightAmount: data.gross_weight,
+        grossWeightUnit: data.id_gross_weight_unit,
+        measurementVolume: data.measurement_vol,
+        measurementUnit: data.measurement_unit,
+      })),
+      vinDetailForm: data.td_do_vin.map((vin) => ({
+        ladingBillNumber: vin.no_bl,
+        vinNumber: vin.no_vin,
+      })),
+      paymentDetailForm: data.td_do_invoice_form.map((inv) => ({
+        invoiceNumber: inv.no_invoice,
+        invoiceDate: inv.tgl_invoice
+          ? moment(inv.tgl_invoice).format('YYYY-MM-DD')
+          : null,
+        currency: inv.id_currency,
+        totalPayment: inv.total_payment,
+        bank: inv.id_bank,
+        accountNumber: inv.no_rekening,
+        urlFile: inv.filepath_buktibayar,
+      })),
+      supportingDocumentForm: data.td_do_dok_form.map((dok) => ({
+        documentType: dok.id_jenis_dok,
+        documentNumber: dok.no_dok,
+        documentDate: dok.tgl_dok
+          ? moment(dok.tgl_dok).format('YYYY-MM-DD')
+          : null,
+        urlFile: dok.filepath_dok,
+      })),
+    };
+    return response;
+  }
+
+  // GET DO DETAIL SMART CONTRACT
+  async getDoDetailSC(username: string, orderId: string) {
+    const data = await this.smartContractService.getDoDetailData(
+      username,
+      orderId,
+    );
+    const result = {
+      requestDetailForm: {
+        requestorType: data.requestDetail.requestor.requestorType,
+        requestorName: data.requestDetail.requestor.requestorName,
+        requestorNib: data.requestDetail.requestor.nib,
+        requestorNpwp: data.requestDetail.requestor.npwp,
+        requestorAlamat: data.requestDetail.requestor.requestorAddress,
+        requestorFile: data.requestDetail.requestor.urlFile,
+        shippingLine: data.requestDetail.shippingLine.shippingType,
+        vesselName: data.requestDetail.shippingLine.vesselName,
+        voyageNumber: data.requestDetail.shippingLine.voyageNumber,
+        blNumber: data.requestDetail.document.ladingBillNumber,
+        blDate: data.requestDetail.document.ladingBillDate
+          ? moment(data.requestDetail.document.ladingBillDate).format(
+              'YYYY-MM-DD',
+            )
+          : null,
+        blType: data.requestDetail.document.ladingBillType,
+        blFile: data.requestDetail.document.urlFile,
+        bc11Date: data.requestDetail.document.bc11Date
+          ? moment(data.requestDetail.document.bc11Date).format('YYYY-MM-DD')
+          : null,
+        bc11Number: data.requestDetail.document.bc11Number || '',
+        kodePos: data.requestDetail.document.postalCode || '',
+        reqdoExp: data.requestDetail.shippingLine.doExpired
+          ? moment(data.requestDetail.shippingLine.doExpired).format(
+              'YYYY-MM-DD',
+            )
+          : null,
+        metodeBayar: data.requestDetail.payment,
+        callSign: data.requestDetail.callSign || '',
+        doReleaseDate: data.requestDetail.doReleaseDate
+          ? moment(data.requestDetail.doReleaseDate).format('YYYY-MM-DD')
+          : null,
+        doReleaseNumber: data.requestDetail.doReleaseNo || '',
+        doExp: data.requestDetail.doExpiredDate
+          ? moment(data.requestDetail.doExpiredDate).format('YYYY-MM-DD')
+          : null,
+        terminalOp: data.requestDetail.terminalOp || '',
+      },
+      partiesDetailForm: {
+        shipperName: data.parties.shipper.name,
+        consigneeName: data.parties.consignee.name,
+        consigneeNpwp: data.parties.consignee.npwp,
+        notifyPartyName: data.parties.notifyParty.name,
+        notifyPartyNpwp: data.parties.notifyParty.npwp,
+        placeLoading: data.location.locationType[0].countryCode,
+        portLoading: data.location.locationType[0].portCode,
+        placeDischarge: data.location.locationType[1].portCode,
+        placeDestination: data.location.locationType[2].portCode,
+      },
+      containerDetailForm:
+        data.cargoDetail.container !== undefined
+          ? data.cargoDetail.container.map((item) => ({
+              containerNumber: item.containerNo,
+              containerSeal: item.sealNo,
+              sizeType: item.sizeType.kodeSize,
+              grossWeightAmount: item.grossWeight.amount,
+              grossWeightUnit: item.grossWeight.unit,
+              ownership: item.ownership,
+              depoForm: {
+                nama:
+                  item.depoDetail && item.depoDetail.depoName !== undefined
+                    ? item.depoDetail.depoName
+                    : '',
+                npwp:
+                  item.depoDetail && item.depoDetail.depoNpwp !== undefined
+                    ? item.depoDetail.depoNpwp
+                    : '',
+                alamat:
+                  item.depoDetail && item.depoDetail.alamat !== undefined
+                    ? item.depoDetail.alamat
+                    : '',
+                noTelp:
+                  item.depoDetail && item.depoDetail.noTelp !== undefined
+                    ? item.depoDetail.noTelp
+                    : '',
+                kota:
+                  item.depoDetail && item.depoDetail.kotaDepo !== undefined
+                    ? item.depoDetail.kotaDepo
+                    : '',
+                kodePos:
+                  item.depoDetail && item.depoDetail.kodePos !== undefined
+                    ? item.depoDetail.kodePos
+                    : '',
+              },
+            }))
+          : [],
+      nonContainerDetailForm:
+        data.cargoDetail.nonContainer !== undefined
+          ? data.cargoDetail.nonContainer.map((item) => ({
+              goodsDescription: item.goodsDescription,
+              packageQuantityAmount: item.packageQuantity.amount,
+              packageQuantityUnit: item.packageQuantity.unit,
+              grossWeightAmount: item.grossWeight.amount,
+              grossWeightUnit: item.grossWeight.unit,
+              measurementVolume: item.measurementVolume.amount,
+              measurementUnit: item.measurementVolume.unit,
+            }))
+          : [],
+      vinDetailForm: data.vinDetail,
+      paymentDetailForm: data.paymentDetail.invoice.map((inv) => ({
+        invoiceNumber: inv.invoiceNo,
+        invoiceDate: inv.invoiceDate
+          ? moment(inv.invoiceDate).format('YYYY-MM-DD')
+          : null,
+        currency: inv.currency,
+        totalPayment: inv.totalAmount,
+        bank: inv.bankId,
+        accountNumber: inv.accountNo,
+        urlFile: inv.urlFile,
+      })),
+      supportingDocumentForm: data.supportingDocument.documentType.map(
+        (dok) => ({
+          documentType: dok.document,
+          documentNumber: dok.documentNo,
+          documentDate: dok.documentDate
+            ? moment(dok.documentDate).format('YYYY-MM-DD')
+            : null,
+          urlFile: dok.urlFile,
+        }),
+      ),
+    };
+    return result;
   }
 
   async getHeaderData(idDO: number) {
