@@ -14,9 +14,9 @@ import {
   td_do_nonkontainer_form,
   td_do_vin,
 } from '@prisma/client';
-import * as moment from 'moment';
+import * as moment from 'moment-timezone';
 import { UserService } from 'src/user/user.service';
-import { generateNoReq, validateError } from 'src/util';
+import { generateNoReq, getLocalTimeZone, validateError } from 'src/util';
 import { ShippinglineService } from 'src/referensi/shippingline/shippingline.service';
 import { DepoService } from 'src/referensi/depo/depo.service';
 import { SmartContractService } from 'src/smart-contract/smart-contract.service';
@@ -33,6 +33,7 @@ export class DeliveryOrderService {
 
   async getAllDoCo(token: string) {
     let dataSubmitted = [];
+    const timezone = getLocalTimeZone();
     const userInfo = await this.userService.getDetail(token);
 
     if (userInfo.profile.details.kd_detail_ga) {
@@ -88,7 +89,9 @@ export class DeliveryOrderService {
         id: item.id,
         orderId: item.order_id,
         requestNumber: item.no_reqdo,
-        requestTime: moment(item.tgl_reqdo).format('DD-MM-YYYY HH:mm:ss'),
+        requestTime: moment(item.tgl_reqdo)
+          .tz(timezone)
+          .format('DD-MM-YYYY HH:mm:ss'),
         blNumber: item.td_do_bl_form.no_bl,
         blDate: item.td_do_bl_form.tgl_bl
           ? moment(item.td_do_bl_form.tgl_bl).format('DD-MM-YYYY')
@@ -116,7 +119,9 @@ export class DeliveryOrderService {
         id: headerData.id,
         orderId: item.Record.orderId,
         requestNumber: item.Record.requestDetail.requestDoNumber,
-        requestTime: moment(headerData.tgl_reqdo).format('DD-MM-YYYY HH:mm:ss'),
+        requestTime: moment(headerData.tgl_reqdo)
+          .tz(timezone)
+          .format('DD-MM-YYYY HH:mm:ss'),
         blNumber: item.Record.requestDetail.document.ladingBillNumber,
         blDate: item.Record.requestDetail.document.ladingBillDate
           ? moment(item.Record.requestDetail.document.ladingBillDate).format(
@@ -179,107 +184,6 @@ export class DeliveryOrderService {
     return {
       message: 'success',
       data: deleted,
-    };
-  }
-
-  // UPDATE DO - SHIPPINGLINE
-  async updateDoSL(
-    idDO: number,
-    data: UpdateDoSLDto,
-    token: string,
-    status?: StatusDo,
-  ) {
-    const userInfo = await this.userService.getDetail(token);
-    const updated_by = userInfo.sub;
-    const updated_at = new Date();
-
-    // CHECK IF ROLE IS SHIPPING LINE
-    if (!userInfo.profile.details.kd_detail_ga) {
-      throw new BadRequestException(
-        'Cannot Update DO - Shippingline, Role is not SL',
-      );
-    }
-
-    const isDoExist = await this.getHeaderData(+idDO);
-    if (!isDoExist) {
-      throw new NotFoundException(`DO by id = ${idDO} not found.`);
-    }
-
-    const updatedDo = await this.prisma.td_reqdo_header_form.update({
-      where: {
-        id: idDO,
-      },
-      data: {
-        td_do_req_form: {
-          update: {
-            nama_vessel: data.vesselName,
-            no_voyage: data.voyageNo,
-            call_sign: data.callSign,
-            no_do_release: data.doReleaseNo,
-            tgl_do_release: new Date(data.doReleaseDate),
-            tgl_do_exp: new Date(data.doExpiredDate),
-            id_terminal_op: data.terminalOp,
-          },
-        },
-      },
-    });
-
-    let results = [];
-    for (const item of data.cargoDetail) {
-      const isCargoExist = await this.prisma.td_do_kontainer_form.findUnique({
-        where: {
-          id: +item.containerId,
-        },
-      });
-      if (!!!isCargoExist) {
-        throw new NotFoundException(
-          `Kontainer DO by id = ${item.containerId} not found`,
-        );
-      }
-
-      let depoData: DepoDto;
-      if (!!!item.depoDetail.depoId) {
-        depoData = await this.depoService.createDepo(
-          item.depoDetail,
-          updated_by,
-        );
-      } else {
-        // check if depo exist
-        const isDepoExist = await this.prisma.td_depo.findUnique({
-          where: {
-            id: +item.depoDetail.depoId,
-          },
-        });
-        if (!isDepoExist) {
-          throw new NotFoundException(
-            `Depo by id = ${+item.depoDetail.depoId} not found`,
-          );
-        }
-
-        depoData = await this.depoService.updateDepo(
-          +item.depoDetail.depoId,
-          item.depoDetail,
-          updated_by,
-        );
-      }
-
-      const result = await this.prisma.td_do_kontainer_form.update({
-        where: {
-          id: +item.containerId,
-        },
-        data: {
-          updated_by,
-          updated_at,
-          no_kontainer: item.containerNo,
-          id_sizeType: item.sizeType,
-          td_depoId: depoData.depoId,
-        },
-      });
-      results.push(result);
-    }
-    return {
-      message: 'success',
-      result: results,
     };
   }
 
@@ -1128,6 +1032,107 @@ export class DeliveryOrderService {
     return {
       messsage: 'success',
       data: updatedStatus,
+    };
+  }
+
+  // UPDATE DO - SHIPPINGLINE
+  async updateDoSL(
+    idDO: number,
+    data: UpdateDoSLDto,
+    token: string,
+    status?: StatusDo,
+  ) {
+    const userInfo = await this.userService.getDetail(token);
+    const updated_by = userInfo.sub;
+    const updated_at = new Date();
+
+    // CHECK IF ROLE IS SHIPPING LINE
+    if (!userInfo.profile.details.kd_detail_ga) {
+      throw new BadRequestException(
+        'Cannot Update DO - Shippingline, Role is not SL',
+      );
+    }
+
+    const isDoExist = await this.getHeaderData(+idDO);
+    if (!isDoExist) {
+      throw new NotFoundException(`DO by id = ${idDO} not found.`);
+    }
+
+    const updatedDo = await this.prisma.td_reqdo_header_form.update({
+      where: {
+        id: idDO,
+      },
+      data: {
+        td_do_req_form: {
+          update: {
+            nama_vessel: data.vesselName,
+            no_voyage: data.voyageNo,
+            call_sign: data.callSign,
+            no_do_release: data.doReleaseNo,
+            tgl_do_release: new Date(data.doReleaseDate),
+            tgl_do_exp: new Date(data.doExpiredDate),
+            id_terminal_op: data.terminalOp,
+          },
+        },
+      },
+    });
+
+    let results = [];
+    for (const item of data.cargoDetail) {
+      const isCargoExist = await this.prisma.td_do_kontainer_form.findUnique({
+        where: {
+          id: +item.containerId,
+        },
+      });
+      if (!!!isCargoExist) {
+        throw new NotFoundException(
+          `Kontainer DO by id = ${item.containerId} not found`,
+        );
+      }
+
+      let depoData: DepoDto;
+      if (!!!item.depoDetail.depoId) {
+        depoData = await this.depoService.createDepo(
+          item.depoDetail,
+          updated_by,
+        );
+      } else {
+        // check if depo exist
+        const isDepoExist = await this.prisma.td_depo.findUnique({
+          where: {
+            id: +item.depoDetail.depoId,
+          },
+        });
+        if (!isDepoExist) {
+          throw new NotFoundException(
+            `Depo by id = ${+item.depoDetail.depoId} not found`,
+          );
+        }
+
+        depoData = await this.depoService.updateDepo(
+          +item.depoDetail.depoId,
+          item.depoDetail,
+          updated_by,
+        );
+      }
+
+      const result = await this.prisma.td_do_kontainer_form.update({
+        where: {
+          id: +item.containerId,
+        },
+        data: {
+          updated_by,
+          updated_at,
+          no_kontainer: item.containerNo,
+          id_sizeType: item.sizeType,
+          td_depoId: depoData.depoId,
+        },
+      });
+      results.push(result);
+    }
+    return {
+      message: 'success',
+      result: results,
     };
   }
 

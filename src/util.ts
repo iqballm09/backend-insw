@@ -1,5 +1,5 @@
 import { HttpException, HttpStatus } from '@nestjs/common';
-import * as moment from 'moment';
+import * as moment from 'moment-timezone';
 
 export function validateError(error) {
   // Handle specific error cases if needed
@@ -32,6 +32,11 @@ export function validateError(error) {
       HttpStatus.INTERNAL_SERVER_ERROR,
     );
   }
+}
+
+export function getLocalTimeZone() {
+  const userTimeZone = 'Asia/Jakarta';
+  return userTimeZone;
 }
 
 export function generateNoReq(shippingType: string) {
