@@ -91,7 +91,7 @@ export class DeliveryOrderService {
         requestNumber: item.no_reqdo,
         requestTime: moment(item.tgl_reqdo)
           .tz(timezone)
-          .format('DD-MM-YYYY HH:mm:ss'),
+          .format('DD-MM-YYYY HH:mm:ss Z'),
         blNumber: item.td_do_bl_form.no_bl,
         blDate: item.td_do_bl_form.tgl_bl
           ? moment(item.td_do_bl_form.tgl_bl).format('DD-MM-YYYY')
@@ -121,7 +121,7 @@ export class DeliveryOrderService {
         requestNumber: item.Record.requestDetail.requestDoNumber,
         requestTime: moment(headerData.tgl_reqdo)
           .tz(timezone)
-          .format('DD-MM-YYYY HH:mm:ss'),
+          .format('DD-MM-YYYY HH:mm:ss Z'),
         blNumber: item.Record.requestDetail.document.ladingBillNumber,
         blDate: item.Record.requestDetail.document.ladingBillDate
           ? moment(item.Record.requestDetail.document.ladingBillDate).format(
@@ -1138,10 +1138,12 @@ export class DeliveryOrderService {
 
   // GET ALL STATUS REQDO
   async getAllStatus(idDO: number) {
-    // const isDOExist = await this.getDoDetail(idDO);
-    // if (!isDOExist) {
-    //   throw new NotFoundException(`DO Request by id = ${idDO} not found`);
-    // }
+    // get timezone
+    const timezone = getLocalTimeZone();
+    const isDOExist = await this.getHeaderData(idDO);
+    if (!isDOExist) {
+      throw new NotFoundException(`DO Request by id = ${idDO} not found`);
+    }
     const data = await this.prisma.td_reqdo_status.findMany({
       where: {
         id_reqdo_header: idDO,
@@ -1150,7 +1152,9 @@ export class DeliveryOrderService {
 
     const result = data.map((item) => ({
       status: item.name,
-      datetime: moment(item.datetime_status).format('DD-MM-YYYY HH:mm:ss'),
+      datetime: moment(item.datetime_status)
+        .tz(timezone)
+        .format('DD-MM-YYYY HH:mm:ss Z'),
     }));
 
     return {

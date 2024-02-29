@@ -7,6 +7,7 @@ import { PassportModule } from '@nestjs/passport';
 import { SessionSerializer } from './session.serializer';
 import { UserService } from 'src/user/user.service';
 import { UserModule } from 'src/user/user.module';
+import { SmartContractService } from 'src/smart-contract/smart-contract.service';
 
 const OidcStrategyFactory = {
   provide: 'OidcStrategy',
@@ -25,6 +26,12 @@ const OidcStrategyFactory = {
   ],
   controllers: [AuthController],
   exports: [AuthService],
-  providers: [OidcStrategyFactory, SessionSerializer, AuthService, UserService],
+  providers: [
+    OidcStrategyFactory,
+    SessionSerializer,
+    AuthService,
+    UserService,
+    SmartContractService,
+  ],
 })
 export class AuthModule {}

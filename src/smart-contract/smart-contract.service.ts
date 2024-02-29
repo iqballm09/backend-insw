@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { CreateUserDto } from './dto/create-actor.dto';
 import axios from 'axios';
@@ -6,6 +6,7 @@ import { validateError } from 'src/util';
 import { RequestDoDto } from 'src/delivery-order/dto/create-do.dto';
 import { StatusDo } from '@prisma/client';
 import { AuthService } from 'src/auth/auth.service';
+import * as bcrypt from 'bcrypt';
 
 @Injectable()
 export class SmartContractService {
@@ -32,8 +33,6 @@ export class SmartContractService {
   }
 
   async enrollUser(userData: any, tokenAdmin: string) {
-    // create user if not exist
-    await this.createUser(userData, tokenAdmin);
     // get user token from smart contract
     try {
       const response = await axios.post(
@@ -74,7 +73,9 @@ export class SmartContractService {
     }
   }
 
-  async createUser(userData: any, tokenAdmin: string) {
+  async createUser(userData: any) {
+    // generate admin token
+    const tokenAdmin = (await this.enrollAdmin()).token;
     // check if user already exists
     const listUsers = (await this.getAllUsers(tokenAdmin)).data;
     for (const user of listUsers) {
@@ -82,7 +83,6 @@ export class SmartContractService {
         return;
       }
     }
-
     try {
       const response = await axios.post(
         `${this.configService.get('API_SMART_CONTRACT')}/user/register`,
