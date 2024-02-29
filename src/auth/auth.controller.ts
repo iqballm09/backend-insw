@@ -54,16 +54,16 @@ export class AuthController {
       throw new ForbiddenException('Credentials is different');
     }
 
-    // TODO: Registration account to Blockhain
-    await this.smartContractService.createUser({
-      name: user.name,
-      hash: user.hash,
-    });
-
     const createdUser = await this.userService.update(user);
     if (!createdUser) {
       throw new BadRequestException();
     }
+
+    // TODO: Registration account to Blockhain
+    await this.smartContractService.createUser({
+      name: user.name,
+      hash: createdUser.hash,
+    });
 
     return { message: 'Account successfully created!' };
   }

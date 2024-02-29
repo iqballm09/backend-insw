@@ -49,14 +49,14 @@ export class UserService {
   }
 
   async update(user: UserDto) {
-    // const hash = await bcrypt.hash(user.hash, 10);
+    const hash = await bcrypt.hash(user.hash, 10);
 
     return await this.prisma.user.update({
       where: {
         name: user.name,
       },
       data: {
-        hash: user.hash,
+        hash,
       },
     });
   }
