@@ -7,6 +7,7 @@ import { RequestDoDto } from 'src/delivery-order/dto/create-do.dto';
 import { StatusDo } from '@prisma/client';
 import { AuthService } from 'src/auth/auth.service';
 import * as bcrypt from 'bcrypt';
+import { ShippinglineEntity } from 'src/referensi/shippingline/entities/shippingline.entity';
 
 @Injectable()
 export class SmartContractService {
@@ -80,7 +81,9 @@ export class SmartContractService {
     const listUsers = (await this.getAllUsers(tokenAdmin)).data;
     for (const user of listUsers) {
       if (user.id === userData.name) {
-        return;
+        throw new BadRequestException(
+          `user '${userData.name}' already exist on smart contract`,
+        );
       }
     }
     try {
@@ -191,6 +194,31 @@ export class SmartContractService {
         {
           method: 'queryAllOrdersCO',
           args: [coName],
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${userToken}`,
+          },
+        },
+      );
+      return { data: response.data.response };
+    } catch (e) {
+      validateError(e);
+    }
+  }
+
+  async getAllDoSL(slName: string, listKodeSL: string[]) {
+    const tokenAdmin = (await this.enrollAdmin()).token;
+    // get user info
+    const userData = await this.authService.getUserDB(slName);
+    // generate user token
+    const userToken = (await this.enrollUser(userData, tokenAdmin)).token;
+    try {
+      const response = await axios.post(
+        `${this.configService.get('API_SMART_CONTRACT')}/query/do-channel/chaincode1`,
+        {
+          method: 'queryAllOrdersSL',
+          args: [JSON.stringify(listKodeSL)],
         },
         {
           headers: {

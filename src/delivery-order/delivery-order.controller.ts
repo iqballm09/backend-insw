@@ -25,11 +25,15 @@ import {
   UpdateNonContainerRequestDO,
 } from './dto/create-do.dto';
 import { StatusDo } from '@prisma/client';
+import { UserService } from 'src/user/user.service';
 
 @ApiTags('Delivery Order')
 @Controller('do')
 export class DeliveryOrderController {
-  constructor(private readonly deliveryOrderService: DeliveryOrderService) {}
+  constructor(
+    private readonly deliveryOrderService: DeliveryOrderService,
+    private readonly userService: UserService,
+  ) {}
 
   @Post('kontainer?')
   @HttpCode(201)
@@ -137,11 +141,20 @@ export class DeliveryOrderController {
   @Get()
   @UseGuards(AuthGuard)
   @ApiBearerAuth()
-  getAllDoDataCo(@Req() req: any) {
-    return this.deliveryOrderService.getAllDoCo(req.token);
+  async getAllDoData(@Req() req: any) {
+    // get user info
+    const userInfo = await this.userService.getDetail(req.token);
+    // CASE 1 : IF USER HAS KD_DETAIL_GA, GET DO DATA FOR SL
+    if (userInfo.profile.details.kd_detail_ga) {
+      return this.deliveryOrderService.getAllDoSL(
+        userInfo.sub,
+        userInfo.profile.details.kd_detail_ga,
+        req.token
+      );
+    }
+    // CASE 2: IF USER DOEST'NT HAVE KD_DETAIL_GA, GET DO DATA FOR CO
+    return this.deliveryOrderService.getAllDoCo(userInfo.sub);
   }
-
-  getAllDoDataSl() {}
 
   @Get('status-reqdo/:id')
   getAllStatusDo(@Param('id') id: number) {

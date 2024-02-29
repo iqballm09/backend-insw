@@ -20,6 +20,7 @@ import { generateNoReq, getLocalTimeZone, validateError } from 'src/util';
 import { ShippinglineService } from 'src/referensi/shippingline/shippingline.service';
 import { DepoService } from 'src/referensi/depo/depo.service';
 import { SmartContractService } from 'src/smart-contract/smart-contract.service';
+import { SlowBuffer } from 'buffer';
 
 @Injectable()
 export class DeliveryOrderService {
@@ -31,16 +32,9 @@ export class DeliveryOrderService {
     private smartContractService: SmartContractService,
   ) {}
 
-  async getAllDoCo(token: string) {
+  async getAllDoCo(coName: string) {
     let dataSubmitted = [];
     const timezone = getLocalTimeZone();
-    const userInfo = await this.userService.getDetail(token);
-
-    if (userInfo.profile.details.kd_detail_ga) {
-      throw new BadRequestException(
-        `Cannot get all DO for CO, Role is not CO!`,
-      );
-    }
 
     const data = await this.prisma.td_reqdo_header_form.findMany({
       include: {
@@ -82,7 +76,7 @@ export class DeliveryOrderService {
     let dataDraft = data
       .filter(
         (item) =>
-          item.created_by === userInfo.sub &&
+          item.created_by === coName &&
           item.td_reqdo_status[0].name === 'Draft',
       )
       .map((item) => ({
@@ -101,9 +95,8 @@ export class DeliveryOrderService {
         status: item.td_reqdo_status[0].name,
         isContainer: item.request_type == 1,
       }));
-    for (const item of (
-      await this.smartContractService.getAllDoCo(userInfo.sub)
-    ).data) {
+    for (const item of (await this.smartContractService.getAllDoCo(coName))
+      .data) {
       // get header data by order id
       const headerData = await this.prisma.td_reqdo_header_form.findFirst({
         where: {
@@ -139,6 +132,52 @@ export class DeliveryOrderService {
       return a.requestTime.localeCompare(b.requestTime);
     });
     return dataDoCo;
+  }
+
+  async getAllDoSL(slName: string, kodeDetailGa: string, token: string) {
+    let dataDoSL = [];
+    const timezone = getLocalTimeZone();
+    // get list of shippingline codes that by kode detail ga
+    const listKodeSL = (await this.shippinglineService.findAll(token)).data
+      .filter((item) => item.kd_detail_ga === kodeDetailGa)
+      .map((item) => item.kode);
+    // console.log(listKodeSL);
+    for (const item of (
+      await this.smartContractService.getAllDoSL(slName, listKodeSL)
+    ).data) {
+      // get header data by order id
+      const headerData = await this.prisma.td_reqdo_header_form.findFirst({
+        where: {
+          order_id: item.Record.orderId,
+        },
+      });
+      if (!headerData) {
+        throw new NotFoundException(
+          `DO data by order_id = ${item.Record.orderId} not found!`,
+        );
+      }
+      dataDoSL.push({
+        id: headerData.id,
+        orderId: item.Record.orderId,
+        requestNumber: item.Record.requestDetail.requestDoNumber,
+        requestTime: moment(headerData.tgl_reqdo)
+          .tz(timezone)
+          .format('DD-MM-YYYY HH:mm:ss Z'),
+        blNumber: item.Record.requestDetail.document.ladingBillNumber,
+        blDate: item.Record.requestDetail.document.ladingBillDate
+          ? moment(item.Record.requestDetail.document.ladingBillDate)
+              .tz(timezone)
+              .format('DD-MM-YYYY HH:mm:ss Z')
+          : null,
+        requestName: item.Record.requestDetail.requestor.requestorName,
+        shippingLine: item.Record.requestDetail.shippingLine.shippingType,
+        status: item.Record.status,
+        isContainer: item.Record.requestType == 1,
+      });
+    }
+    return dataDoSL.sort((b, a) => {
+      return a.requestTime.localeCompare(b.requestTime);
+    });
   }
 
   async getDoDetail(idDo: number, token: string) {
