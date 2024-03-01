@@ -85,7 +85,7 @@ export class DeliveryOrderService {
         requestNumber: item.no_reqdo,
         requestTime: moment(item.tgl_reqdo)
           .tz(timezone)
-          .format('DD-MM-YYYY HH:mm:ss Z'),
+          .format('DD-MM-YYYY HH:mm:ss'),
         blNumber: item.td_do_bl_form.no_bl,
         blDate: item.td_do_bl_form.tgl_bl
           ? moment(item.td_do_bl_form.tgl_bl).format('DD-MM-YYYY')
@@ -114,7 +114,7 @@ export class DeliveryOrderService {
         requestNumber: item.Record.requestDetail.requestDoNumber,
         requestTime: moment(headerData.tgl_reqdo)
           .tz(timezone)
-          .format('DD-MM-YYYY HH:mm:ss Z'),
+          .format('DD-MM-YYYY HH:mm:ss'),
         blNumber: item.Record.requestDetail.document.ladingBillNumber,
         blDate: item.Record.requestDetail.document.ladingBillDate
           ? moment(item.Record.requestDetail.document.ladingBillDate).format(
@@ -162,12 +162,12 @@ export class DeliveryOrderService {
         requestNumber: item.Record.requestDetail.requestDoNumber,
         requestTime: moment(headerData.tgl_reqdo)
           .tz(timezone)
-          .format('DD-MM-YYYY HH:mm:ss Z'),
+          .format('DD-MM-YYYY HH:mm:ss'),
         blNumber: item.Record.requestDetail.document.ladingBillNumber,
         blDate: item.Record.requestDetail.document.ladingBillDate
           ? moment(item.Record.requestDetail.document.ladingBillDate)
               .tz(timezone)
-              .format('DD-MM-YYYY HH:mm:ss Z')
+              .format('DD-MM-YYYY')
           : null,
         requestName: item.Record.requestDetail.requestor.requestorName,
         shippingLine: item.Record.requestDetail.shippingLine.shippingType,
@@ -1193,7 +1193,7 @@ export class DeliveryOrderService {
       status: item.name,
       datetime: moment(item.datetime_status)
         .tz(timezone)
-        .format('DD-MM-YYYY HH:mm:ss Z'),
+        .format('DD-MM-YYYY HH:mm:ss'),
     }));
 
     return {
