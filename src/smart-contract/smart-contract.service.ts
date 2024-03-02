@@ -3,7 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { CreateUserDto } from './dto/create-actor.dto';
 import axios from 'axios';
 import { validateError } from 'src/util';
-import { RequestDoDto } from 'src/delivery-order/dto/create-do.dto';
+import { RequestDoDto, UpdateDoSLDto } from 'src/delivery-order/dto/create-do.dto';
 import { StatusDo } from '@prisma/client';
 import { AuthService } from 'src/auth/auth.service';
 import * as bcrypt from 'bcrypt';
@@ -227,6 +227,30 @@ export class SmartContractService {
         },
       );
       return { data: response.data.response };
+    } catch (e) {
+      validateError(e);
+    }
+  }
+
+  async updateDoSL(slName: string, orderId: string, payload: UpdateDoSLDto) {
+    const tokenAdmin = (await this.enrollAdmin()).token;
+    const userData = await this.authService.getUserDB(slName);
+    // generate user token
+    const userToken = (await this.enrollUser(userData, tokenAdmin)).token;
+    try {
+      const response = await axios.post(
+        `${this.configService.get('API_SMART_CONTRACT')}/query/do-channel/chaincode1`,
+        {
+          method: 'updateRequestSL',
+          args: [orderId, JSON.stringify(payload)],
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${userToken}`,
+          },
+        },
+      );
+      return response.data.response;
     } catch (e) {
       validateError(e);
     }

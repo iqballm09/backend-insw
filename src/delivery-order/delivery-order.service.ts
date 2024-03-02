@@ -121,7 +121,9 @@ export class DeliveryOrderService {
             )
           : null,
         requestName: item.Record.requestDetail.requestor.requestorName,
-        shippingLine: item.Record.requestDetail.shippingLine.shippingType.split('|')[0].trim(),
+        shippingLine: item.Record.requestDetail.shippingLine.shippingType
+          .split('|')[0]
+          .trim(),
         status: item.Record.status,
         isContainer: item.Record.requestType == 1,
       });
@@ -169,7 +171,9 @@ export class DeliveryOrderService {
               .format('DD-MM-YYYY')
           : null,
         requestName: item.Record.requestDetail.requestor.requestorName,
-        shippingLine: item.Record.requestDetail.shippingLine.shippingType.split('|')[0].trim(),
+        shippingLine: item.Record.requestDetail.shippingLine.shippingType
+          .split('|')[0]
+          .trim(),
         status: item.Record.status,
         isContainer: item.Record.requestType == 1,
       });
@@ -1079,8 +1083,6 @@ export class DeliveryOrderService {
     status?: StatusDo,
   ) {
     const userInfo = await this.userService.getDetail(token);
-    const updated_by = userInfo.sub;
-    const updated_at = new Date();
 
     // CHECK IF ROLE IS SHIPPING LINE
     if (!userInfo.profile.details.kd_detail_ga) {
@@ -1089,86 +1091,32 @@ export class DeliveryOrderService {
       );
     }
 
-    const isDoExist = await this.getHeaderData(+idDO);
-    if (!isDoExist) {
+    const headerDo = await this.getHeaderData(+idDO);
+    if (!headerDo) {
       throw new NotFoundException(`DO by id = ${idDO} not found.`);
     }
 
-    const updatedDo = await this.prisma.td_reqdo_header_form.update({
-      where: {
-        id: idDO,
-      },
-      data: {
-        td_do_req_form: {
-          update: {
-            nama_vessel: data.vesselName,
-            no_voyage: data.voyageNo,
-            call_sign: data.callSign,
-            no_do_release: data.doReleaseNo,
-            tgl_do_release: new Date(data.doReleaseDate),
-            tgl_do_exp: new Date(data.doExpiredDate),
-            id_terminal_op: data.terminalOp,
-          },
-        },
-      },
-    });
+    // get the last status
+    const lastStatus = (await this.getAllStatus(idDO)).data.pop().status;
 
-    let results = [];
-    for (const item of data.cargoDetail) {
-      const isCargoExist = await this.prisma.td_do_kontainer_form.findUnique({
-        where: {
-          id: +item.containerId,
-        },
-      });
-      if (!!!isCargoExist) {
-        throw new NotFoundException(
-          `Kontainer DO by id = ${item.containerId} not found`,
-        );
-      }
-
-      let depoData: DepoDto;
-      if (!!!item.depoDetail.depoId) {
-        depoData = await this.depoService.createDepo(
-          item.depoDetail,
-          updated_by,
-        );
-      } else {
-        // check if depo exist
-        const isDepoExist = await this.prisma.td_depo.findUnique({
-          where: {
-            id: +item.depoDetail.depoId,
-          },
-        });
-        if (!isDepoExist) {
-          throw new NotFoundException(
-            `Depo by id = ${+item.depoDetail.depoId} not found`,
-          );
-        }
-
-        depoData = await this.depoService.updateDepo(
-          +item.depoDetail.depoId,
-          item.depoDetail,
-          updated_by,
-        );
-      }
-
-      const result = await this.prisma.td_do_kontainer_form.update({
-        where: {
-          id: +item.containerId,
-        },
-        data: {
-          updated_by,
-          updated_at,
-          no_kontainer: item.containerNo,
-          id_sizeType: item.sizeType,
-          td_depoId: depoData.depoId,
-        },
-      });
-      results.push(result);
+    if (lastStatus !== 'Submitted') {
+      throw new BadRequestException(
+        `Cannot update DO shippingline, the last status is not Submitted!`,
+      );
     }
+
+    const response = await this.smartContractService.updateDoSL(
+      userInfo.sub,
+      headerDo.order_id,
+      data,
+    );
+
+    // update status reqdo
+    const updatedStatus = await this.updateStatusDo(idDO, token, 'Processed');
+
     return {
       message: 'success',
-      result: results,
+      data: updatedStatus,
     };
   }
 
