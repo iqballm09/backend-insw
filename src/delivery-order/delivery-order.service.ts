@@ -20,7 +20,6 @@ import { generateNoReq, getLocalTimeZone, validateError } from 'src/util';
 import { ShippinglineService } from 'src/referensi/shippingline/shippingline.service';
 import { DepoService } from 'src/referensi/depo/depo.service';
 import { SmartContractService } from 'src/smart-contract/smart-contract.service';
-import { SlowBuffer } from 'buffer';
 
 @Injectable()
 export class DeliveryOrderService {
@@ -91,7 +90,7 @@ export class DeliveryOrderService {
           ? moment(item.td_do_bl_form.tgl_bl).format('DD-MM-YYYY')
           : null,
         requestName: item.td_do_requestor_form.nama,
-        shippingLine: item.td_do_req_form.id_shippingline,
+        shippingLine: item.td_do_req_form.id_shippingline.split('|')[0].trim(),
         status: item.td_reqdo_status[0].name,
         isContainer: item.request_type == 1,
       }));
@@ -122,7 +121,7 @@ export class DeliveryOrderService {
             )
           : null,
         requestName: item.Record.requestDetail.requestor.requestorName,
-        shippingLine: item.Record.requestDetail.shippingLine.shippingType,
+        shippingLine: item.Record.requestDetail.shippingLine.shippingType.split('|')[0].trim(),
         status: item.Record.status,
         isContainer: item.Record.requestType == 1,
       });
@@ -170,7 +169,7 @@ export class DeliveryOrderService {
               .format('DD-MM-YYYY')
           : null,
         requestName: item.Record.requestDetail.requestor.requestorName,
-        shippingLine: item.Record.requestDetail.shippingLine.shippingType,
+        shippingLine: item.Record.requestDetail.shippingLine.shippingType.split('|')[0].trim(),
         status: item.Record.status,
         isContainer: item.Record.requestType == 1,
       });
@@ -350,7 +349,7 @@ export class DeliveryOrderService {
             id_shippingline: data.requestDetail.shippingLine.shippingType,
             nama_vessel: data.requestDetail.shippingLine.vesselName,
             no_voyage: data.requestDetail.shippingLine.voyageNumber,
-            kode_pos: data.requestDetail.document.postalCode,
+            pos_number: data.requestDetail.document.posNumber,
             tgl_reqdo_exp: new Date(data.requestDetail.shippingLine.doExpired),
             no_bc11: data.requestDetail.document.bc11Number,
             tanggal_bc11: data.requestDetail.document.bc11Date
@@ -569,7 +568,7 @@ export class DeliveryOrderService {
             tanggal_bc11: data.requestDetail.document.bc11Date
               ? new Date(data.requestDetail.document.bc11Date)
               : null,
-            kode_pos: data.requestDetail.document.postalCode,
+            pos_number: data.requestDetail.document.posNumber,
           },
         },
         td_parties_detail_form: {
@@ -740,10 +739,9 @@ export class DeliveryOrderService {
       return data;
     });
 
-    const dataVin = data.vinDetail.map((item) => {
-      const data = {
-        no_bl: item.ladingBillNumber,
-        no_vin: item.vinNumber,
+    const dataVin = data.vinDetail.vinNumber.map((vin) => {
+      const data: Partial<td_do_vin> = {
+        no_vin: vin,
       };
       return data;
     });
@@ -779,7 +777,7 @@ export class DeliveryOrderService {
             tanggal_bc11: data.requestDetail.document.bc11Date
               ? new Date(data.requestDetail.document.bc11Date)
               : null,
-            kode_pos: data.requestDetail.document.postalCode,
+            pos_number: data.requestDetail.document.posNumber,
           },
         },
         td_parties_detail_form: {
@@ -803,16 +801,16 @@ export class DeliveryOrderService {
             id_jenis_bl: data.requestDetail.document.ladingBillType,
             no_bl: data.requestDetail.document.ladingBillNumber,
             tgl_bl: new Date(data.requestDetail.document.ladingBillDate),
+            do_vin: {
+              createMany: {
+                data: dataVin as td_do_vin[],
+              },
+            },
           },
         },
         td_do_dok_form: {
           createMany: {
             data: dataDokumen as td_do_dok_form[],
-          },
-        },
-        td_do_vin: {
-          createMany: {
-            data: dataVin as td_do_vin[],
           },
         },
         td_do_invoice_form: {
@@ -975,10 +973,9 @@ export class DeliveryOrderService {
       return data;
     });
 
-    const dataVin = data.vinDetail.map((item) => {
-      const data = {
-        no_bl: item.ladingBillNumber,
-        no_vin: item.vinNumber,
+    const dataVin = data.vinDetail.vinNumber.map((vin) => {
+      const data: Partial<td_do_vin> = {
+        no_vin: vin,
       };
       return data;
     });
@@ -1005,6 +1002,12 @@ export class DeliveryOrderService {
             filepath_dok: data.requestDetail.document.urlFile,
             no_bl: data.requestDetail.document.ladingBillNumber,
             tgl_bl: new Date(data.requestDetail.document.ladingBillDate),
+            do_vin: {
+              deleteMany: {},
+              createMany: {
+                data: dataVin as td_do_vin[],
+              },
+            },
           },
         },
         td_do_req_form: {
@@ -1020,7 +1023,7 @@ export class DeliveryOrderService {
             tanggal_bc11: data.requestDetail.document.bc11Date
               ? new Date(data.requestDetail.document.bc11Date)
               : null,
-            kode_pos: data.requestDetail.document.postalCode,
+            pos_number: data.requestDetail.document.posNumber,
           },
         },
         td_parties_detail_form: {
@@ -1048,12 +1051,6 @@ export class DeliveryOrderService {
           deleteMany: {},
           createMany: {
             data: dataInvoice as td_do_invoice_form[],
-          },
-        },
-        td_do_vin: {
-          deleteMany: {},
-          createMany: {
-            data: dataVin as td_do_vin[],
           },
         },
         td_do_nonkontainer_form: {
@@ -1254,6 +1251,7 @@ export class DeliveryOrderService {
             tgl_bl: true,
             no_bl: true,
             filepath_dok: true,
+            do_vin: true,
           },
         },
         td_do_req_form: {
@@ -1270,7 +1268,7 @@ export class DeliveryOrderService {
             no_voyage: true,
             no_bc11: true,
             tanggal_bc11: true,
-            kode_pos: true,
+            pos_number: true,
           },
         },
         td_parties_detail_form: {
@@ -1297,7 +1295,6 @@ export class DeliveryOrderService {
           },
         },
         td_do_nonkontainer_form: true,
-        td_do_vin: true,
         td_do_invoice_form: {
           select: {
             no_invoice: true,
@@ -1348,7 +1345,7 @@ export class DeliveryOrderService {
           ? moment(data.td_do_req_form.tanggal_bc11).format('YYYY-MM-DD')
           : null,
         bc11Number: data.td_do_req_form.no_bc11 || '',
-        kodePos: data.td_do_req_form.kode_pos || '',
+        posNumber: data.td_do_req_form.pos_number || '',
         reqdoExp: data.td_do_req_form.tgl_reqdo_exp
           ? moment(data.td_do_req_form.tgl_reqdo_exp).format('YYYY-MM-DD')
           : null,
@@ -1399,10 +1396,7 @@ export class DeliveryOrderService {
         measurementVolume: data.measurement_vol,
         measurementUnit: data.measurement_unit,
       })),
-      vinDetailForm: data.td_do_vin.map((vin) => ({
-        ladingBillNumber: vin.no_bl,
-        vinNumber: vin.no_vin,
-      })),
+      vinDetailForm: data.td_do_bl_form.do_vin.map((vin) => vin),
       paymentDetailForm: data.td_do_invoice_form.map((inv) => ({
         invoiceNumber: inv.no_invoice,
         invoiceDate: inv.tgl_invoice
@@ -1455,7 +1449,7 @@ export class DeliveryOrderService {
           ? moment(data.requestDetail.document.bc11Date).format('YYYY-MM-DD')
           : null,
         bc11Number: data.requestDetail.document.bc11Number || '',
-        kodePos: data.requestDetail.document.postalCode || '',
+        posNumber: data.requestDetail.document.posNumber || '',
         reqdoExp: data.requestDetail.shippingLine.doExpired
           ? moment(data.requestDetail.shippingLine.doExpired).format(
               'YYYY-MM-DD',

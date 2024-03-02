@@ -6,7 +6,7 @@
             "urlFile": ""
         },
         "shippingLine": {
-            "shippingType": "YML | Yang Ming Line",
+            "shippingType": "YML",
             "doExpired": "2023-10-18",
             "vesselName": "NAVIOS DELIGHT",
             "voyageNumber": "0KRH3W"
@@ -19,7 +19,7 @@
             "urlFile": "assets/upload/billing/bl01.pdf",
             "bc11Number": "BC123XYU7I555",
             "bc11Date": "2019-10-12",
-            "postalCode": "16113"
+            "posNumber": "16113"
         }
     },
     "parties": {
@@ -72,16 +72,10 @@
             }
         ]
     },
-    "vinDetail": [
-        {
-            "ladingBillNumber": "121020190055",
-            "vinNumber": "1HGCM82633A123456"
-        },
-        {
-            "ladingBillNumber":"121020190055", 
-            "vinNumber":"2T3DFREV5EW123789"
-        }
-    ],
+    "vinDetail": {
+        "ladingBillNumber": "121020190055",
+        "vinNumber": ["1HGCM82633A123456", "2T3DFREV5EW123789"]
+    },
     "location": {
         "locationType": [
             {

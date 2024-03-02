@@ -72,7 +72,6 @@ model td_reqdo_header_form {
   td_reqdo_status         td_reqdo_status[]
   td_do_kontainer_form    td_do_kontainer_form[]
   td_do_nonkontainer_form td_do_nonkontainer_form[]
-  td_do_vin               td_do_vin[]
 }
 
 // REQUESTOR FORM
@@ -104,7 +103,7 @@ model td_do_req_form {
   no_voyage       String    @db.VarChar(20)
   no_bc11         String?   @db.VarChar(20)
   tanggal_bc11    DateTime?
-  kode_pos        String?   @db.VarChar(45)
+  pos_number      String?   @db.VarChar(45)
   call_sign       String?   @db.VarChar(10)
   no_do_release   String?   @db.VarChar(50)
   tgl_reqdo_exp   DateTime
@@ -227,15 +226,15 @@ model td_do_bl_form {
   created_by      String
 
   do_req_header td_reqdo_header_form @relation(fields: [id_reqdo_header], references: [id], onDelete: Cascade)
+  do_vin        td_do_vin[]
 }
 
 // VIN FORM
 model td_do_vin {
-  id              Int                  @id @default(autoincrement())
-  id_reqdo_header Int
-  no_bl           String               @db.VarChar(50)
-  no_vin          String               @db.VarChar(50)
-  do_req_header   td_reqdo_header_form @relation(fields: [id_reqdo_header], references: [id], onDelete: Cascade)
+  id                     Int                   @id @default(autoincrement())
+  id_bl                  Int
+  no_vin                 String                @db.VarChar(50)
+  do_bl                  td_do_bl_form?        @relation(fields: [id_bl], references: [id], onDelete: Cascade)
 }
 
 // INVOICE FORM

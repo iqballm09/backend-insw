@@ -10,7 +10,7 @@
             "requestorAddress": "JAKARTA PUSAT"
         },
         "shippingLine": {
-            "shippingType": "YML | Yang Ming Line",
+            "shippingType": "YML",
             "doExpired": "2019-10-12",
             "vesselName": "NAVIOS DELIGHT",
             "voyageNumber": "0KRH3W"
@@ -23,7 +23,7 @@
             "urlFile": "assets/upload/billing/bl01.pdf",
             "bc11Number": "BC123XYU7I555",
             "bc11Date": "2019-10-12",
-            "postalCode": "16113"
+            "posNumber": "16113"
         }
     },
     "parties": {
@@ -71,17 +71,17 @@
             {
                 "location": "0",
                 "countryCode": "AG",
-                "portCode": "AGBBQ | Barbuda"
+                "portCode": "AGBBQ"
             },
             {
                 "location": "1",
                 "countryCode": "ID",
-                "portCode": "IDAEG | Aekgodang"
+                "portCode": "IDAEG"
             },
             {
                 "location": "2",
                 "countryCode": "ID",
-                "portCode": "IDAKE | Akeselaka"
+                "portCode": "IDAKE"
             }
         ]
     },
@@ -91,7 +91,7 @@
                 "invoiceNo": "INV1232021",
                 "invoiceDate": "2019-10-11",
                 "totalAmount": 100000000.00,
-                "bankId": "002 | BRI",
+                "bankId": "002",
                 "currency": "IDR",
                 "accountNo": "80123123123123",
                 "urlFile": "assets/upload/payment/15712185291.pdf"
@@ -101,7 +101,7 @@
                 "invoiceNo": "INV9872021",
                 "invoiceDate": "2019-11-12",
                 "totalAmount": 900000000.00,
-                "bankId": "002 | BRI",
+                "bankId": "002",
                 "accountNo": "80123123123123",
                 "urlFile": "assets/upload/payment/inv.pdf"
             }

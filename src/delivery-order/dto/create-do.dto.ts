@@ -30,7 +30,7 @@ class Document {
   urlFile: string;
   bc11Number?: string;
   bc11Date?: string;
-  postalCode?: string;
+  posNumber?: string;
 }
 
 class Parties {
@@ -110,7 +110,7 @@ class DocumentType {
 
 class VinDetail {
   ladingBillNumber: string;
-  vinNumber: string;
+  vinNumber: string[];
 }
 
 export class RequestDoDto {
@@ -133,7 +133,7 @@ export class RequestDoDto {
     container?: Container[];
     nonContainer?: NonContainer[];
   };
-  vinDetail?: VinDetail[];
+  vinDetail?: VinDetail;
   location: {
     locationType: LocationType[];
   };
