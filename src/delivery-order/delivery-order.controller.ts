@@ -26,6 +26,7 @@ import {
 } from './dto/create-do.dto';
 import { StatusDo } from '@prisma/client';
 import { UserService } from 'src/user/user.service';
+import { identity } from 'rxjs';
 
 @ApiTags('Delivery Order')
 @Controller('do')
@@ -138,6 +139,13 @@ export class DeliveryOrderController {
     );
   }
 
+  @Put('shipping-line/status/:id')
+  @UseGuards(AuthGuard)
+  @ApiBearerAuth()
+  updateDoStatusProcessSL(@Param('id') id: number, @Req() req: any) {
+    return this.deliveryOrderService.updateStatusDoProcessSL(+id, req.token);
+  }
+
   @Get()
   @UseGuards(AuthGuard)
   @ApiBearerAuth()
@@ -149,7 +157,7 @@ export class DeliveryOrderController {
       return this.deliveryOrderService.getAllDoSL(
         userInfo.sub,
         userInfo.profile.details.kd_detail_ga,
-        req.token
+        req.token,
       );
     }
     // CASE 2: IF USER DOEST'NT HAVE KD_DETAIL_GA, GET DO DATA FOR CO

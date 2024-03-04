@@ -270,6 +270,7 @@ export class DeliveryOrderService {
         data.requestDetail.shippingLine.shippingType.split('|')[0].trim(),
       );
       const result = await this.smartContractService.requestDO(data, status);
+      // generate status do to smart contract
       const headerDo = await this.prisma.td_reqdo_header_form.create({
         data: {
           order_id: result.response.orderId,
@@ -278,8 +279,8 @@ export class DeliveryOrderService {
           created_by: data.requestDetail.requestorId,
           td_reqdo_status: {
             create: {
-              name: status,
-              datetime_status: new Date(),
+              name: result.response.status,
+              datetime_status: new Date(result.response.datetime),
             },
           },
         },
@@ -467,8 +468,15 @@ export class DeliveryOrderService {
       throw new BadRequestException('Freight Forwarder required surat kuasa');
     }
 
-    // find the last status DO
+    // CHECK IF DO already exist
+    const doData = await this.getHeaderData(+idDO);
+    if (!doData) {
+      throw new NotFoundException(`DO with id = ${idDO} is not found!`);
+    }
+
+    // get last status DO
     const lastStatus = (await this.getAllStatus(+idDO)).data.pop().status;
+
     if (lastStatus !== 'Draft') {
       throw new BadRequestException(
         `Cannot update container DO, the last status DO is not draft!`,
@@ -482,11 +490,6 @@ export class DeliveryOrderService {
       );
     }
 
-    // CHECK IF DO already exist
-    const doData = await this.getHeaderData(+idDO);
-    if (!doData) {
-      throw new NotFoundException(`DO with id = ${idDO} is not found!`);
-    }
     // CASE 1 : IF THE STATUS IS SUBMITTED AFTER UPDATE DO, SEND PAYLOAD DATA TO SMART CONTRACT
     if (status === 'Submitted') {
       data.requestDetail.requestorId = userInfo.sub;
@@ -499,7 +502,6 @@ export class DeliveryOrderService {
         +idDO,
         data.requestDetail.requestDoNumber,
         result.response.orderId,
-        status,
       );
       return result;
     }
@@ -704,7 +706,8 @@ export class DeliveryOrderService {
           created_by: data.requestDetail.requestorId,
           td_reqdo_status: {
             create: {
-              name: status,
+              name: result.response.status,
+              datetime_status: new Date(result.response.datetime),
             },
           },
         },
@@ -926,7 +929,6 @@ export class DeliveryOrderService {
         +idDO,
         data.requestDetail.requestDoNumber,
         result.response.orderId,
-        status,
       );
       return result;
     }
@@ -1075,12 +1077,59 @@ export class DeliveryOrderService {
     };
   }
 
+  async updateStatusDoProcessSL(idDO: number, token: string) {
+    const userInfo = await this.userService.getDetail(token);
+    // check if role is shippingline
+    if (!userInfo.profile.details.kd_detail_ga) {
+      throw new BadRequestException(
+        'Cannot update status DO on shippingline, role is not SL',
+      );
+    }
+    // get header data
+    const headerData = await this.getHeaderData(idDO);
+    // check status if status DO == 'submitted'
+    const statusDO = await this.smartContractService.getStatusDo(
+      headerData.order_id,
+    );
+    if (statusDO.status !== 'Submitted') {
+      throw new BadRequestException(
+        `Cannot update status DO SL to Processed, last status DO is not Submitted`,
+      );
+    }
+    // update status DO SL from 'Submitted' to 'Processed'
+    const updatedDoSL = await this.smartContractService.updateStatusDo(
+      userInfo.sub,
+      headerData.order_id,
+      'Processed',
+    );
+
+    const updatedStatusDO = await this.prisma.td_reqdo_header_form.update({
+      where: {
+        id: +idDO,
+      },
+      data: {
+        td_reqdo_status: {
+          create: {
+            name: updatedDoSL.status,
+            datetime_status: new Date(updatedDoSL.datetime),
+          },
+        },
+      },
+    });
+
+    return {
+      status: 'success',
+      data: updatedDoSL,
+    };
+    // update header DO
+  }
+
   // UPDATE DO - SHIPPINGLINE
   async updateDoSL(
     idDO: number,
     data: UpdateDoSLDto,
     token: string,
-    status?: StatusDo,
+    status: StatusDo,
   ) {
     const userInfo = await this.userService.getDetail(token);
 
@@ -1091,13 +1140,27 @@ export class DeliveryOrderService {
       );
     }
 
+    if (!['Rejected', 'Released'].includes(status)) {
+      throw new BadRequestException(
+        `Cannot create DO decision, status is not Released or Rejected`,
+      );
+    }
+
     const headerDo = await this.getHeaderData(+idDO);
     if (!headerDo) {
       throw new NotFoundException(`DO by id = ${idDO} not found.`);
     }
+    // update status do smart contract
+    const updatedStatusSC = await this.smartContractService.updateStatusDo(
+      userInfo.sub,
+      headerDo.no_reqdo,
+      status,
+    );
+    // update status do db
+    const updateStatusDO1 = await this.updateStatusDo(idDO, token, status);
 
     // get the last status
-    const lastStatus = (await this.getAllStatus(idDO)).data.pop().status;
+    const lastStatus = updateStatusDO1.name;
 
     if (lastStatus !== 'Submitted') {
       throw new BadRequestException(
@@ -1512,14 +1575,11 @@ export class DeliveryOrderService {
     return data;
   }
 
-  async updateHeaderData(
-    idDO: number,
-    reqdoNum: string,
-    orderId: string,
-    status: StatusDo,
-  ) {
+  async updateHeaderData(idDO: number, reqdoNum: string, orderId: string) {
     // check if DO exist
     const headerData = await this.getHeaderData(idDO);
+    // get status do from smart contract
+    const statusDo = await this.smartContractService.getStatusDo(orderId);
 
     const updatedHeader = await this.prisma.td_reqdo_header_form.update({
       where: {
@@ -1531,8 +1591,8 @@ export class DeliveryOrderService {
         tgl_reqdo: new Date(),
         td_reqdo_status: {
           create: {
-            name: status,
-            datetime_status: new Date(),
+            name: statusDo.status,
+            datetime_status: new Date(statusDo.datetime),
           },
         },
       },
