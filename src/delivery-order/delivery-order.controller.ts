@@ -15,7 +15,14 @@ import {
 } from '@nestjs/common';
 import { DeliveryOrderService } from './delivery-order.service';
 import { AuthGuard } from 'src/auth/guard/auth.guard';
-import { ApiBearerAuth, ApiBody, ApiQuery, ApiTags } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiBody,
+  ApiOperation,
+  ApiProperty,
+  ApiQuery,
+  ApiTags,
+} from '@nestjs/swagger';
 import {
   CreateContainerRequestDO,
   CreateNonContainerRequestDO,
@@ -142,6 +149,9 @@ export class DeliveryOrderController {
   @Put('shipping-line/status/:id')
   @UseGuards(AuthGuard)
   @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'Update status DO when SL choosed "periksa pengajuan"',
+  })
   updateDoStatusProcessSL(@Param('id') id: number, @Req() req: any) {
     return this.deliveryOrderService.updateStatusDoProcessSL(+id, req.token);
   }
