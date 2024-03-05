@@ -27,11 +27,11 @@ export class AppController {
 
     const authResult = await this.auth.exchangeToken(code);
 
-    if (authResult.redirect) {
-      return res.redirect(
-        `${process.env.WEB_URI}/signup?sub=${authResult.username}&token=${authResult.token}`,
-      );
-    }
+    // if (authResult.redirect) {
+    //   return res.redirect(
+    //     `${process.env.WEB_URI}/signup?sub=${authResult.username}&token=${authResult.token}`,
+    //   );
+    // }
 
     return res.redirect(
       `${process.env.WEB_URI}/api/auth/signin?token=${authResult.token}`,

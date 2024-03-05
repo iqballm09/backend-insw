@@ -150,7 +150,7 @@ export class DeliveryOrderController {
   @UseGuards(AuthGuard)
   @ApiBearerAuth()
   @ApiOperation({
-    summary: 'Update status DO when SL choosed "periksa pengajuan"',
+    summary: 'Update status DO immediately when SL processed DO Request',
   })
   updateDoStatusProcessSL(@Param('id') id: number, @Req() req: any) {
     return this.deliveryOrderService.updateStatusDoProcessSL(+id, req.token);

@@ -1,4 +1,8 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { PrismaService } from 'src/prisma/prisma.service';
@@ -33,6 +37,7 @@ export class UserService {
     return await this.prisma.user.create({
       data: {
         name: name,
+        hash: crypto.randomUUID(),
         role: {
           connectOrCreate: {
             create: {
@@ -48,10 +53,22 @@ export class UserService {
     });
   }
 
+  async getUserDB(username: string) {
+    const user = await this.prisma.user.findUnique({
+      where: {
+        name: username,
+      },
+    });
+    if (!user) {
+      throw new NotFoundException(`User by Id = ${username} not found on DB!`);
+    }
+    return user;
+  }
+
   async update(user: UserDto) {
     const hash = await bcrypt.hash(user.hash, 10);
 
-    return await this.prisma.user.update({
+    const updatedData = await this.prisma.user.update({
       where: {
         name: user.name,
       },
@@ -59,5 +76,7 @@ export class UserService {
         hash,
       },
     });
+
+    return updatedData;
   }
 }

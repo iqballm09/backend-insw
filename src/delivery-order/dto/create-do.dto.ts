@@ -156,9 +156,8 @@ export class DepoDto {
 }
 
 export class CargoDetailSL {
-  containerId: number;
   containerNo: string;
-  sizeType: string;
+  sizeType: SizeType;
   depoDetail: DepoDto;
 }
 
@@ -166,11 +165,12 @@ export class UpdateDoSLDto {
   vesselName: string;
   voyageNo: string;
   callSign: string;
-  doReleaseNo: string;
-  doReleaseDate: string;
+  doReleaseNo?: string;
+  doReleaseDate?: string;
   doExpiredDate: string;
   terminalOp: string;
   cargoDetail?: CargoDetailSL[];
+  statusNote?: string;
 }
 
 export class CreateNonContainerRequestDO {

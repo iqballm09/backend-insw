@@ -8,9 +8,18 @@
     "terminalOp": "BICT",
     "cargoDetail": [
         {
-            "containerId": 1,
-            "containerNo": "MSKU01982523",
-            "sizeType": "20GP",
+            "containerNo": "MKSU1234565",
+            "grossWeight": {
+              "amount": 1560,
+              "unit": "KGM"
+            },
+            "ownership": "2",
+            "sealNo": [
+              "SEAL1234567"
+            ],
+            "sizeType": {
+              "kodeSize": "20GP"
+            },
             "depoDetail": {
                 "depoName": "PT. MITRA JAYA BAHARI",
                 "depoNpwp": "015163736112000",
@@ -18,21 +27,8 @@
                 "alamat": "Jl. Raya Pelabuhan Gabion Km.0 Belawan - 20412 Sumatera Utara - Indonesia",
                 "kotaDepo": "1271",
                 "kodePos": "16526"
-            }
-        },
-        {
-            "containerId": 2,
-            "containerNo": "AGKU021825892",
-            "sizeType": "42GP",
-            "depoDetail": {
-                "depoId": 1,
-                "depoName": "PT. MITRA JAYA BAHARI",
-                "depoNpwp": "015163736112000",
-                "noTelp": "061-6940095",
-                "alamat": "Jl. Raya Pelabuhan Gabion Km.0 Belawan - 20412 Sumatera Utara - Indonesia",
-                "kotaDepo": "1271",
-                "kodePos": "16598"
-            }
+              }
         }
-    ]
+    ],
+    "statusNote": "reject, ada kesalahan yang terdapat di request DO detail. Harap diperbaiki"
 }

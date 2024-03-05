@@ -1,6 +1,5 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { CreateUserDto } from './dto/create-actor.dto';
 import axios from 'axios';
 import { validateError } from 'src/util';
 import {
@@ -8,15 +7,13 @@ import {
   UpdateDoSLDto,
 } from 'src/delivery-order/dto/create-do.dto';
 import { StatusDo } from '@prisma/client';
-import { AuthService } from 'src/auth/auth.service';
-import * as bcrypt from 'bcrypt';
-import { ShippinglineEntity } from 'src/referensi/shippingline/entities/shippingline.entity';
+import { UserService } from 'src/user/user.service';
 
 @Injectable()
 export class SmartContractService {
   constructor(
+    private userService: UserService,
     private configService: ConfigService,
-    private authService: AuthService,
   ) {}
 
   async enrollAdmin() {
@@ -37,6 +34,8 @@ export class SmartContractService {
   }
 
   async enrollUser(userData: any, tokenAdmin: string) {
+    // TODO: Registration account to Blockhain
+    await this.createUser(userData, tokenAdmin);
     // get user token from smart contract
     try {
       const response = await axios.post(
@@ -77,16 +76,12 @@ export class SmartContractService {
     }
   }
 
-  async createUser(userData: any) {
-    // generate admin token
-    const tokenAdmin = (await this.enrollAdmin()).token;
+  async createUser(userData: any, tokenAdmin: string) {
     // check if user already exists
     const listUsers = (await this.getAllUsers(tokenAdmin)).data;
     for (const user of listUsers) {
       if (user.id === userData.name) {
-        throw new BadRequestException(
-          `user '${userData.name}' already exist on smart contract`,
-        );
+        return;
       }
     }
     try {
@@ -112,7 +107,7 @@ export class SmartContractService {
     // generate admin token
     const tokenAdmin = (await this.enrollAdmin()).token;
     // get user info
-    const userData = await this.authService.getUserDB(
+    const userData = await this.userService.getUserDB(
       payload.requestDetail.requestorId,
     );
     // generate user token
@@ -141,7 +136,7 @@ export class SmartContractService {
     // generate admin token
     const tokenAdmin = (await this.enrollAdmin()).token;
     // get user info
-    const userData = await this.authService.getUserDB(userId);
+    const userData = await this.userService.getUserDB(userId);
     // generate user token
     const userToken = (await this.enrollUser(userData, tokenAdmin)).token;
     try {
@@ -188,7 +183,7 @@ export class SmartContractService {
   async getAllDoCo(coName: string) {
     const tokenAdmin = (await this.enrollAdmin()).token;
     // get user info
-    const userData = await this.authService.getUserDB(coName);
+    const userData = await this.userService.getUserDB(coName);
     // generate user token
     const userToken = (await this.enrollUser(userData, tokenAdmin)).token;
     try {
@@ -213,7 +208,7 @@ export class SmartContractService {
   async getAllDoSL(slName: string, listKodeSL: string[]) {
     const tokenAdmin = (await this.enrollAdmin()).token;
     // get user info
-    const userData = await this.authService.getUserDB(slName);
+    const userData = await this.userService.getUserDB(slName);
     // generate user token
     const userToken = (await this.enrollUser(userData, tokenAdmin)).token;
     try {
@@ -237,7 +232,7 @@ export class SmartContractService {
 
   async updateStatusDo(username: string, orderId: string, status: string) {
     const tokenAdmin = (await this.enrollAdmin()).token;
-    const userData = await this.authService.getUserDB(username);
+    const userData = await this.userService.getUserDB(username);
     // generate user token
     const userToken = (await this.enrollUser(userData, tokenAdmin)).token;
     const response = await axios.post(
@@ -255,9 +250,39 @@ export class SmartContractService {
     return response.data.response;
   }
 
-  async updateDoSL(slName: string, orderId: string, payload: UpdateDoSLDto) {
+  async updateDoSL(
+    slName: string,
+    orderId: string,
+    payload: UpdateDoSLDto,
+    status: StatusDo,
+  ) {
     const tokenAdmin = (await this.enrollAdmin()).token;
-    const userData = await this.authService.getUserDB(slName);
+    const userData = await this.userService.getUserDB(slName);
+
+    // get do data
+    const data = await this.getDoDetailData(slName, orderId);
+
+    // update data
+    data.requestDetail.shippingLine.vesselName = payload.vesselName;
+    data.requestDetail.shippingLine.voyageNumber = payload.voyageNo;
+    data.requestDetail.doReleaseDate = payload.doReleaseDate;
+    data.requestDetail.doExpiredDate = payload.doExpiredDate;
+    data.requestDetail.doReleaseNumber = payload.doReleaseNo;
+    data.requestDetail.callSign = payload.callSign;
+    data.requestDetail.terminalOp = payload.terminalOp;
+
+    for (let i = 0; i < data.cargoDetail.container.length; i++) {
+      data.cargoDetail.container[i].containerNo =
+        payload.cargoDetail[i].containerNo;
+      data.cargoDetail.container[i].sizeType = payload.cargoDetail[i].sizeType;
+      data.cargoDetail.container[i].depoDetail =
+        payload.cargoDetail[i].depoDetail;
+    }
+
+    // update status
+    data.status = status;
+    data.statusDate = new Date().toLocaleString();
+    data.statusNote = payload.statusNote;
 
     // generate user token
     const userToken = (await this.enrollUser(userData, tokenAdmin)).token;
@@ -266,7 +291,7 @@ export class SmartContractService {
         `${this.configService.get('API_SMART_CONTRACT')}/invoke/do-channel/chaincode1`,
         {
           method: 'updateDO',
-          args: [orderId, JSON.stringify(payload)],
+          args: [orderId, JSON.stringify(data)],
         },
         {
           headers: {

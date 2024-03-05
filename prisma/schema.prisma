@@ -231,10 +231,10 @@ model td_do_bl_form {
 
 // VIN FORM
 model td_do_vin {
-  id                     Int                   @id @default(autoincrement())
-  id_bl                  Int
-  no_vin                 String                @db.VarChar(50)
-  do_bl                  td_do_bl_form?        @relation(fields: [id_bl], references: [id], onDelete: Cascade)
+  id     Int            @id @default(autoincrement())
+  id_bl  Int
+  no_vin String         @db.VarChar(50)
+  do_bl  td_do_bl_form? @relation(fields: [id_bl], references: [id], onDelete: Cascade)
 }
 
 // INVOICE FORM
@@ -278,6 +278,7 @@ model td_reqdo_status {
   id_reqdo_header Int
   name            StatusDo
   datetime_status DateTime @default(now())
+  note            String?
 
   do_req_header td_reqdo_header_form @relation(fields: [id_reqdo_header], references: [id], onDelete: Cascade)
 }

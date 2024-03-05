@@ -31,23 +31,11 @@ export class AuthService {
       },
     });
 
-    if (!userExist.hash) {
-      throw new UnauthorizedException('User not created yet');
-    }
+    // if (!userExist.hash) {
+    //   throw new UnauthorizedException('User not created yet');
+    // }
 
     return { success: true, data: { ...userInfo, roleId: userExist.roleId } };
-  }
-
-  async getUserDB(username: string) {
-    const user = await this.prisma.user.findUnique({
-      where: {
-        name: username,
-      },
-    });
-    if (!user) {
-      throw new NotFoundException(`User by Id = ${username} not found on DB!`);
-    }
-    return user;
   }
 
   async exchangeToken(code: string) {
@@ -90,21 +78,21 @@ export class AuthService {
             : ('CO' as UserRole),
         };
         this.userService.create(userInfo.sub, role);
-        return {
-          redirect: true,
-          username: userInfo.sub,
-          token: data.access_token,
-        };
+        // return {
+        //   redirect: true,
+        //   username: userInfo.sub,
+        //   token: data.access_token,
+        // };
       }
 
-      // IF USER STILL NOT HAVE PASSWORD, REDIRECT TO SIGN UP PAGE
-      if (!userExist.hash) {
-        return {
-          redirect: true,
-          username: userInfo.sub,
-          token: data.access_token,
-        };
-      }
+      // // IF USER STILL NOT HAVE PASSWORD, REDIRECT TO SIGN UP PAGE
+      // if (!userExist.hash) {
+      //   return {
+      //     redirect: true,
+      //     username: userInfo.sub,
+      //     token: data.access_token,
+      //   };
+      // }
 
       return {
         token: data.access_token,

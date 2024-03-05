@@ -21,7 +21,6 @@ import { UserDto } from 'src/user/entities/user.entity';
 import { UserService } from 'src/user/user.service';
 import { AuthGuard } from './guard/auth.guard';
 import { ApiBearerAuth, ApiBody, ApiTags } from '@nestjs/swagger';
-import { SmartContractService } from 'src/smart-contract/smart-contract.service';
 
 @Controller('auth')
 @ApiTags('Auth')
@@ -29,7 +28,6 @@ export class AuthController {
   constructor(
     private readonly authService: AuthService,
     private userService: UserService,
-    private smartContractService: SmartContractService,
   ) {}
 
   @Get()
@@ -58,12 +56,6 @@ export class AuthController {
     if (!createdUser) {
       throw new BadRequestException();
     }
-
-    // TODO: Registration account to Blockhain
-    await this.smartContractService.createUser({
-      name: user.name,
-      hash: createdUser.hash,
-    });
 
     return { message: 'Account successfully created!' };
   }

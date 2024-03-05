@@ -47,6 +47,6 @@ import { SmartContractModule } from './smart-contract/smart-contract.module';
     SmartContractModule,
   ],
   controllers: [AppController],
-  providers: [AuthService, UserService],
+  providers: [],
 })
 export class AppModule {}

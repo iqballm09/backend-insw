@@ -72,6 +72,7 @@ export class DeliveryOrderService {
         created_at: 'desc',
       },
     });
+
     let dataDraft = data
       .filter(
         (item) =>
@@ -94,6 +95,7 @@ export class DeliveryOrderService {
         status: item.td_reqdo_status[0].name,
         isContainer: item.request_type == 1,
       }));
+
     for (const item of (await this.smartContractService.getAllDoCo(coName))
       .data) {
       // get header data by order id
@@ -1121,7 +1123,7 @@ export class DeliveryOrderService {
       status: 'success',
       data: updatedDoSL,
     };
-// update header DO
+    // update header DO
   }
 
   // UPDATE DO - SHIPPINGLINE
@@ -1150,21 +1152,15 @@ export class DeliveryOrderService {
     if (!headerDo) {
       throw new NotFoundException(`DO by id = ${idDO} not found.`);
     }
-    // update status do smart contract
-    const updatedStatusSC = await this.smartContractService.updateStatusDo(
-      userInfo.sub,
-      headerDo.no_reqdo,
-      status,
+
+    // get last status do db
+    const lastStatusDO = await this.smartContractService.getStatusDo(
+      headerDo.order_id,
     );
-    // update status do db
-    const updateStatusDO1 = await this.updateStatusDo(idDO, token, status);
 
-    // get the last status
-    const lastStatus = updateStatusDO1.name;
-
-    if (lastStatus !== 'Submitted') {
+    if (lastStatusDO.status !== 'Processed') {
       throw new BadRequestException(
-        `Cannot update DO shippingline, the last status is not Submitted!`,
+        `Cannot update DO shippingline, the last status is not Processed!`,
       );
     }
 
@@ -1172,10 +1168,16 @@ export class DeliveryOrderService {
       userInfo.sub,
       headerDo.order_id,
       data,
+      status,
     );
 
-    // update status reqdo
-    const updatedStatus = await this.updateStatusDo(idDO, token, 'Processed');
+    // update status reqdo on db
+    const updatedStatus = await this.updateStatusDo(
+      idDO,
+      token,
+      status,
+      data.statusNote,
+    );
 
     return {
       message: 'success',
@@ -1211,7 +1213,12 @@ export class DeliveryOrderService {
   }
 
   // UPDATE STATUS DO
-  async updateStatusDo(idDO: number, token: string, status: StatusDo) {
+  async updateStatusDo(
+    idDO: number,
+    token: string,
+    status: StatusDo,
+    note?: string,
+  ) {
     const userInfo = await this.userService.getDetail(token);
 
     const statusDO = await this.prisma.td_reqdo_status.findFirst({
@@ -1226,6 +1233,7 @@ export class DeliveryOrderService {
         data: {
           name: status,
           id_reqdo_header: idDO,
+          note: note,
         },
       });
       return updatedStatus;
@@ -1356,7 +1364,7 @@ export class DeliveryOrderService {
           ? moment(data.td_do_req_form.tanggal_bc11).format('YYYY-MM-DD')
           : null,
         bc11Number: data.td_do_req_form.no_bc11 || '',
-        posNumber: data.td_do_req_form.pos_number || '',
+        kodePos: data.td_do_req_form.pos_number || '',
         reqdoExp: data.td_do_req_form.tgl_reqdo_exp
           ? moment(data.td_do_req_form.tgl_reqdo_exp).format('YYYY-MM-DD')
           : null,
@@ -1460,7 +1468,7 @@ export class DeliveryOrderService {
           ? moment(data.requestDetail.document.bc11Date).format('YYYY-MM-DD')
           : null,
         bc11Number: data.requestDetail.document.bc11Number || '',
-        posNumber: data.requestDetail.document.posNumber || '',
+        kodePos: data.requestDetail.document.posNumber || '',
         reqdoExp: data.requestDetail.shippingLine.doExpired
           ? moment(data.requestDetail.shippingLine.doExpired).format(
               'YYYY-MM-DD',
@@ -1537,7 +1545,8 @@ export class DeliveryOrderService {
               measurementUnit: item.measurementVolume.unit,
             }))
           : [],
-      vinDetailForm: data.vinDetail,
+      vinDetailForm:
+        data.vinDetail.vinNumber.length !== 0 ? data.vinDetail.vinNumber : [],
       paymentDetailForm: data.paymentDetail.invoice.map((inv) => ({
         invoiceNumber: inv.invoiceNo,
         invoiceDate: inv.invoiceDate
