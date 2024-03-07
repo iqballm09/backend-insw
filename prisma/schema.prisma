@@ -127,9 +127,9 @@ model td_parties_detail_form {
   id_port_discharge   String
   nama_shipper        String   @db.VarChar(255)
   nama_consignee      String   @db.VarChar(255)
-  npwp_consignee      String   @db.VarChar(15)
+  npwp_consignee      String   @db.VarChar(16)
   nama_notifyparty    String   @db.VarChar(255)
-  npwp_notifyparty    String   @db.VarChar(15)
+  npwp_notifyparty    String   @db.VarChar(16)
   updated_by          String?  @db.VarChar(255)
   updated_at          DateTime @updatedAt
   created_at          DateTime @default(now())

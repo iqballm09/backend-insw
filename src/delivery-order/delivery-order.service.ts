@@ -220,6 +220,14 @@ export class DeliveryOrderService {
       throw new NotFoundException(`DO data by id = ${idDo} not found`);
     }
 
+    // check if status is draft
+    const statusDO = (await this.getAllStatus(data.id)).data.pop().status;
+    if (statusDO !== 'Draft') {
+      throw new BadRequestException(
+        'Cannot delete DO, status DO is not Draft!',
+      );
+    }
+
     const deleted = await this.prisma.td_reqdo_header_form.delete({
       where: {
         id: idDo,
