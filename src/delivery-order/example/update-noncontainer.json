@@ -81,17 +81,20 @@
             {
                 "location": "0",
                 "countryCode": "AG",
-                "portCode": "AGBBQ | Barbuda"
+                "portCode": "AGBBQ",
+                "portDetail": "AGBBQ | Barbuda"
             },
             {
                 "location": "1",
                 "countryCode": "ID",
-                "portCode": "IDAEG | Aekgodang"
+                "portCode": "IDAEG",
+                "portDetail": "IDAEG | Aekgodang"
             },
             {
                 "location": "2",
                 "countryCode": "ID",
-                "portCode": "IDAKE | Akeselaka"
+                "portCode": "IDAKE",
+                "portDetail": "IDAKE | Adeselaka"
             }
         ]
     },

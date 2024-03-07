@@ -89,6 +89,7 @@ class LocationType {
   location: string;
   countryCode: string;
   portCode: string;
+  portDetail?: string;
 }
 
 class Invoice {

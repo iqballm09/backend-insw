@@ -71,17 +71,20 @@
             {
                 "location": "0",
                 "countryCode": "AG",
-                "portCode": "AGBBQ"
+                "portCode": "AGBBQ",
+                "portDetail": "AGBBQ | Barbuda"
             },
             {
                 "location": "1",
                 "countryCode": "ID",
-                "portCode": "IDAEG"
+                "portCode": "IDAEG",
+                "portDetail": "IDAEG | Aekgodang"
             },
             {
                 "location": "2",
                 "countryCode": "ID",
-                "portCode": "IDAKE"
+                "portCode": "IDAKE",
+                "portDetail": "IDAKE | Adeselaka"
             }
         ]
     },
@@ -110,14 +113,14 @@
     "supportingDocument": {
         "documentType": [
             {
-                "document": "1",
-                "documentNo": "CON012019",
+                "document": "0500005",
+                "documentNo": "SPK012019",
                 "documentDate": "2019-11-21",
                 "urlFile": "assets/upload/document/Con1.pdf"
             },
             {
-                "document": "2",
-                "documentNo": "CON022019",
+                "document": "0500006",
+                "documentNo": "CON022018",
                 "documentDate": "2019-10-02",
                 "urlFile": "assets/upload/document/Con2.pdf"
             }

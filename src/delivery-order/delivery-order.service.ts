@@ -377,9 +377,9 @@ export class DeliveryOrderService {
           create: {
             created_by,
             id_negara_loading: data.location.locationType[0].countryCode,
-            id_port_loading: data.location.locationType[0].portCode,
-            id_port_discharge: data.location.locationType[1].portCode,
-            id_port_destination: data.location.locationType[2].portCode,
+            id_port_loading: data.location.locationType[0].portDetail,
+            id_port_discharge: data.location.locationType[1].portDetail,
+            id_port_destination: data.location.locationType[2].portDetail,
             nama_consignee: data.parties.consignee.name,
             nama_notifyparty: data.parties.notifyParty.name,
             nama_shipper: data.parties.shipper.name,
@@ -592,9 +592,9 @@ export class DeliveryOrderService {
             updated_by,
             updated_at: new Date(),
             id_negara_loading: data.location.locationType[0].countryCode,
-            id_port_loading: data.location.locationType[0].portCode,
-            id_port_discharge: data.location.locationType[1].portCode,
-            id_port_destination: data.location.locationType[2].portCode,
+            id_port_loading: data.location.locationType[0].portDetail,
+            id_port_discharge: data.location.locationType[1].portDetail,
+            id_port_destination: data.location.locationType[2].portDetail,
             nama_consignee: data.parties.consignee.name,
             nama_notifyparty: data.parties.notifyParty.name,
             nama_shipper: data.parties.shipper.name,
@@ -801,9 +801,9 @@ export class DeliveryOrderService {
           create: {
             created_by,
             id_negara_loading: data.location.locationType[0].countryCode,
-            id_port_loading: data.location.locationType[0].portCode,
-            id_port_discharge: data.location.locationType[1].portCode,
-            id_port_destination: data.location.locationType[2].portCode,
+            id_port_loading: data.location.locationType[0].portDetail,
+            id_port_discharge: data.location.locationType[1].portDetail,
+            id_port_destination: data.location.locationType[2].portDetail,
             nama_consignee: data.parties.consignee.name,
             nama_notifyparty: data.parties.notifyParty.name,
             nama_shipper: data.parties.shipper.name,
@@ -1047,9 +1047,9 @@ export class DeliveryOrderService {
             updated_by,
             updated_at: new Date(),
             id_negara_loading: data.location.locationType[0].countryCode,
-            id_port_loading: data.location.locationType[0].portCode,
-            id_port_discharge: data.location.locationType[1].portCode,
-            id_port_destination: data.location.locationType[2].portCode,
+            id_port_loading: data.location.locationType[0].portDetail,
+            id_port_discharge: data.location.locationType[1].portDetail,
+            id_port_destination: data.location.locationType[2].portDetail,
             nama_consignee: data.parties.consignee.name,
             nama_notifyparty: data.parties.notifyParty.name,
             nama_shipper: data.parties.shipper.name,
@@ -1212,6 +1212,7 @@ export class DeliveryOrderService {
       datetime: moment(item.datetime_status)
         .tz(timezone)
         .format('DD-MM-YYYY HH:mm:ss'),
+      note: item.note,
     }));
 
     return {
@@ -1500,9 +1501,9 @@ export class DeliveryOrderService {
         notifyPartyName: data.parties.notifyParty.name,
         notifyPartyNpwp: data.parties.notifyParty.npwp,
         placeLoading: data.location.locationType[0].countryCode,
-        portLoading: data.location.locationType[0].portCode,
-        placeDischarge: data.location.locationType[1].portCode,
-        placeDestination: data.location.locationType[2].portCode,
+        portLoading: data.location.locationType[0].portDetail,
+        placeDischarge: data.location.locationType[1].portDetail,
+        placeDestination: data.location.locationType[2].portDetail,
       },
       containerDetailForm:
         data.cargoDetail.container !== undefined
