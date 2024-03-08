@@ -65,6 +65,9 @@ export class FilesController {
     if (!!!file) {
       throw new BadRequestException('File is required');
     }
+    if (['container', 'cargo'].includes(type)) {
+      return this.fileService.uploadData(file.filename, type);
+    }
     return {
       urlFile: `${process.env.API_URI}/files/${type}/${file.filename.split('.')[0]}`,
     };

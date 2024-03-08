@@ -168,9 +168,9 @@ export class DeliveryOrderService {
           .format('DD-MM-YYYY HH:mm:ss'),
         blNumber: item.Record.requestDetail.document.ladingBillNumber,
         blDate: item.Record.requestDetail.document.ladingBillDate
-          ? moment(item.Record.requestDetail.document.ladingBillDate)
-              .tz(timezone)
-              .format('DD-MM-YYYY')
+          ? moment(item.Record.requestDetail.document.ladingBillDate).format(
+              'DD-MM-YYYY',
+            )
           : null,
         requestName: item.Record.requestDetail.requestor.requestorName,
         shippingLine: item.Record.requestDetail.shippingLine.shippingType
@@ -1261,6 +1261,7 @@ export class DeliveryOrderService {
 
   // GET DO DETAIL DRAFT
   async getDoDetailDraft(idDo: number) {
+    const timezone = getLocalTimeZone();
     const data = await this.prisma.td_reqdo_header_form.findUnique({
       include: {
         td_do_requestor_form: {
@@ -1342,11 +1343,20 @@ export class DeliveryOrderService {
             filepath_dok: true,
           },
         },
+        td_reqdo_status: {
+          select: {
+            name: true,
+            datetime_status: true,
+          },
+        },
       },
       where: {
         id: idDo,
       },
     });
+
+    // get statusDO
+    const statusDO = data.td_reqdo_status.pop();
 
     if (!data) {
       throw new NotFoundException(`${idDo} is not found`);
@@ -1444,12 +1454,19 @@ export class DeliveryOrderService {
           : null,
         urlFile: dok.filepath_dok,
       })),
+      statusReqDo: {
+        status: statusDO.name,
+        datetime: moment(statusDO.datetime_status)
+          .tz(timezone)
+          .format('DD-MM-YYYY HH:mm:ss'),
+      },
     };
     return response;
   }
 
   // GET DO DETAIL SMART CONTRACT
   async getDoDetailSC(username: string, orderId: string) {
+    const timezone = getLocalTimeZone();
     const data = await this.smartContractService.getDoDetailData(
       username,
       orderId,
@@ -1577,6 +1594,12 @@ export class DeliveryOrderService {
           urlFile: dok.urlFile,
         }),
       ),
+      statusReqdo: {
+        name: data.status,
+        datetime: moment(data.statusDate)
+          .tz(timezone)
+          .format('DD-MM-YYYY HH:mm:ss'),
+      },
     };
     return result;
   }

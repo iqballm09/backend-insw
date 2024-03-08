@@ -21,6 +21,11 @@
             "display": "0500006 | ID Penerima Kuasa"
         },
         {
+            "id_dokumen": "0500010",
+            "uraian_dokumen": "Dokumen VIN",
+            "display": "0500010 | Dokumen VIN"
+        },
+        {
             "id_dokumen": "0500970",
             "uraian_dokumen": "Surat Kuasa",
             "display": "0500970 | Surat Kuasa"

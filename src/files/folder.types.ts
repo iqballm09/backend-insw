@@ -3,4 +3,6 @@ export enum FolderType {
   DOCUMENT = 'document',
   REQUESTOR = 'requestor',
   PAYMENT = 'payment',
+  CONTAINER = 'container',
+  CARGO = 'cargo',
 }

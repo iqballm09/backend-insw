@@ -21,7 +21,6 @@ import { PelabuhanModule } from './referensi/pelabuhan/pelabuhan.module';
 import { SupportingDocumentModule } from './referensi/supporting-document/supporting-document.module';
 import { DepoModule } from './referensi/depo/depo.module';
 import { SmartContractModule } from './smart-contract/smart-contract.module';
-
 @Module({
   imports: [
     ConfigModule.forRoot({
