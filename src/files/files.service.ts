@@ -27,32 +27,10 @@ export class FilesService {
   async uploadData(filename: string, type: FolderType) {
     const client = await buildOpenIdClient();
     const filepath = `assets/upload/${client.client_id}/${type}/${filename}`;
+    const workbook = XLSX.readFile(filepath);
     if (type === 'container') {
-      const headerFormat = [
-        'no_container',
-        'tipe_container',
-        'uk_container',
-        'gross_weight',
-        'gross_weight_satuan',
-        'ownership',
-      ];
-      const workbook = XLSX.readFile(filepath);
-      const sheet = workbook.Sheets[workbook.SheetNames[0]];
-      const jsonData = XLSX.utils.sheet_to_json(sheet, {
-        header: 1,
-        defval: '',
-      });
-      const header = jsonData[0];
-      // check if header is same with header format
-      if (header.toString() !== headerFormat.toString()) {
-        throw new BadRequestException(
-          `Failed to generate JSON data, header ${header} excel is not same with header format ${headerFormat}`,
-        );
-      }
-      jsonData.shift();
-      for (const row of jsonData) {
-        console.log(row);
-      }
+      const listObjCon = this.convertExcelToJSONContainer(workbook);
+      return listObjCon;
     } else if (type === 'cargo') {
       const headerFormat = [
         'goods_desc',
@@ -65,6 +43,9 @@ export class FilesService {
       ];
       const header = '';
     }
+
+    // delete file after upload
+    await this.deleteFile(filename, type);
   }
 
   async deleteFile(name: string, type: string): Promise<void> {
@@ -89,5 +70,76 @@ export class FilesService {
     });
   }
 
-  convertExcelToJSON() {}
+  convertExcelToJSONContainer(workbook: XLSX.WorkBook): any[] {
+    const conHeaderFormat = [
+      'no_container',
+      'tipe_container',
+      'uk_container',
+      'gross_weight',
+      'gross_weight_satuan',
+      'ownership',
+    ];
+    const sealHeaderFormat = ['no_container', 'no_seal'];
+
+    const conSheet = workbook.Sheets[workbook.SheetNames[0]];
+    const conData = XLSX.utils.sheet_to_json(conSheet, {
+      header: 1,
+      defval: '',
+      blankrows: false,
+    });
+    const conHeader = conData[0];
+    conData.shift();
+
+    // check if container header is same with header format
+    if (conHeader.toString() !== conHeaderFormat.toString()) {
+      throw new BadRequestException(
+        `Failed to generate JSON data, header ${conHeader} excel is not same with header format ${conHeaderFormat}`,
+      );
+    }
+
+    const sealSheet = workbook.Sheets[workbook.SheetNames[1]];
+    const sealData = XLSX.utils.sheet_to_json(sealSheet, {
+      header: 1,
+      defval: '',
+      blankrows: false,
+    });
+    const sealHeader = sealData[0];
+    sealData.shift();
+
+    if (sealHeader.toString() !== sealHeaderFormat.toString()) {
+      throw new BadRequestException(
+        `Failed to generate JSON data, header ${sealHeader} excel is not same with header format ${sealHeaderFormat}`,
+      );
+    }
+
+    let cnt = 0;
+    const listConObj = [];
+    conData.forEach((data: any) => {
+      if (!!data.join('').length) {
+        const objData = {
+          containerSeq: cnt++,
+          containerNo: data[0].trim(),
+          grossWeight: {
+            amount: data[3],
+            unit: data[4].split('-')[0].trim(),
+          },
+          sealNo: [
+            ...new Set(
+              sealData
+                .filter((seal) => seal[0].trim() === data[0].trim())
+                .map((seal) => seal[1].trim()),
+            ),
+          ],
+          ownership: data[5].split('-')[0].trim(),
+          sizeType: {
+            kodeSize: data[1].trim(),
+          },
+        };
+        listConObj.push(objData);
+      }
+    });
+    return listConObj;
+  }
+
+  convertExcelToJSONCargo() {}
 }
