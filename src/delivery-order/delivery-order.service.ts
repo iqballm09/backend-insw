@@ -486,10 +486,9 @@ export class DeliveryOrderService {
 
     // get last status DO
     const lastStatus = (await this.getAllStatus(+idDO)).data.pop().status;
-
-    if (lastStatus !== 'Draft') {
+    if (!['Draft', 'Rejected'].includes(lastStatus)) {
       throw new BadRequestException(
-        `Cannot update container DO, the last status DO is not draft!`,
+        `Cannot update container DO, the last status DO is not draft or rejected!`,
       );
     }
 
@@ -908,9 +907,9 @@ export class DeliveryOrderService {
 
     // find the last status DO
     const lastStatus = (await this.getAllStatus(idDO)).data.pop().status;
-    if (lastStatus !== 'Draft') {
+    if (!['Draft', 'Rejected'].includes(lastStatus)) {
       throw new BadRequestException(
-        `Cannot update non container DO, the last status DO is not draft!`,
+        `Cannot update non container DO, the last status DO is not draft or rejected!`,
       );
     }
 
