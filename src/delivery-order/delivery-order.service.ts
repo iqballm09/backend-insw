@@ -1189,7 +1189,14 @@ export class DeliveryOrderService {
 
     return {
       message: 'success',
-      data: updatedStatus,
+      data: {
+        id: updatedStatus.id,
+        id_reqdo_header: updatedStatus.id_reqdo_header,
+        name: updatedStatus.name,
+        datetime_status: updatedStatus.datetime_status,
+        note: updatedStatus.note,
+        isContainer: headerDo.request_type === 1,
+      },
     };
   }
 
