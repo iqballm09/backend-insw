@@ -1512,7 +1512,7 @@ export class DeliveryOrderService {
         doReleaseDate: data.requestDetail.doReleaseDate
           ? moment(data.requestDetail.doReleaseDate).format('YYYY-MM-DD')
           : null,
-        doReleaseNumber: data.requestDetail.doReleaseNo || '',
+        doReleaseNumber: data.requestDetail.doReleaseNumber || '',
         doExp: data.requestDetail.doExpiredDate
           ? moment(data.requestDetail.doExpiredDate).format('YYYY-MM-DD')
           : null,
