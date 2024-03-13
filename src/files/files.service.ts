@@ -10,9 +10,11 @@ import * as fs from 'fs';
 import * as XLSX from 'xlsx';
 import { FolderType } from './folder.types';
 import axios from 'axios';
+import { FlagService } from 'src/referensi/flag/flag.service';
 
 @Injectable()
 export class FilesService {
+  constructor(private flagService: FlagService) {}
   async show(res: any, name: string, type: string) {
     try {
       const client = await buildOpenIdClient();
@@ -24,24 +26,16 @@ export class FilesService {
     }
   }
 
-  async uploadData(filename: string, type: FolderType) {
+  async uploadData(filename: string, type: FolderType, token: string) {
     const client = await buildOpenIdClient();
     const filepath = `assets/upload/${client.client_id}/${type}/${filename}`;
     const workbook = XLSX.readFile(filepath);
     if (type === 'container') {
-      const listObjCon = this.convertExcelToJSONContainer(workbook);
+      const listObjCon = await this.convertExcelToJSONContainer(workbook);
       return listObjCon;
     } else if (type === 'cargo') {
-      const headerFormat = [
-        'goods_desc',
-        'package_qty',
-        'package_uom',
-        'gross_qty',
-        'gross_uom',
-        'measurement_qty',
-        'measurement_uom',
-      ];
-      const header = '';
+      const listObjCargo = await this.convertExcelToJSONCargo(workbook, token);
+      return listObjCargo;
     }
 
     // delete file after upload
@@ -70,7 +64,7 @@ export class FilesService {
     });
   }
 
-  convertExcelToJSONContainer(workbook: XLSX.WorkBook): any[] {
+  convertExcelToJSONContainer(workbook: XLSX.WorkBook) {
     const conHeaderFormat = [
       'no_container',
       'tipe_container',
@@ -141,5 +135,86 @@ export class FilesService {
     return listConObj;
   }
 
-  convertExcelToJSONCargo() {}
+  async convertExcelToJSONCargo(workbook: XLSX.WorkBook, token: string) {
+    const headerFormat = [
+      'goods_desc',
+      'package_qty',
+      'package_uom',
+      'gross_qty',
+      'gross_uom',
+      'measurement_qty',
+      'measurement_uom',
+    ];
+    // check if header same
+    const cargoSheet = workbook.Sheets[workbook.SheetNames[0]];
+    const cargoData = XLSX.utils.sheet_to_json(cargoSheet, {
+      header: 1,
+      defval: '',
+      blankrows: false,
+    });
+    const cargoHeader = cargoData[0];
+    cargoData.shift();
+
+    // check if the header is same with header format
+    if (cargoHeader.toString() !== headerFormat.toString()) {
+      throw new BadRequestException(
+        `Failed to generate JSON data, header ${cargoHeader} is not same as header format ${headerFormat}`,
+      );
+    }
+
+    let cnt = 0;
+    const listCargoObj = [];
+    const listMeasurement = await this.getListSatuan(token, 'measurement_uom');
+    const listGwu = await this.getListSatuan(token, 'weight_uom');
+    const listPackage = await this.getListSatuan(token, 'package_uom');
+
+    cargoData.forEach((data: any) => {
+      if (!!data.join('').length) {
+        const satuanGwu = data[4].split('-')[0].trim().toUpperCase();
+        const satuanMeasurement = data[6].trim().toUpperCase();
+        const satuanPackage = data[2].trim();
+        if (!listGwu.includes(satuanGwu)) {
+          throw new BadRequestException(
+            `Satuan ${satuanGwu} is not exist on list gross weight unit '${listGwu}'`,
+          );
+        }
+        if (!listPackage.includes(satuanPackage)) {
+          throw new BadRequestException(
+            `Satuan ${satuanPackage} is not exist on list package unit '${listPackage}'`,
+          );
+        }
+        if (!listMeasurement.includes(satuanMeasurement)) {
+          throw new BadRequestException(
+            `Satuan ${satuanMeasurement} is not exist on list measurement unit '${listMeasurement}'`,
+          );
+        }
+        const objData = {
+          nonContainerSeq: cnt++,
+          grossWeight: {
+            amount: data[3],
+            unit: data[4].split('-')[0].trim().toUpperCase(),
+          },
+          measurementVolume: {
+            amount: data[5],
+            unit: data[6].trim().toUpperCase(),
+          },
+          packageQuantity: {
+            amount: data[1],
+            unit: data[2].trim(),
+          },
+          goodsDescription: data[0].trim(),
+        };
+        listCargoObj.push(objData);
+      }
+    });
+    return listCargoObj;
+  }
+
+  convertExcelToJSONVin() {}
+
+  async getListSatuan(token: string, keyword: string) {
+    // get data reference
+    const refData = await this.flagService.findAll(token, keyword);
+    return refData.data.map((item) => item.kode);
+  }
 }
