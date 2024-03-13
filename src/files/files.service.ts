@@ -31,11 +31,14 @@ export class FilesService {
     const filepath = `assets/upload/${client.client_id}/${type}/${filename}`;
     const workbook = XLSX.readFile(filepath);
     if (type === 'container') {
-      const listObjCon = await this.convertExcelToJSONContainer(workbook);
+      const listObjCon = this.convertExcelToJSONContainer(workbook);
       return listObjCon;
     } else if (type === 'cargo') {
       const listObjCargo = await this.convertExcelToJSONCargo(workbook, token);
       return listObjCargo;
+    } else if (type === 'vin') {
+      const listVin = this.convertExcelToJSONVin(workbook);
+      return listVin;
     }
 
     // delete file after upload
@@ -165,24 +168,12 @@ export class FilesService {
     let cnt = 0;
     const listCargoObj = [];
     const listMeasurement = await this.getListSatuan(token, 'measurement_uom');
-    const listGwu = await this.getListSatuan(token, 'weight_uom');
-    const listPackage = await this.getListSatuan(token, 'package_uom');
 
     cargoData.forEach((data: any) => {
       if (!!data.join('').length) {
         const satuanGwu = data[4].split('-')[0].trim().toUpperCase();
         const satuanMeasurement = data[6].trim().toUpperCase();
         const satuanPackage = data[2].trim();
-        if (!listGwu.includes(satuanGwu)) {
-          throw new BadRequestException(
-            `Satuan ${satuanGwu} is not exist on list gross weight unit '${listGwu}'`,
-          );
-        }
-        if (!listPackage.includes(satuanPackage)) {
-          throw new BadRequestException(
-            `Satuan ${satuanPackage} is not exist on list package unit '${listPackage}'`,
-          );
-        }
         if (!listMeasurement.includes(satuanMeasurement)) {
           throw new BadRequestException(
             `Satuan ${satuanMeasurement} is not exist on list measurement unit '${listMeasurement}'`,
@@ -210,7 +201,27 @@ export class FilesService {
     return listCargoObj;
   }
 
-  convertExcelToJSONVin() {}
+  convertExcelToJSONVin(workbook: XLSX.WorkBook) {
+    const headerFormat = 'nomor_equipment_identification';
+    const vinSheet = workbook.Sheets[workbook.SheetNames[0]];
+    const vinData = XLSX.utils.sheet_to_json(vinSheet, {
+      header: 1,
+      defval: '',
+      blankrows: false,
+    });
+    const vinHeader = vinData[0];
+    vinData.shift();
+    // check if header same
+    if (vinHeader.toString() !== headerFormat.toString()) {
+      throw new BadRequestException(
+        `Vin header ${vinHeader} tidak sama dengan format header vin ${headerFormat}`,
+      );
+    }
+    const listVinObj = {
+      vinNumber: vinData.map((data) => data[0]),
+    };
+    return listVinObj;
+  }
 
   async getListSatuan(token: string, keyword: string) {
     // get data reference

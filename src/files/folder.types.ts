@@ -5,4 +5,5 @@ export enum FolderType {
   PAYMENT = 'payment',
   CONTAINER = 'container',
   CARGO = 'cargo',
+  VIN = 'vin',
 }

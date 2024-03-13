@@ -60,13 +60,13 @@ export class FilesController {
   async uploadFile(
     @UploadedFile() file: Express.Multer.File,
     @Query('type') type: FolderType,
-    @Req() req: any
+    @Req() req: any,
   ) {
     // Handle file upload logic
     if (!!!file) {
       throw new BadRequestException('File is required');
     }
-    if (['container', 'cargo'].includes(type)) {
+    if (['container', 'cargo', 'vin'].includes(type)) {
       return this.fileService.uploadData(file.filename, type, req.token);
     }
     return {
