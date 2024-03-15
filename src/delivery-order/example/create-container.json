@@ -43,23 +43,14 @@
     "cargoDetail": {
         "container": [
             {
-                "containerSeq": 1,
+                "containerSeq": 0,
                 "containerNo": "MSKU0198252",
                 "sealNo": ["SEAL13102019005", "SEAL123456789"],
-                "sizeType": "42GP",
+                "sizeType": {
+                    "kodeSize": "20GP"
+                },
                 "grossWeight": {
                     "amount": 8890.00,
-                    "unit": "KGM"
-                },
-                "ownership": "2"
-            },
-            {
-                "containerSeq": 2,
-                "containerNo": "AGKU0198252",
-                "sealNo": ["SEAL13102090081"],
-                "sizeType": "42GP",
-                "grossWeight": {
-                    "amount": 8871.00,
                     "unit": "KGM"
                 },
                 "ownership": "2"

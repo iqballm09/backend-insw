@@ -271,18 +271,58 @@ export class SmartContractService {
     data.requestDetail.callSign = payload.callSign;
     data.requestDetail.terminalOp = payload.terminalOp;
 
-    for (let i = 0; i < data.cargoDetail.container.length; i++) {
-      data.cargoDetail.container[i].containerNo =
-        payload.cargoDetail[i].containerNo;
-      data.cargoDetail.container[i].sizeType = payload.cargoDetail[i].sizeType;
-      data.cargoDetail.container[i].depoDetail =
-        payload.cargoDetail[i].depoDetail;
+    if (+data.requestType === 1) {
+      for (let i = 0; i < data.cargoDetail.container.length; i++) {
+        data.cargoDetail.container[i].containerNo =
+          payload.cargoDetail[i].containerNo;
+        data.cargoDetail.container[i].sizeType =
+          payload.cargoDetail[i].sizeType;
+        data.cargoDetail.container[i].depoDetail =
+          payload.cargoDetail[i].depoDetail;
+      }
     }
 
     // update status
     data.status = status;
     data.statusDate = new Date().toLocaleString();
     data.statusNote = payload.statusNote;
+
+    // generate user token
+    const userToken = (await this.enrollUser(userData, tokenAdmin)).token;
+    try {
+      const response = await axios.post(
+        `${this.configService.get('API_SMART_CONTRACT')}/invoke/do-channel/chaincode1`,
+        {
+          method: 'updateDO',
+          args: [orderId, JSON.stringify(data)],
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${userToken}`,
+          },
+        },
+      );
+      return response.data.response;
+    } catch (e) {
+      validateError(e);
+    }
+  }
+
+  async updateDoCo(
+    coName: string,
+    orderId: string,
+    payload: RequestDoDto,
+    status: StatusDo,
+  ) {
+    const tokenAdmin = (await this.enrollAdmin()).token;
+    const userData = await this.userService.getUserDB(coName);
+
+    // get do data
+    const data = await this.getDoDetailData(coName, orderId);
+
+    // update status
+    data.status = status;
+    data.statusDate = new Date().toLocaleString();
 
     // generate user token
     const userToken = (await this.enrollUser(userData, tokenAdmin)).token;

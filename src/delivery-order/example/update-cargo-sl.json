@@ -21,13 +21,14 @@
               "kodeSize": "20GP"
             },
             "depoDetail": {
+                "depoId": 1,
                 "depoName": "PT. MITRA JAYA BAHARI",
                 "depoNpwp": "015163736112000",
                 "noTelp": "061-6940095",
                 "alamat": "Jl. Raya Pelabuhan Gabion Km.0 Belawan - 20412 Sumatera Utara - Indonesia",
                 "kotaDepo": "1271",
                 "kodePos": "16526"
-              }
+            }
         }
     ],
     "statusNote": "reject, ada kesalahan yang terdapat di request DO detail. Harap diperbaiki"

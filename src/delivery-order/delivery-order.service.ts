@@ -273,35 +273,6 @@ export class DeliveryOrderService {
       );
     }
 
-    // CASE 1: IF SUBMITTED, SEND PAYLOAD TO SMART CONTRACT
-    if (status === 'Submitted') {
-      data.requestDetail.requestorId = userInfo.sub;
-      data.requestDetail.requestDoNumber = generateNoReq(
-        data.requestDetail.shippingLine.shippingType.split('|')[0].trim(),
-      );
-      const result = await this.smartContractService.requestDO(data, status);
-      // generate status do to smart contract
-      const headerDo = await this.prisma.td_reqdo_header_form.create({
-        data: {
-          order_id: result.response.orderId,
-          request_type: data.requestType,
-          no_reqdo: data.requestDetail.requestDoNumber,
-          created_by: data.requestDetail.requestorId,
-          td_reqdo_status: {
-            create: {
-              name: result.response.status,
-              datetime_status: new Date(result.response.datetime),
-            },
-          },
-        },
-      });
-      return {
-        result,
-        data: headerDo,
-      };
-    }
-
-    // CASE 2: IF DRAFT, SAVE TO RELATIONAL DATABASE
     const dataDokumen = data.supportingDocument.documentType.map((item) => {
       const data: Partial<td_do_dok_form> = {
         created_by,
@@ -397,16 +368,9 @@ export class DeliveryOrderService {
             data: dataInvoice as td_do_invoice_form[],
           },
         },
-        td_reqdo_status: {
-          create: {
-            name: 'Draft',
-            datetime_status: new Date(),
-          },
-        },
       },
     });
 
-    // TODO: POPULATE DATA SEAL TO CONTAINER ITEM
     const promises = data.cargoDetail.container.map((item) => {
       return this.prisma.td_do_kontainer_form.create({
         data: {
@@ -440,6 +404,48 @@ export class DeliveryOrderService {
         console.error('Error in one or more promises:', error);
       });
 
+    // CASE 1: DRAFT STATUS
+    if (status === 'Draft') {
+      const updatedStatus = await this.prisma.td_reqdo_status.create({
+        data: {
+          name: status,
+          id_reqdo_header: createdDo.id,
+          datetime_status: new Date(),
+        },
+      });
+    }
+
+    // CASE 2: IF SUBMITTED, SEND PAYLOAD TO SMART CONTRACT
+    if (status === 'Submitted') {
+      data.requestDetail.requestorId = userInfo.sub;
+      data.requestDetail.requestDoNumber = generateNoReq(
+        data.requestDetail.shippingLine.shippingType.split('|')[0].trim(),
+      );
+      const result = await this.smartContractService.requestDO(data, status);
+      // generate status do to smart contract
+      const headerDo = await this.prisma.td_reqdo_header_form.update({
+        where: {
+          id: createdDo.id,
+        },
+        data: {
+          order_id: result.response.orderId,
+          request_type: data.requestType,
+          no_reqdo: data.requestDetail.requestDoNumber,
+          created_by: data.requestDetail.requestorId,
+          td_reqdo_status: {
+            create: {
+              name: result.response.status,
+              datetime_status: new Date(result.response.datetime),
+            },
+          },
+        },
+      });
+      return {
+        result,
+        data: headerDo,
+      };
+    }
+
     return {
       messsage: 'success',
       data: createdDo,
@@ -453,6 +459,9 @@ export class DeliveryOrderService {
     token: string,
     status?: StatusDo,
   ) {
+    const listStatusDO = (await this.getAllStatus(+idDO)).data.map(
+      (item) => item.status,
+    );
     const userInfo = await this.userService.getDetail(token);
     const updated_by = userInfo.sub;
 
@@ -485,7 +494,7 @@ export class DeliveryOrderService {
     }
 
     // get last status DO
-    const lastStatus = (await this.getAllStatus(+idDO)).data.pop().status;
+    const lastStatus = listStatusDO[listStatusDO.length - 1];
     if (!['Draft', 'Rejected'].includes(lastStatus)) {
       throw new BadRequestException(
         `Cannot update container DO, the last status DO is not draft or rejected!`,
@@ -499,8 +508,33 @@ export class DeliveryOrderService {
       );
     }
 
-    // CASE 1 : IF THE STATUS IS SUBMITTED AFTER UPDATE DO, SEND PAYLOAD DATA TO SMART CONTRACT
-    if (status === 'Submitted') {
+    // CASE 1 : IF THE STATUS IS SUBMITTED AND THE LAST STATUS OR BEFORE IS REJECTED, THEN HIT UPDATE DO SMART CONTRACT
+    const last2Status = listStatusDO[listStatusDO.length - 2];
+    if (
+      [lastStatus, last2Status].includes('Rejected') &&
+      status === 'Submitted'
+    ) {
+      data.requestDetail.requestorId = userInfo.sub;
+      data.requestDetail.requestDoNumber = generateNoReq(
+        data.requestDetail.shippingLine.shippingType.split('|')[0].trim(),
+      );
+      const result = await this.smartContractService.updateDoCo(
+        userInfo.sub,
+        doData.order_id,
+        data,
+        status,
+      );
+      // get update header data
+      const updatedHeader = await this.updateHeaderData(
+        +idDO,
+        data.requestDetail.requestDoNumber,
+        doData.order_id,
+      );
+      return result;
+    }
+
+    // CASE 2 : IF THE STATUS IS SUBMITTED AFTER UPDATE DO, SEND PAYLOAD DATA TO SMART CONTRACT
+    else if (status === 'Submitted') {
       data.requestDetail.requestorId = userInfo.sub;
       data.requestDetail.requestDoNumber = generateNoReq(
         data.requestDetail.shippingLine.shippingType.split('|')[0].trim(),
@@ -515,7 +549,7 @@ export class DeliveryOrderService {
       return result;
     }
 
-    // CASE 2 : IF THE STATUS IS STILL DRAFT AFTER UPDATE DO, SAVE TO RELATIONAL DATABASE
+    // CASE 3 : IF THE STATUS IS STILL DRAFT AFTER UPDATE DO, SAVE TO RELATIONAL DATABASE
     const dataInvoice = data.paymentDetail.invoice.map((item) => {
       const data: Partial<td_do_invoice_form> = {
         updated_by,
@@ -700,34 +734,8 @@ export class DeliveryOrderService {
         'Status DO of Create DO must be Draft or Submitted',
       );
     }
-    // CASE 1: IF SUBMITTED, SEND PAYLOAD TO SMART CONTRACT
-    if (status === 'Submitted') {
-      data.requestDetail.requestorId = userInfo.sub;
-      data.requestDetail.requestDoNumber = generateNoReq(
-        data.requestDetail.shippingLine.shippingType.split('|')[0].trim(),
-      );
-      const result = await this.smartContractService.requestDO(data, status);
-      const headerDo = await this.prisma.td_reqdo_header_form.create({
-        data: {
-          order_id: result.response.orderId,
-          request_type: data.requestType,
-          no_reqdo: data.requestDetail.requestDoNumber,
-          created_by: data.requestDetail.requestorId,
-          td_reqdo_status: {
-            create: {
-              name: result.response.status,
-              datetime_status: new Date(result.response.datetime),
-            },
-          },
-        },
-      });
-      return {
-        result,
-        data: headerDo,
-      };
-    }
 
-    // CASE 2: IF DRAFT, SAVE TO RELATIONAL DATABASE
+    // CASE 1: IF DRAFT, SAVE TO RELATIONAL DATABASE
     const dataDokumen = data.supportingDocument.documentType.map((item) => {
       const data: Partial<td_do_dok_form> = {
         created_by,
@@ -834,11 +842,6 @@ export class DeliveryOrderService {
             data: dataInvoice as td_do_invoice_form[],
           },
         },
-        td_reqdo_status: {
-          create: {
-            name: status ?? 'Draft',
-          },
-        },
       },
     });
 
@@ -867,6 +870,47 @@ export class DeliveryOrderService {
         console.error('Error in one or more promises:', error);
       });
 
+    // CASE 1: DRAFT STATUS
+    if (status === 'Draft') {
+      const updatedStatus = await this.prisma.td_reqdo_status.create({
+        data: {
+          name: status,
+          id_reqdo_header: createdDo.id,
+          datetime_status: new Date(),
+        },
+      });
+    }
+
+    // CASE 2: IF SUBMITTED, SEND PAYLOAD TO SMART CONTRACT
+    if (status === 'Submitted') {
+      data.requestDetail.requestorId = userInfo.sub;
+      data.requestDetail.requestDoNumber = generateNoReq(
+        data.requestDetail.shippingLine.shippingType.split('|')[0].trim(),
+      );
+      const result = await this.smartContractService.requestDO(data, status);
+      const headerDo = await this.prisma.td_reqdo_header_form.update({
+        where: {
+          id: createdDo.id,
+        },
+        data: {
+          order_id: result.response.orderId,
+          request_type: data.requestType,
+          no_reqdo: data.requestDetail.requestDoNumber,
+          created_by: data.requestDetail.requestorId,
+          td_reqdo_status: {
+            create: {
+              name: result.response.status,
+              datetime_status: new Date(result.response.datetime),
+            },
+          },
+        },
+      });
+      return {
+        result,
+        data: headerDo,
+      };
+    }
+
     return {
       messsage: 'success',
       data: createdDo,
@@ -880,6 +924,9 @@ export class DeliveryOrderService {
     token: string,
     status?: StatusDo,
   ) {
+    const listStatusDO = (await this.getAllStatus(+idDO)).data.map(
+      (item) => item.status,
+    );
     const userInfo = await this.userService.getDetail(token);
     const updated_by = userInfo.sub;
 
@@ -906,7 +953,7 @@ export class DeliveryOrderService {
     }
 
     // find the last status DO
-    const lastStatus = (await this.getAllStatus(idDO)).data.pop().status;
+    const lastStatus = listStatusDO[listStatusDO.length - 1];
     if (!['Draft', 'Rejected'].includes(lastStatus)) {
       throw new BadRequestException(
         `Cannot update non container DO, the last status DO is not draft or rejected!`,
@@ -921,13 +968,38 @@ export class DeliveryOrderService {
     }
 
     // CHECK IF DO EXIST
-    const headerData = await this.getHeaderData(idDO);
-    if (!headerData) {
+    const doData = await this.getHeaderData(idDO);
+    if (!doData) {
       throw new BadRequestException(`DO by id = ${idDO} not found.`);
     }
 
-    // CASE 1 : IF STATUS DO IS SUBMITTED AFTER UPDATE DO, SEND PAYLOAD DATA TO SMART CONTRACT
-    if (status === 'Submitted') {
+    // CASE 1 : IF THE STATUS IS SUBMITTED AND THE LAST STATUS OR BEFORE IS REJECTED, THEN HIT UPDATE DO SMART CONTRACT
+    const last2Status = listStatusDO[listStatusDO.length - 2];
+    if (
+      [lastStatus, last2Status].includes('Rejected') &&
+      status === 'Submitted'
+    ) {
+      data.requestDetail.requestorId = userInfo.sub;
+      data.requestDetail.requestDoNumber = generateNoReq(
+        data.requestDetail.shippingLine.shippingType.split('|')[0].trim(),
+      );
+      const result = await this.smartContractService.updateDoCo(
+        userInfo.sub,
+        doData.order_id,
+        data,
+        status,
+      );
+      // get update header data
+      const updatedHeader = await this.updateHeaderData(
+        +idDO,
+        data.requestDetail.requestDoNumber,
+        doData.order_id,
+      );
+      return result;
+    }
+
+    // CASE 2 : IF STATUS DO IS SUBMITTED AFTER UPDATE DO, SEND PAYLOAD DATA TO SMART CONTRACT
+    else if (status === 'Submitted') {
       data.requestDetail.requestorId = userInfo.sub;
       data.requestDetail.requestDoNumber = generateNoReq(
         data.requestDetail.shippingLine.shippingType.split('|')[0].trim(),
@@ -942,7 +1014,7 @@ export class DeliveryOrderService {
       return result;
     }
 
-    // CASE 2 : IF STATUS DO IS STILL DRAFT AFTER UPDATE DO, UPDATE DO DATA ON DB
+    // CASE 3 : IF STATUS DO IS STILL DRAFT AFTER UPDATE DO, UPDATE DO DATA ON DB
     const dataNonKontainer = data.cargoDetail.nonContainer.map((item) => {
       const data: Partial<td_do_nonkontainer_form> = {
         created_by: updated_by,
@@ -1177,6 +1249,81 @@ export class DeliveryOrderService {
       data,
       status,
     );
+
+    // update data on DB
+    const updatedData = await this.prisma.td_reqdo_header_form.update({
+      where: {
+        id: headerDo.id,
+      },
+      data: {
+        td_do_req_form: {
+          update: {
+            nama_vessel: data.vesselName,
+            no_voyage: data.voyageNo,
+            call_sign: data.callSign,
+            no_do_release: data.doReleaseNo,
+            tgl_do_release: data.doReleaseDate
+              ? new Date(data.doReleaseDate)
+              : null,
+            tgl_do_exp: data.doExpiredDate
+              ? new Date(data.doExpiredDate)
+              : null,
+            id_terminal_op: data.terminalOp,
+          },
+        },
+      },
+    });
+
+    if (headerDo.request_type === 1) {
+      const conData = await this.prisma.td_do_kontainer_form.findMany({
+        where: {
+          id_reqdo_header: headerDo.id,
+        },
+      });
+      if (!conData) {
+        throw new NotFoundException(
+          `Containers Data by id = ${headerDo.id} not found`,
+        );
+      }
+
+      for (let i = 0; i < conData.length; i++) {
+        const depoData = await this.prisma.td_depo.upsert({
+          where: {
+            id: data.cargoDetail[i].depoDetail.depoId,
+          },
+          update: {
+            deskripsi: data.cargoDetail[i].depoDetail.depoName,
+            npwp: data.cargoDetail[i].depoDetail.depoNpwp,
+            no_telp: data.cargoDetail[i].depoDetail.noTelp,
+            alamat: data.cargoDetail[i].depoDetail.alamat,
+            kode_pos: data.cargoDetail[i].depoDetail.kodePos,
+            id_kabkota: data.cargoDetail[i].depoDetail.kotaDepo,
+            created_by: userInfo.sub,
+          },
+          create: {
+            deskripsi: data.cargoDetail[i].depoDetail.depoName,
+            npwp: data.cargoDetail[i].depoDetail.depoNpwp,
+            no_telp: data.cargoDetail[i].depoDetail.noTelp,
+            alamat: data.cargoDetail[i].depoDetail.alamat,
+            kode_pos: data.cargoDetail[i].depoDetail.kodePos,
+            id_kabkota: data.cargoDetail[i].depoDetail.kotaDepo,
+            created_by: userInfo.sub,
+          },
+        });
+        const updatedCon = await this.prisma.td_do_kontainer_form.update({
+          where: {
+            id: conData[i].id,
+          },
+          data: {
+            no_kontainer: data.cargoDetail[i].containerNo,
+            id_sizeType: data.cargoDetail[i].sizeType.kodeSize,
+            id_depo: data.cargoDetail[i].depoDetail.depoId
+              ? data.cargoDetail[i].depoDetail.depoId
+              : depoData.id,
+          },
+        });
+      }
+    }
 
     // update status reqdo on db
     const updatedStatus = await this.updateStatusDo(
