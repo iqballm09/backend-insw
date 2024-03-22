@@ -10,6 +10,7 @@ import {
   Put,
   Query,
   Req,
+  Res,
   UnsupportedMediaTypeException,
   UseGuards,
 } from '@nestjs/common';
@@ -191,5 +192,12 @@ export class DeliveryOrderController {
   @ApiBearerAuth()
   deleteModel(@Param('id') id: string, @Req() req: any) {
     return this.deliveryOrderService.deleteDo(+id, req.token);
+  }
+
+  @Get('print/:id')
+  @UseGuards(AuthGuard)
+  @ApiBearerAuth()
+  async printDoPdf(@Param('id') id: string, @Req() req: any, @Res() res) {
+    return this.deliveryOrderService.printDo(+id, req.token, res);
   }
 }

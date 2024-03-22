@@ -16,10 +16,20 @@ import {
 } from '@prisma/client';
 import * as moment from 'moment-timezone';
 import { UserService } from 'src/user/user.service';
-import { generateNoReq, getLocalTimeZone, validateError } from 'src/util';
+import {
+  fonts,
+  generateNoReq,
+  getLocalTimeZone,
+  jsonToBodyPdf,
+  validateError,
+} from 'src/util';
 import { ShippinglineService } from 'src/referensi/shippingline/shippingline.service';
 import { DepoService } from 'src/referensi/depo/depo.service';
 import { SmartContractService } from 'src/smart-contract/smart-contract.service';
+import * as pdfPrinter from 'pdfmake';
+import * as pdfMake from 'pdfmake/build/pdfmake';
+import * as fs from 'fs';
+import * as path from 'path';
 
 @Injectable()
 export class DeliveryOrderService {
@@ -1287,20 +1297,8 @@ export class DeliveryOrderService {
       }
 
       for (let i = 0; i < conData.length; i++) {
-        const depoData = await this.prisma.td_depo.upsert({
-          where: {
-            id: data.cargoDetail[i].depoDetail.depoId,
-          },
-          update: {
-            deskripsi: data.cargoDetail[i].depoDetail.depoName,
-            npwp: data.cargoDetail[i].depoDetail.depoNpwp,
-            no_telp: data.cargoDetail[i].depoDetail.noTelp,
-            alamat: data.cargoDetail[i].depoDetail.alamat,
-            kode_pos: data.cargoDetail[i].depoDetail.kodePos,
-            id_kabkota: data.cargoDetail[i].depoDetail.kotaDepo,
-            created_by: userInfo.sub,
-          },
-          create: {
+        const depoData = await this.prisma.td_depo.create({
+          data: {
             deskripsi: data.cargoDetail[i].depoDetail.depoName,
             npwp: data.cargoDetail[i].depoDetail.depoNpwp,
             no_telp: data.cargoDetail[i].depoDetail.noTelp,
@@ -1536,7 +1534,7 @@ export class DeliveryOrderService {
           ? moment(data.td_do_req_form.tanggal_bc11).format('YYYY-MM-DD')
           : null,
         bc11Number: data.td_do_req_form.no_bc11 || '',
-        kodePos: data.td_do_req_form.pos_number || '',
+        posNumber: data.td_do_req_form.pos_number || '',
         reqdoExp: data.td_do_req_form.tgl_reqdo_exp
           ? moment(data.td_do_req_form.tgl_reqdo_exp).format('YYYY-MM-DD')
           : null,
@@ -1647,7 +1645,7 @@ export class DeliveryOrderService {
           ? moment(data.requestDetail.document.bc11Date).format('YYYY-MM-DD')
           : null,
         bc11Number: data.requestDetail.document.bc11Number || '',
-        kodePos: data.requestDetail.document.posNumber || '',
+        posNumber: data.requestDetail.document.posNumber || '',
         reqdoExp: data.requestDetail.shippingLine.doExpired
           ? moment(data.requestDetail.shippingLine.doExpired).format(
               'YYYY-MM-DD',
@@ -1793,5 +1791,26 @@ export class DeliveryOrderService {
     });
 
     return updatedHeader;
+  }
+
+  async printDo(idDo: number, token: string, res: any) {
+    const userInfo = await this.userService.getDetail(token);
+    // get header data
+    const headerDo = await this.getHeaderData(idDo);
+    // get do detail
+    const doData = await this.getDoDetail(idDo, token);
+    // convert data from json to pdf
+    const type = headerDo.request_type === 1 ? 'container' : 'cargo';
+    const bodyPdf = jsonToBodyPdf(doData, type);
+    const printer = new pdfPrinter(fonts);
+    const pdfDoc = printer.createPdfKitDocument(bodyPdf);
+    // generate pdf
+    const filename = `dosp2_${type}_${headerDo.id}.pdf`;
+    // Set response headers for PDF file
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `inline; filename=${filename}`);
+    // Stream PDF directly to the response
+    pdfDoc.pipe(res);
+    pdfDoc.end();
   }
 }

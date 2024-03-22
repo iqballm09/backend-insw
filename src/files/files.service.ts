@@ -42,12 +42,16 @@ export class FilesService {
     }
 
     // delete file after upload
-    await this.deleteFile(filename, type);
+    await this.deleteFile(filename, type, 'xlsx');
   }
 
-  async deleteFile(name: string, type: string): Promise<void> {
+  async deleteFile(
+    name: string,
+    type: string,
+    fileType: string = 'pdf',
+  ): Promise<void> {
     const client = await buildOpenIdClient();
-    const filepath = `./assets/upload/${client.client_id}/${type}/${name}.pdf`;
+    const filepath = `./assets/upload/${client.client_id}/${type}/${name}.${fileType}`;
 
     return new Promise(async (resolve, reject) => {
       fs.access(filepath, fs.constants.F_OK, (accessError) => {

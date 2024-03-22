@@ -74,6 +74,7 @@ export class FilesController {
     };
   }
 
+
   @Get(':type/:name')
   // @UseGuards(AuthGuard)
   @ApiQuery({ name: 'type', enum: FolderType })
