@@ -74,14 +74,14 @@ export class FilesController {
     return this.fileService.downloadPdf(+id, res);
   }
 
-  @Get('/:name?')
+  @Get(':type/:name')
   // @UseGuards(AuthGuard)
   @ApiQuery({ name: 'type', enum: FolderType })
   // @ApiBearerAuth()
   showFile(
     @Param('name') name: string,
-    @Query('type') type: FolderType,
-    @Res() res: Response,
+    @Param('type') type: FolderType,
+    @Res() res,
   ) {
     return this.fileService.show(res, name, type);
   }

@@ -17,17 +17,6 @@ import { FlagService } from 'src/referensi/flag/flag.service';
 export class FilesService {
   constructor(private flagService: FlagService) {}
 
-  downloadPdf(idDo: number, res: any) {
-    const filepath = `./assets/upload/pdf/dosp2_${idDo}.pdf`;
-    // check if file exist
-    if (!fs.existsSync(filepath)) {
-      throw new NotFoundException(`File pdf by id = ${idDo} not found!`);
-    }
-    // get file
-    res.setHeader('Content-Type', 'application/pdf');
-    res.download(filepath, 'dosp2.pdf');
-  }
-
   async show(res: any, name: string, type: string) {
     try {
       const client = await buildOpenIdClient();
@@ -55,7 +44,18 @@ export class FilesService {
     }
 
     // delete file after upload
-    await this.deleteFile(filename, type, 'xlsx');
+    await this.deleteFile(filename, type);
+  }
+
+  downloadPdf(idDo: number, res: any) {
+    const filepath = `./assets/upload/pdf/dosp2_${idDo}.pdf`;
+    // check if file exist
+    if (!fs.existsSync(filepath)) {
+      throw new NotFoundException(`File pdf by id = ${idDo} not found!`);
+    }
+    // get file
+    res.setHeader('Content-Type', 'application/pdf');
+    res.download(filepath, 'dosp2.pdf');
   }
 
   async deleteFile(
