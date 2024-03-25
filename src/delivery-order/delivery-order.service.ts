@@ -27,9 +27,7 @@ import { ShippinglineService } from 'src/referensi/shippingline/shippingline.ser
 import { DepoService } from 'src/referensi/depo/depo.service';
 import { SmartContractService } from 'src/smart-contract/smart-contract.service';
 import * as pdfPrinter from 'pdfmake';
-import * as pdfMake from 'pdfmake/build/pdfmake';
 import * as fs from 'fs';
-import * as path from 'path';
 
 @Injectable()
 export class DeliveryOrderService {
@@ -93,12 +91,12 @@ export class DeliveryOrderService {
         id: item.id,
         orderId: item.order_id,
         requestNumber: item.no_reqdo,
-        requestTime: moment(item.tgl_reqdo)
+        requestTime: moment(item.tgl_reqdo, 'DD-MM-YYYY HH:mm:ss')
           .tz(timezone)
           .format('DD-MM-YYYY HH:mm:ss'),
         blNumber: item.td_do_bl_form.no_bl,
         blDate: item.td_do_bl_form.tgl_bl
-          ? moment(item.td_do_bl_form.tgl_bl).format('DD-MM-YYYY')
+          ? moment(item.td_do_bl_form.tgl_bl, 'DD-MM-YYYY').format('DD-MM-YYYY')
           : null,
         requestName: item.td_do_requestor_form.nama,
         shippingLine: item.td_do_req_form.id_shippingline.split('|')[0].trim(),
@@ -123,12 +121,15 @@ export class DeliveryOrderService {
         id: headerData.id,
         orderId: item.Record.orderId,
         requestNumber: item.Record.requestDetail.requestDoNumber,
-        requestTime: moment(headerData.tgl_reqdo).format('DD-MM-YYYY HH:mm:ss'),
+        requestTime: moment(headerData.tgl_reqdo, 'DD-MM-YYYY HH:mm:ss')
+          .tz(timezone)
+          .format('DD-MM-YYYY HH:mm:ss'),
         blNumber: item.Record.requestDetail.document.ladingBillNumber,
         blDate: item.Record.requestDetail.document.ladingBillDate
-          ? moment(item.Record.requestDetail.document.ladingBillDate).format(
+          ? moment(
+              item.Record.requestDetail.document.ladingBillDate,
               'DD-MM-YYYY',
-            )
+            ).format('DD-MM-YYYY')
           : null,
         requestName: item.Record.requestDetail.requestor.requestorName,
         shippingLine: item.Record.requestDetail.shippingLine.shippingType
@@ -171,14 +172,15 @@ export class DeliveryOrderService {
         id: headerData.id,
         orderId: item.Record.orderId,
         requestNumber: item.Record.requestDetail.requestDoNumber,
-        requestTime: moment(headerData.tgl_reqdo)
+        requestTime: moment(headerData.tgl_reqdo, 'DD-MM-YYYY HH:mm:ss')
           .tz(timezone)
           .format('DD-MM-YYYY HH:mm:ss'),
         blNumber: item.Record.requestDetail.document.ladingBillNumber,
         blDate: item.Record.requestDetail.document.ladingBillDate
-          ? moment(item.Record.requestDetail.document.ladingBillDate).format(
+          ? moment(
+              item.Record.requestDetail.document.ladingBillDate,
               'DD-MM-YYYY',
-            )
+            ).format('DD-MM-YYYY')
           : null,
         requestName: item.Record.requestDetail.requestor.requestorName,
         shippingLine: item.Record.requestDetail.shippingLine.shippingType
@@ -1358,7 +1360,9 @@ export class DeliveryOrderService {
 
     const result = data.map((item) => ({
       status: item.name,
-      datetime: moment(item.datetime_status).tz(timezone).format(),
+      datetime: moment(item.datetime_status, 'DD-MM-YYYY HH:mm:ss')
+        .tz(timezone)
+        .format('DD-MM-YYYY HH:mm:ss'),
       note: item.note,
     }));
 
@@ -1522,26 +1526,34 @@ export class DeliveryOrderService {
         voyageNumber: data.td_do_req_form.no_voyage,
         blNumber: data.td_do_bl_form.no_bl,
         blDate: data.td_do_bl_form.tgl_bl
-          ? moment(data.td_do_bl_form.tgl_bl).format('YYYY-MM-DD')
+          ? moment(data.td_do_bl_form.tgl_bl, 'YYYY-MM-DD').format('YYYY-MM-DD')
           : null,
         blType: data.td_do_bl_form.id_jenis_bl,
         blFile: data.td_do_bl_form.filepath_dok,
         bc11Date: data.td_do_req_form.tanggal_bc11
-          ? moment(data.td_do_req_form.tanggal_bc11).format('YYYY-MM-DD')
+          ? moment(data.td_do_req_form.tanggal_bc11, 'YYYY-MM-DD').format(
+              'YYYY-MM-DD',
+            )
           : null,
         bc11Number: data.td_do_req_form.no_bc11 || '',
         posNumber: data.td_do_req_form.pos_number || '',
         reqdoExp: data.td_do_req_form.tgl_reqdo_exp
-          ? moment(data.td_do_req_form.tgl_reqdo_exp).format('YYYY-MM-DD')
+          ? moment(data.td_do_req_form.tgl_reqdo_exp, 'YYYY-MM-DD').format(
+              'YYYY-MM-DD',
+            )
           : null,
         metodeBayar: data.td_do_req_form.id_metode_bayar,
         callSign: data.td_do_req_form.call_sign,
         doReleaseDate: data.td_do_req_form.tgl_do_release
-          ? moment(data.td_do_req_form.tgl_do_release).format('YYYY-MM-DD')
+          ? moment(data.td_do_req_form.tgl_do_release, 'YYYY-MM-DD').format(
+              'YYYY-MM-DD',
+            )
           : null,
         doReleaseNumber: data.td_do_req_form.no_do_release,
         doExp: data.td_do_req_form.tgl_do_exp
-          ? moment(data.td_do_req_form.tgl_do_exp).format('YYYY-MM-DD')
+          ? moment(data.td_do_req_form.tgl_do_exp, 'YYYY-MM-DD').format(
+              'YYYY-MM-DD',
+            )
           : null,
         terminalOp: data.td_do_req_form.id_terminal_op,
       },
@@ -1597,13 +1609,13 @@ export class DeliveryOrderService {
         documentType: dok.id_jenis_dok,
         documentNumber: dok.no_dok,
         documentDate: dok.tgl_dok
-          ? moment(dok.tgl_dok).format('YYYY-MM-DD')
+          ? moment(dok.tgl_dok, 'YYYY-MM-DD').format('YYYY-MM-DD')
           : null,
         urlFile: dok.filepath_dok,
       })),
       statusReqDo: {
         status: statusDO.name,
-        datetime: moment(statusDO.datetime_status)
+        datetime: moment(statusDO.datetime_status, 'DD-MM-YYYY HH:mm:ss')
           .tz(timezone)
           .format('DD-MM-YYYY HH:mm:ss'),
       },
@@ -1643,18 +1655,23 @@ export class DeliveryOrderService {
         bc11Number: data.requestDetail.document.bc11Number || '',
         posNumber: data.requestDetail.document.posNumber || '',
         reqdoExp: data.requestDetail.shippingLine.doExpired
-          ? moment(data.requestDetail.shippingLine.doExpired).format(
+          ? moment(
+              data.requestDetail.shippingLine.doExpired,
               'YYYY-MM-DD',
-            )
+            ).format('YYYY-MM-DD')
           : null,
         metodeBayar: data.requestDetail.payment,
         callSign: data.requestDetail.callSign || '',
         doReleaseDate: data.requestDetail.doReleaseDate
-          ? moment(data.requestDetail.doReleaseDate).format('YYYY-MM-DD')
+          ? moment(data.requestDetail.doReleaseDate, 'YYYY-MM-DD').format(
+              'YYYY-MM-DD',
+            )
           : null,
         doReleaseNumber: data.requestDetail.doReleaseNumber || '',
         doExp: data.requestDetail.doExpiredDate
-          ? moment(data.requestDetail.doExpiredDate).format('YYYY-MM-DD')
+          ? moment(data.requestDetail.doExpiredDate, 'YYYY-MM-DD').format(
+              'YYYY-MM-DD',
+            )
           : null,
         terminalOp: data.requestDetail.terminalOp || '',
       },
@@ -1723,7 +1740,7 @@ export class DeliveryOrderService {
       paymentDetailForm: data.paymentDetail.invoice.map((inv) => ({
         invoiceNumber: inv.invoiceNo,
         invoiceDate: inv.invoiceDate
-          ? moment(inv.invoiceDate).format('YYYY-MM-DD')
+          ? moment(inv.invoiceDate, 'YYYY-MM-DD').format('YYYY-MM-DD')
           : null,
         currency: inv.currency,
         totalPayment: inv.totalAmount,
@@ -1736,14 +1753,14 @@ export class DeliveryOrderService {
           documentType: dok.document,
           documentNumber: dok.documentNo,
           documentDate: dok.documentDate
-            ? moment(dok.documentDate).format('YYYY-MM-DD')
+            ? moment(dok.documentDate, 'YYYY-MM-DD').format('YYYY-MM-DD')
             : null,
           urlFile: dok.urlFile,
         }),
       ),
       statusReqdo: {
         name: data.status,
-        datetime: moment(data.statusDate)
+        datetime: moment(data.statusDate, 'DD-MM-YYYY HH:mm:ss')
           .tz(timezone)
           .format('DD-MM-YYYY HH:mm:ss'),
       },
@@ -1797,16 +1814,22 @@ export class DeliveryOrderService {
     const doData = await this.getDoDetail(idDo, token);
     // convert data from json to pdf
     const type = headerDo.request_type === 1 ? 'container' : 'cargo';
-    const bodyPdf = jsonToBodyPdf(doData, type);
+    // generate pdf
+    const filename = `dosp2_${headerDo.id}.pdf`;
+    const dirpath = `./assets/upload/pdf`;
+    const filepath = `./assets/upload/pdf/${filename}`;
+    const bodyPdf = jsonToBodyPdf(doData, type, headerDo.id);
     const printer = new pdfPrinter(fonts);
     const pdfDoc = printer.createPdfKitDocument(bodyPdf);
-    // generate pdf
-    const filename = `dosp2_${type}_${headerDo.id}.pdf`;
-    // Set response headers for PDF file
-    res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', `inline; filename=${filename}`);
-    // Stream PDF directly to the response
-    pdfDoc.pipe(res);
+    // check directory exist
+    if (!fs.existsSync(dirpath)) {
+      fs.mkdirSync(dirpath, { recursive: true });
+    }
+    const write = fs.createWriteStream(filepath);
+    pdfDoc.pipe(write);
+    write.on('finish', () => {
+      fs.createReadStream(filepath).pipe(res);
+    });
     pdfDoc.end();
   }
 }
