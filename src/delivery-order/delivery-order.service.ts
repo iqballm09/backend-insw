@@ -27,9 +27,7 @@ import { ShippinglineService } from 'src/referensi/shippingline/shippingline.ser
 import { DepoService } from 'src/referensi/depo/depo.service';
 import { SmartContractService } from 'src/smart-contract/smart-contract.service';
 import * as pdfPrinter from 'pdfmake';
-import * as pdfMake from 'pdfmake/build/pdfmake';
 import * as fs from 'fs';
-import * as path from 'path';
 
 @Injectable()
 export class DeliveryOrderService {
@@ -1801,16 +1799,22 @@ export class DeliveryOrderService {
     const doData = await this.getDoDetail(idDo, token);
     // convert data from json to pdf
     const type = headerDo.request_type === 1 ? 'container' : 'cargo';
-    const bodyPdf = jsonToBodyPdf(doData, type);
+    // generate pdf
+    const filename = `dosp2_${headerDo.id}.pdf`;
+    const dirpath = `./assets/upload/pdf`;
+    const filepath = `./assets/upload/pdf/${filename}`;
+    const bodyPdf = jsonToBodyPdf(doData, type, headerDo.id);
     const printer = new pdfPrinter(fonts);
     const pdfDoc = printer.createPdfKitDocument(bodyPdf);
-    // generate pdf
-    const filename = `dosp2_${type}_${headerDo.id}.pdf`;
-    // Set response headers for PDF file
-    res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', `inline; filename=${filename}`);
-    // Stream PDF directly to the response
-    pdfDoc.pipe(res);
+    // check directory exist
+    if (!fs.existsSync(dirpath)) {
+      fs.mkdirSync(dirpath, { recursive: true });
+    }
+    const write = fs.createWriteStream(filepath);
+    pdfDoc.pipe(write);
+    write.on('finish', () => {
+      fs.createReadStream(filepath).pipe(res);
+    });
     pdfDoc.end();
   }
 }

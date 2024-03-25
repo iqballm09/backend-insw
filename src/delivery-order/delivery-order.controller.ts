@@ -34,7 +34,6 @@ import {
 } from './dto/create-do.dto';
 import { StatusDo } from '@prisma/client';
 import { UserService } from 'src/user/user.service';
-import { identity } from 'rxjs';
 
 @ApiTags('Delivery Order')
 @Controller('do')
@@ -197,7 +196,7 @@ export class DeliveryOrderController {
   @Get('print/:id')
   @UseGuards(AuthGuard)
   @ApiBearerAuth()
-  async printDoPdf(@Param('id') id: string, @Req() req: any, @Res() res) {
+  printDoPdf(@Param('id') id: string, @Req() req: any, @Res() res) {
     return this.deliveryOrderService.printDo(+id, req.token, res);
   }
 }

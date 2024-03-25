@@ -1,6 +1,6 @@
 import { BadRequestException, HttpException, HttpStatus } from '@nestjs/common';
 import * as moment from 'moment-timezone';
-
+import { FolderType } from './files/folder.types';
 
 export function validateError(error) {
   // Handle specific error cases if needed
@@ -62,13 +62,14 @@ export const fonts = {
   },
 };
 
-export function jsonToBodyPdf(jsonData: any, type: string) {
+export function jsonToBodyPdf(jsonData: any, type: string, idDo: number) {
   if (!['container', 'cargo'].includes(type)) {
     throw new BadRequestException(
       'Failed to generate DO File, type is not container or cargo.',
     );
   }
-
+  // create url path
+  const urlPath = `${process.env.API_URI}/files/download/${idDo}`;
   let docDefinition = {
     pageSize: 'A4',
     pageOrientation: 'potrait',
@@ -103,7 +104,7 @@ export function jsonToBodyPdf(jsonData: any, type: string) {
               { text: '', border: [false, false, false, false] },
               { text: '', border: [false, false, false, false] },
               { text: '', border: [false, false, false, false] },
-              { qr: 'link', fit: '80', border: [true, true, true, true] },
+              { qr: `${urlPath}`, fit: '80', border: [true, true, true, true] },
             ],
           ],
         },
