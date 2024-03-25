@@ -93,10 +93,12 @@ export class DeliveryOrderService {
         id: item.id,
         orderId: item.order_id,
         requestNumber: item.no_reqdo,
-        requestTime: moment(item.tgl_reqdo, 'DD-MM-YYYY HH:mm:ss').tz(timezone),
+        requestTime: moment(item.tgl_reqdo)
+          .tz(timezone)
+          .format('DD-MM-YYYY HH:mm:ss'),
         blNumber: item.td_do_bl_form.no_bl,
         blDate: item.td_do_bl_form.tgl_bl
-          ? moment(item.td_do_bl_form.tgl_bl, 'DD-MM-YYYY')
+          ? moment(item.td_do_bl_form.tgl_bl).format('DD-MM-YYYY')
           : null,
         requestName: item.td_do_requestor_form.nama,
         shippingLine: item.td_do_req_form.id_shippingline.split('|')[0].trim(),
@@ -121,11 +123,10 @@ export class DeliveryOrderService {
         id: headerData.id,
         orderId: item.Record.orderId,
         requestNumber: item.Record.requestDetail.requestDoNumber,
-        requestTime: moment(headerData.tgl_reqdo, 'DD-MM-YYYY HH:mm:ss'),
+        requestTime: moment(headerData.tgl_reqdo).format('DD-MM-YYYY HH:mm:ss'),
         blNumber: item.Record.requestDetail.document.ladingBillNumber,
         blDate: item.Record.requestDetail.document.ladingBillDate
-          ? moment(
-              item.Record.requestDetail.document.ladingBillDate,
+          ? moment(item.Record.requestDetail.document.ladingBillDate).format(
               'DD-MM-YYYY',
             )
           : null,
@@ -170,13 +171,12 @@ export class DeliveryOrderService {
         id: headerData.id,
         orderId: item.Record.orderId,
         requestNumber: item.Record.requestDetail.requestDoNumber,
-        requestTime: moment(headerData.tgl_reqdo).format('DD-MM-YYYY HH:mm:ss').tz(
-          timezone,
-        ),
+        requestTime: moment(headerData.tgl_reqdo)
+          .tz(timezone)
+          .format('DD-MM-YYYY HH:mm:ss'),
         blNumber: item.Record.requestDetail.document.ladingBillNumber,
         blDate: item.Record.requestDetail.document.ladingBillDate
-          ? moment(
-              item.Record.requestDetail.document.ladingBillDate,
+          ? moment(item.Record.requestDetail.document.ladingBillDate).format(
               'DD-MM-YYYY',
             )
           : null,
@@ -1358,9 +1358,7 @@ export class DeliveryOrderService {
 
     const result = data.map((item) => ({
       status: item.name,
-      datetime: moment(item.datetime_status)
-        .tz(timezone)
-        .format(),
+      datetime: moment(item.datetime_status).tz(timezone).format(),
       note: item.note,
     }));
 
