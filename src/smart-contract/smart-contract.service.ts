@@ -108,7 +108,7 @@ export class SmartContractService {
     const tokenAdmin = (await this.enrollAdmin()).token;
     // get user info
     const userData = await this.userService.getUserDB(
-      payload.requestDetail.requestorId,
+      payload.requestDetail.requestor.requestorId,
     );
     // generate user token
     const userToken = (await this.enrollUser(userData, tokenAdmin)).token;

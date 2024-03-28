@@ -41,7 +41,6 @@ export class DeliveryOrderService {
 
   async getAllDoCo(coName: string) {
     let dataSubmitted = [];
-    const timezone = getLocalTimeZone();
 
     const data = await this.prisma.td_reqdo_header_form.findMany({
       include: {
@@ -92,7 +91,7 @@ export class DeliveryOrderService {
         orderId: item.order_id,
         requestNumber: item.no_reqdo,
         requestTime: moment(item.tgl_reqdo, 'DD-MM-YYYY HH:mm:ss')
-          .tz(timezone)
+          .tz(item.timezone)
           .format('DD-MM-YYYY HH:mm:ss'),
         blNumber: item.td_do_bl_form.no_bl,
         blDate: item.td_do_bl_form.tgl_bl
@@ -122,7 +121,7 @@ export class DeliveryOrderService {
         orderId: item.Record.orderId,
         requestNumber: item.Record.requestDetail.requestDoNumber,
         requestTime: moment(headerData.tgl_reqdo, 'DD-MM-YYYY HH:mm:ss')
-          .tz(timezone)
+          .tz(headerData.timezone)
           .format('DD-MM-YYYY HH:mm:ss'),
         blNumber: item.Record.requestDetail.document.ladingBillNumber,
         blDate: item.Record.requestDetail.document.ladingBillDate
@@ -148,7 +147,6 @@ export class DeliveryOrderService {
 
   async getAllDoSL(slName: string, kodeDetailGa: string, token: string) {
     let dataDoSL = [];
-    const timezone = getLocalTimeZone();
     // get list of shippingline codes that by kode detail ga
     const listKodeSL = (await this.shippinglineService.findAll(token)).data
       .filter((item) => item.kd_detail_ga === kodeDetailGa)
@@ -173,7 +171,7 @@ export class DeliveryOrderService {
         orderId: item.Record.orderId,
         requestNumber: item.Record.requestDetail.requestDoNumber,
         requestTime: moment(headerData.tgl_reqdo, 'DD-MM-YYYY HH:mm:ss')
-          .tz(timezone)
+          .tz(headerData.timezone)
           .format('DD-MM-YYYY HH:mm:ss'),
         blNumber: item.Record.requestDetail.document.ladingBillNumber,
         blDate: item.Record.requestDetail.document.ladingBillDate
@@ -253,6 +251,7 @@ export class DeliveryOrderService {
   async createKontainer(data: RequestDoDto, token: string, status?: StatusDo) {
     const userInfo = await this.userService.getDetail(token);
     const created_by = userInfo.sub;
+    const timezone = await getLocalTimeZone();
 
     // CHECK IF USER ROLE IS CO
     if (userInfo.profile.details.kd_detail_ga) {
@@ -318,6 +317,7 @@ export class DeliveryOrderService {
           data.requestDetail.shippingLine.shippingType.split('|')[0].trim(),
         ),
         created_by,
+        timezone: timezone,
         td_do_requestor_form: {
           create: {
             id_jenis_requestor: +data.requestDetail.requestor.requestorType,
@@ -427,10 +427,22 @@ export class DeliveryOrderService {
 
     // CASE 2: IF SUBMITTED, SEND PAYLOAD TO SMART CONTRACT
     if (status === 'Submitted') {
-      data.requestDetail.requestorId = userInfo.sub;
+      data.requestDetail.requestor.requestorId = userInfo.sub;
       data.requestDetail.requestDoNumber = generateNoReq(
         data.requestDetail.shippingLine.shippingType.split('|')[0].trim(),
       );
+      data.requestDetail.document.bc11Date = data.requestDetail.document
+        .bc11Date
+        ? data.requestDetail.document.bc11Date
+        : '';
+      data.requestDetail.document.bc11Number = data.requestDetail.document
+        .bc11Number
+        ? data.requestDetail.document.bc11Number
+        : '';
+      data.requestDetail.document.posNumber = data.requestDetail.document
+        .posNumber
+        ? data.requestDetail.document.posNumber
+        : '';
       const result = await this.smartContractService.requestDO(data, status);
       // generate status do to smart contract
       const headerDo = await this.prisma.td_reqdo_header_form.update({
@@ -441,7 +453,8 @@ export class DeliveryOrderService {
           order_id: result.response.orderId,
           request_type: data.requestType,
           no_reqdo: data.requestDetail.requestDoNumber,
-          created_by: data.requestDetail.requestorId,
+          created_by: data.requestDetail.requestor.requestorId,
+          tgl_reqdo: new Date(result.response.datetime),
           td_reqdo_status: {
             create: {
               name: result.response.status,
@@ -524,10 +537,22 @@ export class DeliveryOrderService {
       [lastStatus, last2Status].includes('Rejected') &&
       status === 'Submitted'
     ) {
-      data.requestDetail.requestorId = userInfo.sub;
+      data.requestDetail.requestor.requestorId = userInfo.sub;
       data.requestDetail.requestDoNumber = generateNoReq(
         data.requestDetail.shippingLine.shippingType.split('|')[0].trim(),
       );
+      data.requestDetail.document.bc11Date = data.requestDetail.document
+        .bc11Date
+        ? data.requestDetail.document.bc11Date
+        : '';
+      data.requestDetail.document.bc11Number = data.requestDetail.document
+        .bc11Number
+        ? data.requestDetail.document.bc11Number
+        : '';
+      data.requestDetail.document.posNumber = data.requestDetail.document
+        .posNumber
+        ? data.requestDetail.document.posNumber
+        : '';
       const result = await this.smartContractService.updateDoCo(
         userInfo.sub,
         doData.order_id,
@@ -545,10 +570,22 @@ export class DeliveryOrderService {
 
     // CASE 2 : IF THE STATUS IS SUBMITTED AFTER UPDATE DO, SEND PAYLOAD DATA TO SMART CONTRACT
     else if (status === 'Submitted') {
-      data.requestDetail.requestorId = userInfo.sub;
+      data.requestDetail.requestor.requestorId = userInfo.sub;
       data.requestDetail.requestDoNumber = generateNoReq(
         data.requestDetail.shippingLine.shippingType.split('|')[0].trim(),
       );
+      data.requestDetail.document.bc11Date = data.requestDetail.document
+        .bc11Date
+        ? data.requestDetail.document.bc11Date
+        : '';
+      data.requestDetail.document.bc11Number = data.requestDetail.document
+        .bc11Number
+        ? data.requestDetail.document.bc11Number
+        : '';
+      data.requestDetail.document.posNumber = data.requestDetail.document
+        .posNumber
+        ? data.requestDetail.document.posNumber
+        : '';
       const result = await this.smartContractService.requestDO(data, status);
       // get update header data
       const updatedHeader = await this.updateHeaderData(
@@ -714,6 +751,7 @@ export class DeliveryOrderService {
     status?: StatusDo,
   ) {
     const userInfo = await this.userService.getDetail(token);
+    const timezone = await getLocalTimeZone();
     const created_by = userInfo.sub;
 
     // CHECK IF USER ROLE IS CO
@@ -788,6 +826,7 @@ export class DeliveryOrderService {
           data.requestDetail.shippingLine.shippingType.split('|')[0].trim(),
         ),
         created_by,
+        timezone: timezone,
         td_do_requestor_form: {
           create: {
             id_jenis_requestor: +data.requestDetail.requestor.requestorType,
@@ -893,10 +932,22 @@ export class DeliveryOrderService {
 
     // CASE 2: IF SUBMITTED, SEND PAYLOAD TO SMART CONTRACT
     if (status === 'Submitted') {
-      data.requestDetail.requestorId = userInfo.sub;
+      data.requestDetail.requestor.requestorId = userInfo.sub;
       data.requestDetail.requestDoNumber = generateNoReq(
         data.requestDetail.shippingLine.shippingType.split('|')[0].trim(),
       );
+      data.requestDetail.document.bc11Date = data.requestDetail.document
+        .bc11Date
+        ? data.requestDetail.document.bc11Date
+        : '';
+      data.requestDetail.document.bc11Number = data.requestDetail.document
+        .bc11Number
+        ? data.requestDetail.document.bc11Number
+        : '';
+      data.requestDetail.document.posNumber = data.requestDetail.document
+        .posNumber
+        ? data.requestDetail.document.posNumber
+        : '';
       const result = await this.smartContractService.requestDO(data, status);
       const headerDo = await this.prisma.td_reqdo_header_form.update({
         where: {
@@ -906,7 +957,7 @@ export class DeliveryOrderService {
           order_id: result.response.orderId,
           request_type: data.requestType,
           no_reqdo: data.requestDetail.requestDoNumber,
-          created_by: data.requestDetail.requestorId,
+          created_by: data.requestDetail.requestor.requestorId,
           td_reqdo_status: {
             create: {
               name: result.response.status,
@@ -989,10 +1040,22 @@ export class DeliveryOrderService {
       [lastStatus, last2Status].includes('Rejected') &&
       status === 'Submitted'
     ) {
-      data.requestDetail.requestorId = userInfo.sub;
+      data.requestDetail.requestor.requestorId = userInfo.sub;
       data.requestDetail.requestDoNumber = generateNoReq(
         data.requestDetail.shippingLine.shippingType.split('|')[0].trim(),
       );
+      data.requestDetail.document.bc11Date = data.requestDetail.document
+        .bc11Date
+        ? data.requestDetail.document.bc11Date
+        : '';
+      data.requestDetail.document.bc11Number = data.requestDetail.document
+        .bc11Number
+        ? data.requestDetail.document.bc11Number
+        : '';
+      data.requestDetail.document.posNumber = data.requestDetail.document
+        .posNumber
+        ? data.requestDetail.document.posNumber
+        : '';
       const result = await this.smartContractService.updateDoCo(
         userInfo.sub,
         doData.order_id,
@@ -1010,10 +1073,22 @@ export class DeliveryOrderService {
 
     // CASE 2 : IF STATUS DO IS SUBMITTED AFTER UPDATE DO, SEND PAYLOAD DATA TO SMART CONTRACT
     else if (status === 'Submitted') {
-      data.requestDetail.requestorId = userInfo.sub;
+      data.requestDetail.requestor.requestorId = userInfo.sub;
       data.requestDetail.requestDoNumber = generateNoReq(
         data.requestDetail.shippingLine.shippingType.split('|')[0].trim(),
       );
+      data.requestDetail.document.bc11Date = data.requestDetail.document
+        .bc11Date
+        ? data.requestDetail.document.bc11Date
+        : '';
+      data.requestDetail.document.bc11Number = data.requestDetail.document
+        .bc11Number
+        ? data.requestDetail.document.bc11Number
+        : '';
+      data.requestDetail.document.posNumber = data.requestDetail.document
+        .posNumber
+        ? data.requestDetail.document.posNumber
+        : '';
       const result = await this.smartContractService.requestDO(data, status);
       // update header data
       const updatedHeader = await this.updateHeaderData(
@@ -1346,10 +1421,8 @@ export class DeliveryOrderService {
 
   // GET ALL STATUS REQDO
   async getAllStatus(idDO: number) {
-    // get timezone
-    const timezone = getLocalTimeZone();
-    const isDOExist = await this.getHeaderData(idDO);
-    if (!isDOExist) {
+    const headerDo = await this.getHeaderData(idDO);
+    if (!headerDo) {
       throw new NotFoundException(`DO Request by id = ${idDO} not found`);
     }
     const data = await this.prisma.td_reqdo_status.findMany({
@@ -1361,7 +1434,7 @@ export class DeliveryOrderService {
     const result = data.map((item) => ({
       status: item.name,
       datetime: moment(item.datetime_status, 'DD-MM-YYYY HH:mm:ss')
-        .tz(timezone)
+        .tz(headerDo.timezone)
         .format('DD-MM-YYYY HH:mm:ss'),
       note: item.note,
     }));
@@ -1412,7 +1485,6 @@ export class DeliveryOrderService {
 
   // GET DO DETAIL DRAFT
   async getDoDetailDraft(idDo: number) {
-    const timezone = getLocalTimeZone();
     const data = await this.prisma.td_reqdo_header_form.findUnique({
       include: {
         td_do_requestor_form: {
@@ -1512,7 +1584,6 @@ export class DeliveryOrderService {
     if (!data) {
       throw new NotFoundException(`${idDo} is not found`);
     }
-
     const response = {
       requestDetailForm: {
         requestorType: data.td_do_requestor_form.id_jenis_requestor,
@@ -1616,7 +1687,7 @@ export class DeliveryOrderService {
       statusReqDo: {
         status: statusDO.name,
         datetime: moment(statusDO.datetime_status, 'DD-MM-YYYY HH:mm:ss')
-          .tz(timezone)
+          .tz(data.timezone)
           .format('DD-MM-YYYY HH:mm:ss'),
       },
     };
@@ -1625,11 +1696,22 @@ export class DeliveryOrderService {
 
   // GET DO DETAIL SMART CONTRACT
   async getDoDetailSC(username: string, orderId: string) {
-    const timezone = getLocalTimeZone();
     const data = await this.smartContractService.getDoDetailData(
       username,
       orderId,
     );
+    // get timezone
+    const headerData = await this.prisma.td_reqdo_header_form.findFirst({
+      where: {
+        order_id: orderId,
+      },
+    });
+    if (!headerData) {
+      throw new NotFoundException(
+        `Header Data by Order Id = ${orderId} not found`,
+      );
+    }
+    const timezone = headerData.timezone;
     const result = {
       requestDetailForm: {
         requestorType: data.requestDetail.requestor.requestorType,
@@ -1793,7 +1875,7 @@ export class DeliveryOrderService {
       data: {
         no_reqdo: reqdoNum,
         order_id: orderId,
-        tgl_reqdo: new Date(),
+        tgl_reqdo: new Date(statusDo.datetime),
         td_reqdo_status: {
           create: {
             name: statusDo.status,

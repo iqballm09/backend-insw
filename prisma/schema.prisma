@@ -59,6 +59,7 @@ model td_reqdo_header_form {
   tgl_reqdo    DateTime @default(now())
   request_type Int
   order_id     String   @unique
+  timezone     String?
   created_at   DateTime @default(now())
   created_by   String   @db.VarChar(255)
 

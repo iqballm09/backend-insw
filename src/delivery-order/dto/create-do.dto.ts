@@ -14,10 +14,12 @@ class Requestor {
   nib: string;
   requestorName: string;
   requestorAddress: string;
+  requestorId: string;
 }
 
 class ShippingLine {
   shippingType: string;
+  shippingDetail?: string;
   doExpired: string;
   vesselName: string;
   voyageNumber: string;
@@ -121,7 +123,6 @@ export class RequestDoDto {
     shippingLine: ShippingLine;
     payment: string;
     document: Document;
-    requestorId?: string;
     requestDoNumber?: string;
     doReleaseNo?: string;
     doReleaseDate?: string;
