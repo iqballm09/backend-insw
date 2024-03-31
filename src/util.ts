@@ -168,9 +168,7 @@ export function jsonToBodyPdf(jsonData: any, type: string, idDo: number) {
           body: [
             [
               {
-                text: jsonData.requestDetailForm.shippingLine
-                  .split(' | ')[1]
-                  .trim(),
+                text: jsonData.requestDetailForm.shippingLine,
                 rowSpan: 2,
                 style: 'headerTable',
                 border: [true, true, true, false],
