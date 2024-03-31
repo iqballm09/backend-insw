@@ -431,6 +431,10 @@ export class DeliveryOrderService {
       data.requestDetail.requestDoNumber = generateNoReq(
         data.requestDetail.shippingLine.shippingType.split('|')[0].trim(),
       );
+      data.requestDetail.shippingLine.shippingDetail =
+        data.requestDetail.shippingLine.shippingType.split('|')[1].trim();
+      data.requestDetail.shippingLine.shippingType =
+        data.requestDetail.shippingLine.shippingType.split('|')[0].trim();
       data.requestDetail.document.bc11Date = data.requestDetail.document
         .bc11Date
         ? data.requestDetail.document.bc11Date
@@ -537,10 +541,15 @@ export class DeliveryOrderService {
       [lastStatus, last2Status].includes('Rejected') &&
       status === 'Submitted'
     ) {
+      console.log(data.requestDetail.shippingLine.shippingType);
       data.requestDetail.requestor.requestorId = userInfo.sub;
       data.requestDetail.requestDoNumber = generateNoReq(
         data.requestDetail.shippingLine.shippingType.split('|')[0].trim(),
       );
+      data.requestDetail.shippingLine.shippingDetail =
+        data.requestDetail.shippingLine.shippingType.split('|')[1].trim();
+      data.requestDetail.shippingLine.shippingType =
+        data.requestDetail.shippingLine.shippingType.split('|')[0].trim();
       data.requestDetail.document.bc11Date = data.requestDetail.document
         .bc11Date
         ? data.requestDetail.document.bc11Date
@@ -574,6 +583,10 @@ export class DeliveryOrderService {
       data.requestDetail.requestDoNumber = generateNoReq(
         data.requestDetail.shippingLine.shippingType.split('|')[0].trim(),
       );
+      data.requestDetail.shippingLine.shippingDetail =
+        data.requestDetail.shippingLine.shippingType.split('|')[1].trim();
+      data.requestDetail.shippingLine.shippingType =
+        data.requestDetail.shippingLine.shippingType.split('|')[0].trim();
       data.requestDetail.document.bc11Date = data.requestDetail.document
         .bc11Date
         ? data.requestDetail.document.bc11Date
@@ -936,6 +949,10 @@ export class DeliveryOrderService {
       data.requestDetail.requestDoNumber = generateNoReq(
         data.requestDetail.shippingLine.shippingType.split('|')[0].trim(),
       );
+      data.requestDetail.shippingLine.shippingDetail =
+        data.requestDetail.shippingLine.shippingType.split('|')[1].trim();
+      data.requestDetail.shippingLine.shippingType =
+        data.requestDetail.shippingLine.shippingType.split('|')[0].trim();
       data.requestDetail.document.bc11Date = data.requestDetail.document
         .bc11Date
         ? data.requestDetail.document.bc11Date
@@ -1044,6 +1061,10 @@ export class DeliveryOrderService {
       data.requestDetail.requestDoNumber = generateNoReq(
         data.requestDetail.shippingLine.shippingType.split('|')[0].trim(),
       );
+      data.requestDetail.shippingLine.shippingDetail =
+        data.requestDetail.shippingLine.shippingType.split('|')[1].trim();
+      data.requestDetail.shippingLine.shippingType =
+        data.requestDetail.shippingLine.shippingType.split('|')[0].trim();
       data.requestDetail.document.bc11Date = data.requestDetail.document
         .bc11Date
         ? data.requestDetail.document.bc11Date
@@ -1077,6 +1098,10 @@ export class DeliveryOrderService {
       data.requestDetail.requestDoNumber = generateNoReq(
         data.requestDetail.shippingLine.shippingType.split('|')[0].trim(),
       );
+      data.requestDetail.shippingLine.shippingDetail =
+        data.requestDetail.shippingLine.shippingType.split('|')[1].trim();
+      data.requestDetail.shippingLine.shippingType =
+        data.requestDetail.shippingLine.shippingType.split('|')[0].trim();
       data.requestDetail.document.bc11Date = data.requestDetail.document
         .bc11Date
         ? data.requestDetail.document.bc11Date
@@ -1684,8 +1709,8 @@ export class DeliveryOrderService {
           : null,
         urlFile: dok.filepath_dok,
       })),
-      statusReqDo: {
-        status: statusDO.name,
+      statusReqdo: {
+        name: statusDO.name,
         datetime: moment(statusDO.datetime_status, 'DD-MM-YYYY HH:mm:ss')
           .tz(data.timezone)
           .format('DD-MM-YYYY HH:mm:ss'),
@@ -1720,7 +1745,10 @@ export class DeliveryOrderService {
         requestorNpwp: data.requestDetail.requestor.npwp,
         requestorAlamat: data.requestDetail.requestor.requestorAddress,
         requestorFile: data.requestDetail.requestor.urlFile,
-        shippingLine: data.requestDetail.shippingLine.shippingType,
+        shippingLine: [
+          data.requestDetail.shippingLine.shippingType,
+          data.requestDetail.shippingLine.shippingDetail,
+        ].join(' | '),
         vesselName: data.requestDetail.shippingLine.vesselName,
         voyageNumber: data.requestDetail.shippingLine.voyageNumber,
         blNumber: data.requestDetail.document.ladingBillNumber,
@@ -1888,7 +1916,7 @@ export class DeliveryOrderService {
     return updatedHeader;
   }
 
-  async printDo(idDo: number, token: string, res: any) {
+  async printDo(idDo: number, token: string) {
     const userInfo = await this.userService.getDetail(token);
     // get header data
     const headerDo = await this.getHeaderData(idDo);
@@ -1909,9 +1937,10 @@ export class DeliveryOrderService {
     }
     const write = fs.createWriteStream(filepath);
     pdfDoc.pipe(write);
-    write.on('finish', () => {
-      fs.createReadStream(filepath).pipe(res);
-    });
+    fs.createReadStream(filepath);
+    // write.on('finish', () => {
+    //   fs.createReadStream(filepath).pipe(res);
+    // });
     pdfDoc.end();
   }
 }

@@ -196,7 +196,10 @@ export class DeliveryOrderController {
   @Get('print/:id')
   @UseGuards(AuthGuard)
   @ApiBearerAuth()
-  printDoPdf(@Param('id') id: string, @Req() req: any, @Res() res) {
-    return this.deliveryOrderService.printDo(+id, req.token, res);
+  async printDoPdf(@Param('id') id: string, @Req() req: any) {
+    const _ = await this.deliveryOrderService.printDo(+id, req.token);
+    return {
+      urlFile: `${process.env.API_URI}/files/download/${+id}`,
+    };
   }
 }
