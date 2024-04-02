@@ -8,9 +8,8 @@ import {
 import { buildOpenIdClient } from 'src/auth/strategy/oidc.strategy';
 import { validateError } from 'src/util';
 import * as fs from 'fs';
-import * as XLSX from 'xlsx';
+import readXlsxFile from 'read-excel-file/node';
 import { FolderType } from './folder.types';
-import axios from 'axios';
 import { FlagService } from 'src/referensi/flag/flag.service';
 
 @Injectable()
@@ -31,15 +30,14 @@ export class FilesService {
   async uploadData(filename: string, type: FolderType, token: string) {
     const client = await buildOpenIdClient();
     const filepath = `assets/upload/${client.client_id}/${type}/${filename}`;
-    const workbook = XLSX.readFile(filepath);
     if (type === 'container') {
-      const listObjCon = this.convertExcelToJSONContainer(workbook);
+      const listObjCon = await this.convertExcelToJSONContainer(filepath);
       return listObjCon;
     } else if (type === 'cargo') {
-      const listObjCargo = await this.convertExcelToJSONCargo(workbook, token);
+      const listObjCargo = await this.convertExcelToJSONCargo(filepath, token);
       return listObjCargo;
     } else if (type === 'vin') {
-      const listVin = this.convertExcelToJSONVin(workbook);
+      const listVin = await this.convertExcelToJSONVin(filepath);
       return listVin;
     }
 
@@ -84,7 +82,7 @@ export class FilesService {
     });
   }
 
-  convertExcelToJSONContainer(workbook: XLSX.WorkBook) {
+  async convertExcelToJSONContainer(filepath: string) {
     const conHeaderFormat = [
       'no_container',
       'tipe_container',
@@ -94,13 +92,8 @@ export class FilesService {
       'ownership',
     ];
     const sealHeaderFormat = ['no_container', 'no_seal'];
-
-    const conSheet = workbook.Sheets[workbook.SheetNames[0]];
-    const conData = XLSX.utils.sheet_to_json(conSheet, {
-      header: 1,
-      defval: '',
-      blankrows: false,
-    });
+    // load excel data: container
+    const conData = await readXlsxFile(filepath, {sheet: 'Container'});
     const conHeader = conData[0];
     conData.shift();
 
@@ -111,12 +104,8 @@ export class FilesService {
       );
     }
 
-    const sealSheet = workbook.Sheets[workbook.SheetNames[1]];
-    const sealData = XLSX.utils.sheet_to_json(sealSheet, {
-      header: 1,
-      defval: '',
-      blankrows: false,
-    });
+    // load excel data: seal
+    const sealData = await readXlsxFile(filepath, {sheet: 'Seal'});
     const sealHeader = sealData[0];
     sealData.shift();
 
@@ -140,8 +129,8 @@ export class FilesService {
           sealNo: [
             ...new Set(
               sealData
-                .filter((seal) => seal[0].trim() === data[0].trim())
-                .map((seal) => seal[1].trim()),
+                .filter((seal: any) => seal[0].trim() === data[0].trim())
+                .map((seal: any) => seal[1].trim()),
             ),
           ],
           ownership: data[5].split('-')[0].trim(),
@@ -155,7 +144,7 @@ export class FilesService {
     return listConObj;
   }
 
-  async convertExcelToJSONCargo(workbook: XLSX.WorkBook, token: string) {
+  async convertExcelToJSONCargo(filepath: string, token: string) {
     const headerFormat = [
       'goods_desc',
       'package_qty',
@@ -166,12 +155,7 @@ export class FilesService {
       'measurement_uom',
     ];
     // check if header same
-    const cargoSheet = workbook.Sheets[workbook.SheetNames[0]];
-    const cargoData = XLSX.utils.sheet_to_json(cargoSheet, {
-      header: 1,
-      defval: '',
-      blankrows: false,
-    });
+    const cargoData = await readXlsxFile(filepath, {sheet: 'non_container'})
     const cargoHeader = cargoData[0];
     cargoData.shift();
 
@@ -188,9 +172,7 @@ export class FilesService {
 
     cargoData.forEach((data: any) => {
       if (!!data.join('').length) {
-        const satuanGwu = data[4].split('-')[0].trim().toUpperCase();
         const satuanMeasurement = data[6].trim().toUpperCase();
-        const satuanPackage = data[2].trim();
         if (!listMeasurement.includes(satuanMeasurement)) {
           throw new BadRequestException(
             `Satuan ${satuanMeasurement} is not exist on list measurement unit '${listMeasurement}'`,
@@ -218,14 +200,9 @@ export class FilesService {
     return listCargoObj;
   }
 
-  convertExcelToJSONVin(workbook: XLSX.WorkBook) {
+  async convertExcelToJSONVin(filepath: string) {
     const headerFormat = 'nomor_equipment_identification';
-    const vinSheet = workbook.Sheets[workbook.SheetNames[0]];
-    const vinData = XLSX.utils.sheet_to_json(vinSheet, {
-      header: 1,
-      defval: '',
-      blankrows: false,
-    });
+    const vinData = await readXlsxFile(filepath)
     const vinHeader = vinData[0];
     vinData.shift();
     // check if header same
@@ -235,7 +212,7 @@ export class FilesService {
       );
     }
     const listVinObj = {
-      vinNumber: vinData.map((data) => data[0]),
+      vinNumber: vinData.map((data: any) => data[0]),
     };
     return listVinObj;
   }
