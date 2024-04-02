@@ -1689,7 +1689,9 @@ export class DeliveryOrderService {
         measurementVolume: data.measurement_vol,
         measurementUnit: data.measurement_unit,
       })),
-      vinDetailForm: data.td_do_bl_form.do_vin.map((vin) => vin),
+      vinDetailForm: {
+        vinNumber: data.td_do_bl_form.do_vin.map((vin) => vin),
+      },
       paymentDetailForm: data.td_do_invoice_form.map((inv) => ({
         invoiceNumber: inv.no_invoice,
         invoiceDate: inv.tgl_invoice
@@ -1845,8 +1847,10 @@ export class DeliveryOrderService {
               measurementUnit: item.measurementVolume.unit,
             }))
           : [],
-      vinDetailForm:
-        data.vinDetail.vinNumber.length !== 0 ? data.vinDetail.vinNumber : [],
+      vinDetailForm: {
+        vinNumber:
+          data.vinDetail.vinNumber.length !== 0 ? data.vinDetail.vinNumber : [],
+      },
       paymentDetailForm: data.paymentDetail.invoice.map((inv) => ({
         invoiceNumber: inv.invoiceNo,
         invoiceDate: inv.invoiceDate
