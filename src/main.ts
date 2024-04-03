@@ -23,6 +23,7 @@ async function bootstrap() {
   );
   app.use(passport.initialize());
   app.use(passport.session());
+  app.getHttpAdapter().getInstance().disable('x-powered-by');
 
   // Set CORS options
   app.enableCors({
