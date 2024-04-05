@@ -165,7 +165,9 @@ export class DeliveryOrderService {
           `DO data by order_id = ${item.Record.orderId} not found!`,
         );
       }
-      if (listKodeSL.includes(slName)) {
+      if (
+        listKodeSL.includes(item.Record.requestDetail.shippingLine.shippingType)
+      ) {
         dataDoSL.push({
           id: headerData.id,
           orderId: item.Record.orderId,
