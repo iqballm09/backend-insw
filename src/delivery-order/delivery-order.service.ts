@@ -103,7 +103,8 @@ export class DeliveryOrderService {
         isContainer: item.request_type == 1,
       }));
 
-    for (const item of (await this.smartContractService.getAllDoData()).data) {
+    for (const item of (await this.smartContractService.getAllDoCo(coName))
+      .data) {
       // get header data by order id
       const headerData = await this.prisma.td_reqdo_header_form.findFirst({
         where: {
@@ -115,29 +116,27 @@ export class DeliveryOrderService {
           `Header data by orderId = ${item.Record.orderId} not found`,
         );
       }
-      if (item.Record.requestDetail.requestor.requestorId === coName) {
-        dataSubmitted.push({
-          id: headerData.id,
-          orderId: item.Record.orderId,
-          requestNumber: item.Record.requestDetail.requestDoNumber,
-          requestTime: moment(headerData.tgl_reqdo, 'DD-MM-YYYY HH:mm:ss')
-            .tz(headerData.timezone)
-            .format('DD-MM-YYYY HH:mm:ss'),
-          blNumber: item.Record.requestDetail.document.ladingBillNumber,
-          blDate: item.Record.requestDetail.document.ladingBillDate
-            ? moment(
-                item.Record.requestDetail.document.ladingBillDate,
-                'DD-MM-YYYY',
-              ).format('DD-MM-YYYY')
-            : null,
-          requestName: item.Record.requestDetail.requestor.requestorName,
-          shippingLine: item.Record.requestDetail.shippingLine.shippingType
-            .split('|')[0]
-            .trim(),
-          status: item.Record.status,
-          isContainer: item.Record.requestType == 1,
-        });
-      }
+      dataSubmitted.push({
+        id: headerData.id,
+        orderId: item.Record.orderId,
+        requestNumber: item.Record.requestDetail.requestDoNumber,
+        requestTime: moment(headerData.tgl_reqdo, 'DD-MM-YYYY HH:mm:ss')
+          .tz(headerData.timezone)
+          .format('DD-MM-YYYY HH:mm:ss'),
+        blNumber: item.Record.requestDetail.document.ladingBillNumber,
+        blDate: item.Record.requestDetail.document.ladingBillDate
+          ? moment(
+              item.Record.requestDetail.document.ladingBillDate,
+              'DD-MM-YYYY',
+            ).format('DD-MM-YYYY')
+          : null,
+        requestName: item.Record.requestDetail.requestor.requestorName,
+        shippingLine: item.Record.requestDetail.shippingLine.shippingType
+          .split('|')[0]
+          .trim(),
+        status: item.Record.status,
+        isContainer: item.Record.requestType == 1,
+      });
     }
     // merge data draft and data submitted
     const dataDoCo = dataDraft.concat(dataSubmitted).sort((b, a) => {
@@ -152,8 +151,10 @@ export class DeliveryOrderService {
     const listKodeSL = (await this.shippinglineService.findAll(token)).data
       .filter((item) => item.kd_detail_ga === kodeDetailGa)
       .map((item) => item.kode);
-    // console.log(listKodeSL);
-    for (const item of (await this.smartContractService.getAllDoData()).data) {
+
+    for (const item of (
+      await this.smartContractService.getAllDoSL(slName, listKodeSL)
+    ).data) {
       // get header data by order id
       const headerData = await this.prisma.td_reqdo_header_form.findFirst({
         where: {
@@ -165,31 +166,27 @@ export class DeliveryOrderService {
           `DO data by order_id = ${item.Record.orderId} not found!`,
         );
       }
-      if (
-        listKodeSL.includes(item.Record.requestDetail.shippingLine.shippingType)
-      ) {
-        dataDoSL.push({
-          id: headerData.id,
-          orderId: item.Record.orderId,
-          requestNumber: item.Record.requestDetail.requestDoNumber,
-          requestTime: moment(headerData.tgl_reqdo, 'DD-MM-YYYY HH:mm:ss')
-            .tz(headerData.timezone)
-            .format('DD-MM-YYYY HH:mm:ss'),
-          blNumber: item.Record.requestDetail.document.ladingBillNumber,
-          blDate: item.Record.requestDetail.document.ladingBillDate
-            ? moment(
-                item.Record.requestDetail.document.ladingBillDate,
-                'DD-MM-YYYY',
-              ).format('DD-MM-YYYY')
-            : null,
-          requestName: item.Record.requestDetail.requestor.requestorName,
-          shippingLine: item.Record.requestDetail.shippingLine.shippingType
-            .split('|')[0]
-            .trim(),
-          status: item.Record.status,
-          isContainer: item.Record.requestType == 1,
-        });
-      }
+      dataDoSL.push({
+        id: headerData.id,
+        orderId: item.Record.orderId,
+        requestNumber: item.Record.requestDetail.requestDoNumber,
+        requestTime: moment(headerData.tgl_reqdo, 'DD-MM-YYYY HH:mm:ss')
+          .tz(headerData.timezone)
+          .format('DD-MM-YYYY HH:mm:ss'),
+        blNumber: item.Record.requestDetail.document.ladingBillNumber,
+        blDate: item.Record.requestDetail.document.ladingBillDate
+          ? moment(
+              item.Record.requestDetail.document.ladingBillDate,
+              'DD-MM-YYYY',
+            ).format('DD-MM-YYYY')
+          : null,
+        requestName: item.Record.requestDetail.requestor.requestorName,
+        shippingLine: item.Record.requestDetail.shippingLine.shippingType
+          .split('|')[0]
+          .trim(),
+        status: item.Record.status,
+        isContainer: item.Record.requestType == 1,
+      });
     }
     return dataDoSL.sort((b, a) => {
       return a.requestTime.localeCompare(b.requestTime);
