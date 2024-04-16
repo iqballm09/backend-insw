@@ -541,7 +541,6 @@ export class DeliveryOrderService {
       [lastStatus, last2Status].includes('Rejected') &&
       status === 'Submitted'
     ) {
-      console.log(data.requestDetail.shippingLine.shippingType);
       data.requestDetail.requestor.requestorId = userInfo.sub;
       data.requestDetail.requestDoNumber = generateNoReq(
         data.requestDetail.shippingLine.shippingType.split('|')[0].trim(),
@@ -1044,13 +1043,11 @@ export class DeliveryOrderService {
         'Status DO of Update DO must be Draft or Submitted',
       );
     }
-
     // CHECK IF DO EXIST
     const doData = await this.getHeaderData(idDO);
     if (!doData) {
       throw new BadRequestException(`DO by id = ${idDO} not found.`);
     }
-
     // CASE 1 : IF THE STATUS IS SUBMITTED AND THE LAST STATUS OR BEFORE IS REJECTED, THEN HIT UPDATE DO SMART CONTRACT
     const last2Status = listStatusDO[listStatusDO.length - 2];
     if (
@@ -1690,7 +1687,7 @@ export class DeliveryOrderService {
         measurementUnit: data.measurement_unit,
       })),
       vinDetailForm: {
-        vinNumber: data.td_do_bl_form.do_vin.map((vin) => vin),
+        vinNumber: data.td_do_bl_form.do_vin.map((vin) => vin.no_vin),
       },
       paymentDetailForm: data.td_do_invoice_form.map((inv) => ({
         invoiceNumber: inv.no_invoice,
