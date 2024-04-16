@@ -1,13 +1,11 @@
-import {
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
 import axios from 'axios';
 import { UserDto } from './entities/user.entity';
 import { UserRole } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 import { validateError } from 'src/util';
+import { v4 as uuidv4 } from 'uuid';
 
 @Injectable()
 export class UserService {
@@ -34,7 +32,7 @@ export class UserService {
     return await this.prisma.user.create({
       data: {
         name: name,
-        hash: crypto.randomUUID(),
+        hash: uuidv4(),
         role: {
           connectOrCreate: {
             create: {

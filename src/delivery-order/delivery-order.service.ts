@@ -26,6 +26,7 @@ import {
 import { ShippinglineService } from 'src/referensi/shippingline/shippingline.service';
 import { DepoService } from 'src/referensi/depo/depo.service';
 import { SmartContractService } from 'src/smart-contract/smart-contract.service';
+import { v4 as uuidv4 } from 'uuid';
 import * as pdfPrinter from 'pdfmake';
 import * as fs from 'fs';
 
@@ -312,7 +313,7 @@ export class DeliveryOrderService {
     const createdDo = await this.prisma.td_reqdo_header_form.create({
       data: {
         request_type: data.requestType,
-        order_id: crypto.randomUUID(),
+        order_id: uuidv4(),
         no_reqdo: generateNoReq(
           data.requestDetail.shippingLine.shippingType.split('|')[0].trim(),
         ),
@@ -833,7 +834,7 @@ export class DeliveryOrderService {
     const createdDo = await this.prisma.td_reqdo_header_form.create({
       data: {
         request_type: data.requestType,
-        order_id: crypto.randomUUID(),
+        order_id: uuidv4(),
         no_reqdo: generateNoReq(
           data.requestDetail.shippingLine.shippingType.split('|')[0].trim(),
         ),

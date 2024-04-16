@@ -43,7 +43,8 @@
     "read-excel-file": "^5.7.1",
     "reflect-metadata": "^0.1.13",
     "rxjs": "^7.8.1",
-    "src": "^1.0.0"
+    "src": "^1.0.0",
+    "uuid": "^9.0.1"
   },
   "devDependencies": {
     "@nestjs/testing": "^10.0.0",
