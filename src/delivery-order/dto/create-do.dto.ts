@@ -20,7 +20,7 @@ class Requestor {
 class ShippingLine {
   shippingType: string;
   shippingDetail?: string;
-  doExpired: string;
+  doExpired?: string;
   vesselName: string;
   voyageNumber: string;
 }
@@ -69,18 +69,18 @@ class MeasurementVolume {
   unit: string;
 }
 
-class Container {
-  containerSeq: number;
+export class Container {
+  Id?: number;
   containerNo: string;
   sealNo: string[];
   sizeType: SizeType;
   grossWeight: GrossWeight;
   ownership: string;
-  depoDetail?: DepoDto;
+  depoDetail: DepoDto;
 }
 
-class NonContainer {
-  nonContainerSeq: number;
+export class NonContainer {
+  Id?: number;
   goodsDescription: string;
   packageQuantity: PackageQuantity;
   grossWeight: GrossWeight;
@@ -94,7 +94,7 @@ class LocationType {
   portDetail?: string;
 }
 
-class Invoice {
+export class Invoice {
   invoiceNo: string;
   invoiceDate: string;
   totalAmount: number;
@@ -111,40 +111,78 @@ class DocumentType {
   urlFile: string;
 }
 
-class VinDetail {
+export class VinDetail {
   ladingBillNumber: string;
-  vinNumber: string[];
+  vinData: {
+    Id?: number;
+    vinNumber: string;
+  }[];
+}
+
+export class RequestDetail {
+  requestType?: number;
+  requestor: Requestor;
+  shippingLine: ShippingLine;
+  payment: string;
+  document: Document;
+  requestDoNumber?: string;
+  doReleaseNo?: string;
+  doReleaseDate?: string;
+  doExpiredDate?: string;
+  callSign?: string;
+  terminalOp?: string;
+}
+
+export class RequestPartiesDetail {
+  requestDetail?: RequestDetail;
+  parties: Parties;
+  location: {
+    locationType: LocationType[];
+  };
+}
+
+export class PaymentSupportingDetail {
+  paymentDetail?: {
+    invoice?: Invoice[];
+  };
+  supportingDocument?: {
+    documentType?: DocumentType[];
+  };
+}
+
+export class CargoVinDetail {
+  nonContainer?: NonContainer[];
+  vinDetail?: {
+    ladingBillNumber?: string;
+    vinData: {
+      Id?: number;
+      vinNumber: string;
+    }[];
+  };
 }
 
 export class RequestDoDto {
   requestType: number;
-  requestDetail: {
-    requestor: Requestor;
-    shippingLine: ShippingLine;
-    payment: string;
-    document: Document;
-    requestDoNumber?: string;
-    doReleaseNo?: string;
-    doReleaseDate?: string;
-    doExpiredDate?: string;
-    callSign?: string;
-    terminalOp?: string;
-  };
-  parties: Parties;
-  cargoDetail: {
+  requestDetail: RequestDetail;
+  parties?: Parties;
+  cargoDetail?: {
     container?: Container[];
     nonContainer?: NonContainer[];
   };
   vinDetail?: VinDetail;
-  location: {
+  location?: {
     locationType: LocationType[];
   };
-  paymentDetail: {
+  paymentDetail?: {
     invoice: Invoice[];
   };
-  supportingDocument: {
+  supportingDocument?: {
     documentType: DocumentType[];
   };
+  status?: string;
+  statusDate?: string;
+  orderId?: string;
+  statusNote?: string;
 }
 
 export class DepoDto {
@@ -160,7 +198,7 @@ export class DepoDto {
 export class CargoDetailSL {
   containerNo: string;
   sizeType: SizeType;
-  depoDetail: DepoDto;
+  depoDetail?: DepoDto;
 }
 
 export class UpdateDoSLDto {

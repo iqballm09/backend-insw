@@ -1,7 +1,5 @@
 import { BadRequestException, HttpException, HttpStatus } from '@nestjs/common';
 import * as moment from 'moment-timezone';
-import * as cheerio from 'cheerio';
-import axios from 'axios';
 
 export function validateError(error) {
   // Handle specific error cases if needed
@@ -347,24 +345,6 @@ export function jsonToBodyPdf(jsonData: any, type: string, idDo: number) {
   };
 
   return docDefinition;
-}
-
-export async function getLocalTimeZone() {
-  const url = `https://www.google.com/search?q=my+timezone+now`;
-  try {
-    const response = await axios.get(url);
-    const $ = cheerio.load(response.data);
-    const timezone = $('.BNeawe.iBp4i.AP7Wnd').first().text();
-    if (timezone.toLowerCase() === 'waktu indonesia tengah') {
-      return 'Asia/Makassar';
-    } else if (timezone.toLowerCase() === 'waktu indonesia timur') {
-      return 'Asia/Jayapura';
-    } else {
-      return 'Asia/Jakarta';
-    }
-  } catch (error) {
-    console.log(error);
-  }
 }
 
 export function generateNoReq(shippingType: string) {

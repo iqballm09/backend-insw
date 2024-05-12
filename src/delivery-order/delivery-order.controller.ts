@@ -25,8 +25,13 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import {
+  CargoVinDetail,
+  Container,
   CreateContainerRequestDO,
   CreateNonContainerRequestDO,
+  PaymentSupportingDetail,
+  RequestDetail,
+  RequestPartiesDetail,
   UpdateCargoDetailSL,
   UpdateContainerRequestDO,
   UpdateDoSLDto,
@@ -43,32 +48,9 @@ export class DeliveryOrderController {
     private readonly userService: UserService,
   ) {}
 
-  @Post('kontainer?')
-  @HttpCode(201)
-  @UseGuards(AuthGuard)
-  @ApiBearerAuth()
-  @ApiBody({
-    type: CreateContainerRequestDO,
-  })
-  @ApiQuery({ name: 'status', enum: StatusDo })
-  createDoKontainer(
-    @Body() payload: CreateContainerRequestDO,
-    @Query('status') status: StatusDo,
-    @Req() req: any,
-  ) {
-    return this.deliveryOrderService.createKontainer(
-      payload.request,
-      req.token,
-      status,
-    );
-  }
-
   @Put('kontainer/:id?')
   @UseGuards(AuthGuard)
   @ApiBearerAuth()
-  @ApiBody({
-    type: UpdateContainerRequestDO,
-  })
   @ApiQuery({ name: 'status', enum: StatusDo })
   updateDoKontainer(
     @Param('id') id: number,
@@ -78,26 +60,6 @@ export class DeliveryOrderController {
   ) {
     return this.deliveryOrderService.updateKontainer(
       +id,
-      payload.request,
-      req.token,
-      status,
-    );
-  }
-
-  @Post('non-kontainer?')
-  @HttpCode(201)
-  @UseGuards(AuthGuard)
-  @ApiBody({
-    type: CreateNonContainerRequestDO,
-  })
-  @ApiQuery({ name: 'status', enum: StatusDo })
-  @ApiBearerAuth()
-  createDoNonKontainer(
-    @Body() payload: CreateNonContainerRequestDO,
-    @Req() req: any,
-    @Query('status') status: StatusDo,
-  ) {
-    return this.deliveryOrderService.createNonKontainer(
       payload.request,
       req.token,
       status,
@@ -123,6 +85,142 @@ export class DeliveryOrderController {
       req.token,
       status,
     );
+  }
+
+  @Post('forms/request-detail')
+  @HttpCode(201)
+  @UseGuards(AuthGuard)
+  @ApiBody({
+    type: RequestDetail,
+  })
+  @ApiBearerAuth()
+  createRequestDetail(@Body() payload: RequestDetail, @Req() req: any) {
+    return this.deliveryOrderService.createRequestDetail(payload, req.token);
+  }
+
+  @Get('forms/request-detail/:id')
+  @HttpCode(200)
+  @UseGuards(AuthGuard)
+  @ApiBearerAuth()
+  getRequestDetail(@Param('id') id: number, @Req() req: any) {
+    return this.deliveryOrderService.getRequestDetail(+id, req.token);
+  }
+
+  @Put('forms/request-detail/:id')
+  @UseGuards(AuthGuard)
+  @ApiBody({
+    type: RequestDetail,
+  })
+  @ApiBearerAuth()
+  updateRequestDetail(
+    @Param('id') id: number,
+    @Body() payload: RequestDetail,
+    @Req() req: any,
+  ) {
+    return this.deliveryOrderService.updateRequestDetail(
+      +id,
+      payload,
+      req.token,
+    );
+  }
+
+  @Post('forms/parties-detail/:id')
+  @HttpCode(201)
+  @UseGuards(AuthGuard)
+  @ApiBearerAuth()
+  @ApiBody({
+    type: RequestPartiesDetail,
+  })
+  createRequestPartiesDetail(
+    @Param('id') id: number,
+    @Body() payload: RequestPartiesDetail,
+    @Req() req: any,
+  ) {
+    return this.deliveryOrderService.createRequestPartiesDetail(
+      +id,
+      payload,
+      req.token,
+    );
+  }
+
+  @Get('forms/parties-detail/:id')
+  @HttpCode(200)
+  @UseGuards(AuthGuard)
+  @ApiBearerAuth()
+  getRequestPartiesDetail(@Param('id') id: number, @Req() req: any) {
+    return this.deliveryOrderService.getRequestPartiesDetail(+id, req.token);
+  }
+
+  @Post('forms/payment-document/:id')
+  @HttpCode(201)
+  @UseGuards(AuthGuard)
+  @ApiBearerAuth()
+  createPaymentDocument(
+    @Param('id') id: number,
+    @Body() payload: PaymentSupportingDetail,
+    @Req() req: any,
+  ) {
+    return this.deliveryOrderService.createPaymentSupportingDetail(
+      +id,
+      payload,
+      req.token,
+    );
+  }
+
+  @Get('forms/payment-document/:id')
+  @HttpCode(200)
+  @UseGuards(AuthGuard)
+  @ApiBearerAuth()
+  getPaymentDocument(@Param('id') id: number, @Req() req: any) {
+    return this.deliveryOrderService.getPaymentSupportingDetail(+id, req.token);
+  }
+
+  @Post('forms/kontainer-detail/:id')
+  @HttpCode(201)
+  @UseGuards(AuthGuard)
+  @ApiBearerAuth()
+  createContainerDetail(
+    @Param('id') id: number,
+    @Body() payload: Container[],
+    @Req() req: any,
+  ) {
+    return this.deliveryOrderService.createContainerDetail(
+      +id,
+      payload,
+      req.token,
+    );
+  }
+
+  @Get('forms/kontainer-detail/:id')
+  @HttpCode(200)
+  @UseGuards(AuthGuard)
+  @ApiBearerAuth()
+  getContainerDetail(@Param('id') id: number, @Req() req: any) {
+    return this.deliveryOrderService.getContainerDetail(+id, req.token);
+  }
+
+  @Post('forms/cargovin-detail/:id')
+  @HttpCode(201)
+  @UseGuards(AuthGuard)
+  @ApiBearerAuth()
+  createCargoVinDetail(
+    @Param('id') id: number,
+    @Body() payload: CargoVinDetail,
+    @Req() req: any,
+  ) {
+    return this.deliveryOrderService.createCargoVinDetail(
+      +id,
+      payload,
+      req.token,
+    );
+  }
+
+  @Get('forms/cargovin-detail/:id')
+  @HttpCode(200)
+  @UseGuards(AuthGuard)
+  @ApiBearerAuth()
+  getCargoVinDetail(@Param('id') id: number, @Req() req: any) {
+    return this.deliveryOrderService.getCargoVinDetail(+id, req.token);
   }
 
   @Put('shipping-line/:id?')

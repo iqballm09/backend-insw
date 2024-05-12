@@ -8,6 +8,13 @@ import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 export class PelabuhanController {
   constructor(private readonly pelabuhanService: PelabuhanService) {}
 
+  @Get('indonesia')
+  @ApiBearerAuth()
+  @UseGuards(AuthGuard)
+  findAllIndo(@Req() req: any) {
+    return this.pelabuhanService.findAllIndo(req.token);
+  }
+
   @Get()
   @ApiBearerAuth()
   @UseGuards(AuthGuard)

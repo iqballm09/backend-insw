@@ -93,7 +93,7 @@ export class FilesService {
     ];
     const sealHeaderFormat = ['no_container', 'no_seal'];
     // load excel data: container
-    const conData = await readXlsxFile(filepath, {sheet: 'Container'});
+    const conData = await readXlsxFile(filepath, { sheet: 'Container' });
     const conHeader = conData[0];
     conData.shift();
 
@@ -105,7 +105,7 @@ export class FilesService {
     }
 
     // load excel data: seal
-    const sealData = await readXlsxFile(filepath, {sheet: 'Seal'});
+    const sealData = await readXlsxFile(filepath, { sheet: 'Seal' });
     const sealHeader = sealData[0];
     sealData.shift();
 
@@ -155,7 +155,7 @@ export class FilesService {
       'measurement_uom',
     ];
     // check if header same
-    const cargoData = await readXlsxFile(filepath, {sheet: 'non_container'})
+    const cargoData = await readXlsxFile(filepath, { sheet: 'non_container' });
     const cargoHeader = cargoData[0];
     cargoData.shift();
 
@@ -202,7 +202,7 @@ export class FilesService {
 
   async convertExcelToJSONVin(filepath: string) {
     const headerFormat = 'nomor_equipment_identification';
-    const vinData = await readXlsxFile(filepath)
+    const vinData = await readXlsxFile(filepath);
     const vinHeader = vinData[0];
     vinData.shift();
     // check if header same

@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import axios from 'axios';
 import { validateError } from 'src/util';
@@ -284,7 +284,7 @@ export class SmartContractService {
 
     // update status
     data.status = status;
-    data.statusDate = new Date().toLocaleString();
+    data.statusDate = String(new Date());
     data.statusNote = payload.statusNote;
 
     // generate user token
@@ -313,16 +313,16 @@ export class SmartContractService {
     orderId: string,
     payload: RequestDoDto,
     status: StatusDo,
+    statusNote: string,
   ) {
     const tokenAdmin = (await this.enrollAdmin()).token;
     const userData = await this.userService.getUserDB(coName);
 
-    // get do data
-    const data = await this.getDoDetailData(coName, orderId);
-
     // update status
-    data.status = status;
-    data.statusDate = new Date().toLocaleString();
+    payload.status = status;
+    payload.statusDate = String(new Date());
+    payload.orderId = orderId;
+    payload.statusNote = statusNote;
 
     // generate user token
     const userToken = (await this.enrollUser(userData, tokenAdmin)).token;
@@ -331,11 +331,32 @@ export class SmartContractService {
         `${this.configService.get('API_SMART_CONTRACT')}/invoke/do-channel/chaincode1`,
         {
           method: 'updateDO',
-          args: [orderId, JSON.stringify(data)],
+          args: [orderId, JSON.stringify(payload)],
         },
         {
           headers: {
             Authorization: `Bearer ${userToken}`,
+          },
+        },
+      );
+      return response.data.response;
+    } catch (e) {
+      validateError(e);
+    }
+  }
+
+  async deleteDo(orderId: string) {
+    const tokenAdmin = (await this.enrollAdmin()).token;
+    try {
+      const response = await axios.post(
+        `${this.configService.get('API_SMART_CONTRACT')}/invoke/do-channel/chaincode1`,
+        {
+          method: 'deleteDO',
+          args: [orderId],
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${tokenAdmin}`,
           },
         },
       );

@@ -5,7 +5,7 @@ FROM node:latest
 WORKDIR /app
 
 # SET ENVIRONMENT VARIABLE
-# SSO ENV
+# SSO ENVLnsw2o23!@
 ENV API_REF_BASE_URL=https://api.insw.go.id/api/ref/v2
 ENV API_SMART_CONTRACT=http://10.239.54.32:8801
 ENV SSO_CLIENT_ID="90b61241-8687-40f8-942d-391b54529936"
@@ -19,7 +19,7 @@ ENV WEB_PORT=3000
 ENV WEB_URI="http://${WEB_HOST}:${WEB_PORT}"
 ENV API_HOST=10.239.54.34
 ENV API_PORT=5000
-ENV API_URI="http://${API_HOST}:${API_PORT}"
+ENV API_URI=http://10.239.54.34:5000
 ENV DATABASE_URL="postgresql://myuser:mysecret@insw_db_temp:5432/db_temp_do_req?schema=public&connect_timeout=60"
 ENV SC_ADMIN_ID = 'admin'
 ENV SC_ADMIN_SECRET = 'adminpw'

@@ -4,31 +4,36 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { DepoDto, RequestDoDto, UpdateDoSLDto } from './dto/create-do.dto';
+import {
+  CargoVinDetail,
+  Container,
+  Invoice,
+  NonContainer,
+  PaymentSupportingDetail,
+  RequestDetail,
+  RequestDoDto,
+  RequestPartiesDetail,
+  UpdateDoSLDto,
+  VinDetail,
+} from './dto/create-do.dto';
 import { PrismaService } from 'src/prisma/prisma.service';
 import {
   StatusDo,
   td_do_dok_form,
   td_do_invoice_form,
-  td_do_kontainer_form,
   td_do_nonkontainer_form,
   td_do_vin,
 } from '@prisma/client';
 import * as moment from 'moment-timezone';
 import { UserService } from 'src/user/user.service';
-import {
-  fonts,
-  generateNoReq,
-  getLocalTimeZone,
-  jsonToBodyPdf,
-  validateError,
-} from 'src/util';
+import { fonts, generateNoReq, jsonToBodyPdf } from 'src/util';
 import { ShippinglineService } from 'src/referensi/shippingline/shippingline.service';
 import { DepoService } from 'src/referensi/depo/depo.service';
 import { SmartContractService } from 'src/smart-contract/smart-contract.service';
 import { v4 as uuidv4 } from 'uuid';
 import * as pdfPrinter from 'pdfmake';
 import * as fs from 'fs';
+import { timeStamp } from 'console';
 
 @Injectable()
 export class DeliveryOrderService {
@@ -41,7 +46,7 @@ export class DeliveryOrderService {
   ) {}
 
   async getAllDoCo(coName: string) {
-    let dataSubmitted = [];
+    let dataNonDraft = [];
 
     const data = await this.prisma.td_reqdo_header_form.findMany({
       include: {
@@ -94,7 +99,7 @@ export class DeliveryOrderService {
         requestTime: moment(item.tgl_reqdo, 'DD-MM-YYYY HH:mm:ss')
           .tz(item.timezone)
           .format('DD-MM-YYYY HH:mm:ss'),
-        blNumber: item.td_do_bl_form.no_bl,
+        blNumber: item.td_do_bl_form.no_bl ? item.td_do_bl_form.no_bl : null,
         blDate: item.td_do_bl_form.tgl_bl
           ? moment(item.td_do_bl_form.tgl_bl, 'DD-MM-YYYY').format('DD-MM-YYYY')
           : null,
@@ -104,6 +109,8 @@ export class DeliveryOrderService {
         isContainer: item.request_type == 1,
       }));
 
+    const listDraftId = dataDraft.map((item) => item.id);
+
     for (const item of (await this.smartContractService.getAllDoCo(coName))
       .data) {
       // get header data by order id
@@ -112,37 +119,43 @@ export class DeliveryOrderService {
           order_id: item.Record.orderId,
         },
       });
+
       if (!headerData) {
         throw new NotFoundException(
           `Header data by orderId = ${item.Record.orderId} not found`,
         );
       }
-      dataSubmitted.push({
-        id: headerData.id,
-        orderId: item.Record.orderId,
-        requestNumber: item.Record.requestDetail.requestDoNumber,
-        requestTime: moment(headerData.tgl_reqdo, 'DD-MM-YYYY HH:mm:ss')
-          .tz(headerData.timezone)
-          .format('DD-MM-YYYY HH:mm:ss'),
-        blNumber: item.Record.requestDetail.document.ladingBillNumber,
-        blDate: item.Record.requestDetail.document.ladingBillDate
-          ? moment(
-              item.Record.requestDetail.document.ladingBillDate,
-              'DD-MM-YYYY',
-            ).format('DD-MM-YYYY')
-          : null,
-        requestName: item.Record.requestDetail.requestor.requestorName,
-        shippingLine: item.Record.requestDetail.shippingLine.shippingType
-          .split('|')[0]
-          .trim(),
-        status: item.Record.status,
-        isContainer: item.Record.requestType == 1,
-      });
+
+      if (listDraftId && !listDraftId.includes(headerData.id)) {
+        dataNonDraft.push({
+          id: headerData.id,
+          orderId: item.Record.orderId,
+          requestNumber: item.Record.requestDetail.requestDoNumber,
+          requestTime: moment(headerData.tgl_reqdo, 'DD-MM-YYYY HH:mm:ss')
+            .tz(headerData.timezone)
+            .format('DD-MM-YYYY HH:mm:ss'),
+          blNumber: item.Record.requestDetail.document.ladingBillNumber,
+          blDate: item.Record.requestDetail.document.ladingBillDate
+            ? moment(
+                item.Record.requestDetail.document.ladingBillDate,
+                'DD-MM-YYYY',
+              ).format('DD-MM-YYYY')
+            : null,
+          requestName: item.Record.requestDetail.requestor.requestorName,
+          shippingLine: item.Record.requestDetail.shippingLine.shippingType
+            .split('|')[0]
+            .trim(),
+          status: item.Record.status,
+          isContainer: item.Record.requestType == 1,
+        });
+      }
     }
+
     // merge data draft and data submitted
-    const dataDoCo = dataDraft.concat(dataSubmitted).sort((b, a) => {
+    const dataDoCo = dataDraft.concat(dataNonDraft).sort((b, a) => {
       return a.requestTime.localeCompare(b.requestTime);
     });
+
     return dataDoCo;
   }
 
@@ -237,6 +250,11 @@ export class DeliveryOrderService {
       );
     }
 
+    const listStatusDO = await this.getAllStatus(idDo);
+    if (listStatusDO.data.map((item) => item.status).includes('Rejected')) {
+      this.smartContractService.deleteDo(data.order_id);
+    }
+
     const deleted = await this.prisma.td_reqdo_header_form.delete({
       where: {
         id: idDo,
@@ -245,238 +263,6 @@ export class DeliveryOrderService {
     return {
       message: 'success',
       data: deleted,
-    };
-  }
-
-  // CREATE KONTAINER
-  async createKontainer(data: RequestDoDto, token: string, status?: StatusDo) {
-    const userInfo = await this.userService.getDetail(token);
-    const created_by = userInfo.sub;
-    const timezone = await getLocalTimeZone();
-
-    // CHECK IF USER ROLE IS CO
-    if (userInfo.profile.details.kd_detail_ga) {
-      throw new BadRequestException(
-        'Cannot create DO container, Role is not CO',
-      );
-    }
-
-    // CHECK IF REQUEST TYPE = 1
-    if (data.requestType !== 1) {
-      throw new BadRequestException(
-        'Tidak dapat melakukan create DO kontainer, requestType != 1',
-      );
-    }
-
-    // CHECK IF USER IS FF AND SURAT KUASA EXIST
-    if (
-      data.requestDetail.requestor.requestorType == '2' &&
-      !data.requestDetail.requestor.urlFile
-    ) {
-      throw new BadRequestException('Freight Forwarder required surat kuasa');
-    }
-
-    // CHECK IF STATUS REQDO Draft or Submitted
-    if (!['Draft', 'Submitted'].includes(status)) {
-      throw new BadRequestException(
-        'Status DO of Create DO must be Draft or Submitted',
-      );
-    }
-
-    const dataDokumen = data.supportingDocument.documentType.map((item) => {
-      const data: Partial<td_do_dok_form> = {
-        created_by,
-        id_jenis_dok: item.document,
-        filepath_dok: item.urlFile,
-        no_dok: item.documentNo,
-        tgl_dok: new Date(item.documentDate),
-      };
-
-      return data;
-    });
-
-    const dataInvoice = data.paymentDetail.invoice.map((item) => {
-      const data: Partial<td_do_invoice_form> = {
-        created_by,
-        filepath_buktibayar: item.urlFile,
-        id_bank: item.bankId,
-        no_invoice: item.invoiceNo,
-        tgl_invoice: new Date(item.invoiceDate),
-        no_rekening: item.accountNo,
-        total_payment: item.totalAmount,
-        id_currency: item.currency, //TODO: ADD CURRENCY JSON
-      };
-
-      return data;
-    });
-
-    const createdDo = await this.prisma.td_reqdo_header_form.create({
-      data: {
-        request_type: data.requestType,
-        order_id: uuidv4(),
-        no_reqdo: generateNoReq(
-          data.requestDetail.shippingLine.shippingType.split('|')[0].trim(),
-        ),
-        created_by,
-        timezone: timezone,
-        td_do_requestor_form: {
-          create: {
-            id_jenis_requestor: +data.requestDetail.requestor.requestorType,
-            alamat: data.requestDetail.requestor.requestorAddress,
-            created_by,
-            nama: data.requestDetail.requestor.requestorName,
-            nib: data.requestDetail.requestor.nib,
-            npwp: data.requestDetail.requestor.npwp,
-            filepath_suratkuasa: data.requestDetail.requestor.urlFile,
-          },
-        },
-        td_do_bl_form: {
-          create: {
-            created_by,
-            filepath_dok: data.requestDetail.document.urlFile,
-            id_jenis_bl: data.requestDetail.document.ladingBillType,
-            no_bl: data.requestDetail.document.ladingBillNumber,
-            tgl_bl: new Date(data.requestDetail.document.ladingBillDate),
-          },
-        },
-        td_do_req_form: {
-          create: {
-            created_by,
-            id_metode_bayar: +data.requestDetail.payment,
-            id_shippingline: data.requestDetail.shippingLine.shippingType,
-            nama_vessel: data.requestDetail.shippingLine.vesselName,
-            no_voyage: data.requestDetail.shippingLine.voyageNumber,
-            pos_number: data.requestDetail.document.posNumber,
-            tgl_reqdo_exp: new Date(data.requestDetail.shippingLine.doExpired),
-            no_bc11: data.requestDetail.document.bc11Number,
-            tanggal_bc11: data.requestDetail.document.bc11Date
-              ? new Date(data.requestDetail.document.bc11Date)
-              : null,
-          },
-        },
-
-        td_parties_detail_form: {
-          create: {
-            created_by,
-            id_negara_loading: data.location.locationType[0].countryCode,
-            id_port_loading: data.location.locationType[0].portDetail,
-            id_port_discharge: data.location.locationType[1].portDetail,
-            id_port_destination: data.location.locationType[2].portDetail,
-            nama_consignee: data.parties.consignee.name,
-            nama_notifyparty: data.parties.notifyParty.name,
-            nama_shipper: data.parties.shipper.name,
-            npwp_consignee: data.parties.shipper.npwp,
-            npwp_notifyparty: data.parties.notifyParty.npwp,
-          },
-        },
-        td_do_dok_form: {
-          createMany: {
-            data: dataDokumen as td_do_dok_form[],
-          },
-        },
-        td_do_invoice_form: {
-          createMany: {
-            data: dataInvoice as td_do_invoice_form[],
-          },
-        },
-      },
-    });
-
-    const promises = data.cargoDetail.container.map((item) => {
-      return this.prisma.td_do_kontainer_form.create({
-        data: {
-          id_reqdo_header: createdDo.id,
-          created_by,
-          gross_weight: item.grossWeight.amount,
-          no_kontainer: item.containerNo,
-          id_sizeType: item.sizeType.kodeSize,
-          id_ownership: +item.ownership,
-          id_gross_weight_unit: item.grossWeight.unit,
-          seals: {
-            create: item.sealNo.map((val) => ({
-              assignedBy: created_by,
-              seal: {
-                create: {
-                  no_seal: val,
-                },
-              },
-            })),
-          },
-        },
-      });
-    });
-
-    // Using Promise.all to wait for all promises to resolve
-    Promise.all(promises)
-      .then((results) => {
-        console.log('All promises resolved successfully');
-      })
-      .catch((error) => {
-        console.error('Error in one or more promises:', error);
-      });
-
-    // CASE 1: DRAFT STATUS
-    if (status === 'Draft') {
-      const updatedStatus = await this.prisma.td_reqdo_status.create({
-        data: {
-          name: status,
-          id_reqdo_header: createdDo.id,
-          datetime_status: new Date(),
-        },
-      });
-    }
-
-    // CASE 2: IF SUBMITTED, SEND PAYLOAD TO SMART CONTRACT
-    if (status === 'Submitted') {
-      data.requestDetail.requestor.requestorId = userInfo.sub;
-      data.requestDetail.requestDoNumber = generateNoReq(
-        data.requestDetail.shippingLine.shippingType.split('|')[0].trim(),
-      );
-      data.requestDetail.shippingLine.shippingDetail =
-        data.requestDetail.shippingLine.shippingType.split('|')[1].trim();
-      data.requestDetail.shippingLine.shippingType =
-        data.requestDetail.shippingLine.shippingType.split('|')[0].trim();
-      data.requestDetail.document.bc11Date = data.requestDetail.document
-        .bc11Date
-        ? data.requestDetail.document.bc11Date
-        : '';
-      data.requestDetail.document.bc11Number = data.requestDetail.document
-        .bc11Number
-        ? data.requestDetail.document.bc11Number
-        : '';
-      data.requestDetail.document.posNumber = data.requestDetail.document
-        .posNumber
-        ? data.requestDetail.document.posNumber
-        : '';
-      const result = await this.smartContractService.requestDO(data, status);
-      // generate status do to smart contract
-      const headerDo = await this.prisma.td_reqdo_header_form.update({
-        where: {
-          id: createdDo.id,
-        },
-        data: {
-          order_id: result.response.orderId,
-          request_type: data.requestType,
-          no_reqdo: data.requestDetail.requestDoNumber,
-          created_by: data.requestDetail.requestor.requestorId,
-          tgl_reqdo: new Date(result.response.datetime),
-          td_reqdo_status: {
-            create: {
-              name: result.response.status,
-              datetime_status: new Date(result.response.datetime),
-            },
-          },
-        },
-      });
-      return {
-        result,
-        data: headerDo,
-      };
-    }
-
-    return {
-      messsage: 'success',
-      data: createdDo,
     };
   }
 
@@ -507,20 +293,6 @@ export class DeliveryOrderService {
       );
     }
 
-    // CHECK IF USER IS FF AND SURAT KUASA EXIST
-    if (
-      data.requestDetail.requestor.requestorType == '2' &&
-      !data.requestDetail.requestor.urlFile
-    ) {
-      throw new BadRequestException('Freight Forwarder required surat kuasa');
-    }
-
-    // CHECK IF DO already exist
-    const doData = await this.getHeaderData(+idDO);
-    if (!doData) {
-      throw new NotFoundException(`DO with id = ${idDO} is not found!`);
-    }
-
     // get last status DO
     const lastStatus = listStatusDO[listStatusDO.length - 1];
     if (!['Draft', 'Rejected'].includes(lastStatus)) {
@@ -536,80 +308,24 @@ export class DeliveryOrderService {
       );
     }
 
-    // CASE 1 : IF THE STATUS IS SUBMITTED AND THE LAST STATUS OR BEFORE IS REJECTED, THEN HIT UPDATE DO SMART CONTRACT
-    const last2Status = listStatusDO[listStatusDO.length - 2];
+    // CHECK IF USER IS FF AND SURAT KUASA EXIST
     if (
-      [lastStatus, last2Status].includes('Rejected') &&
-      status === 'Submitted'
+      data.requestDetail.requestor.requestorType == '2' &&
+      !data.requestDetail.requestor.urlFile
     ) {
-      data.requestDetail.requestor.requestorId = userInfo.sub;
-      data.requestDetail.requestDoNumber = generateNoReq(
-        data.requestDetail.shippingLine.shippingType.split('|')[0].trim(),
-      );
-      data.requestDetail.shippingLine.shippingDetail =
-        data.requestDetail.shippingLine.shippingType.split('|')[1].trim();
-      data.requestDetail.shippingLine.shippingType =
-        data.requestDetail.shippingLine.shippingType.split('|')[0].trim();
-      data.requestDetail.document.bc11Date = data.requestDetail.document
-        .bc11Date
-        ? data.requestDetail.document.bc11Date
-        : '';
-      data.requestDetail.document.bc11Number = data.requestDetail.document
-        .bc11Number
-        ? data.requestDetail.document.bc11Number
-        : '';
-      data.requestDetail.document.posNumber = data.requestDetail.document
-        .posNumber
-        ? data.requestDetail.document.posNumber
-        : '';
-      const result = await this.smartContractService.updateDoCo(
-        userInfo.sub,
-        doData.order_id,
-        data,
-        status,
-      );
-      // get update header data
-      const updatedHeader = await this.updateHeaderData(
-        +idDO,
-        data.requestDetail.requestDoNumber,
-        doData.order_id,
-      );
-      return result;
+      throw new BadRequestException('Freight Forwarder required surat kuasa');
     }
 
-    // CASE 2 : IF THE STATUS IS SUBMITTED AFTER UPDATE DO, SEND PAYLOAD DATA TO SMART CONTRACT
-    else if (status === 'Submitted') {
-      data.requestDetail.requestor.requestorId = userInfo.sub;
-      data.requestDetail.requestDoNumber = generateNoReq(
-        data.requestDetail.shippingLine.shippingType.split('|')[0].trim(),
-      );
-      data.requestDetail.shippingLine.shippingDetail =
-        data.requestDetail.shippingLine.shippingType.split('|')[1].trim();
-      data.requestDetail.shippingLine.shippingType =
-        data.requestDetail.shippingLine.shippingType.split('|')[0].trim();
-      data.requestDetail.document.bc11Date = data.requestDetail.document
-        .bc11Date
-        ? data.requestDetail.document.bc11Date
-        : '';
-      data.requestDetail.document.bc11Number = data.requestDetail.document
-        .bc11Number
-        ? data.requestDetail.document.bc11Number
-        : '';
-      data.requestDetail.document.posNumber = data.requestDetail.document
-        .posNumber
-        ? data.requestDetail.document.posNumber
-        : '';
-      const result = await this.smartContractService.requestDO(data, status);
-      // get update header data
-      const updatedHeader = await this.updateHeaderData(
-        +idDO,
-        data.requestDetail.requestDoNumber,
-        result.response.orderId,
-      );
-      return result;
+    const doData = await this.prisma.td_reqdo_header_form.findUnique({
+      where: {
+        id: idDO,
+      },
+    });
+
+    if (!doData) {
+      throw new NotFoundException(`DO with id = ${idDO} is not found!`);
     }
 
-    // CASE 3 : IF THE STATUS IS STILL DRAFT AFTER UPDATE DO, SAVE TO RELATIONAL DATABASE
     const dataInvoice = data.paymentDetail.invoice.map((item) => {
       const data: Partial<td_do_invoice_form> = {
         updated_by,
@@ -725,6 +441,17 @@ export class DeliveryOrderService {
           id_sizeType: item.sizeType.kodeSize,
           id_ownership: +item.ownership,
           id_gross_weight_unit: item.grossWeight.unit,
+          td_depo: {
+            create: {
+              created_by: userInfo.sub,
+              alamat: '',
+              deskripsi: '',
+              id_kabkota: '',
+              kode_pos: '',
+              no_telp: '',
+              npwp: '',
+            },
+          },
           seals: {
             create: item.sealNo.map((val) => ({
               assignedBy: updated_by,
@@ -741,8 +468,153 @@ export class DeliveryOrderService {
 
     // Using Promise.all to wait for all promises to resolve
     Promise.all(promises)
-      .then((results) => {
+      .then(async (results) => {
         console.log('All promises resolved successfully');
+        const doDraft = await this.getDataDraft(idDO);
+        data.requestDetail.requestor.urlFile =
+          doDraft.td_do_requestor_form.filepath_suratkuasa;
+        data.requestDetail.requestor.requestorId = userInfo.sub;
+        data.requestDetail.requestDoNumber = doDraft.no_reqdo;
+        data.requestDetail.shippingLine.shippingDetail =
+          doDraft.td_do_req_form.id_shippingline.split('|')[1].trim();
+        data.requestDetail.shippingLine.shippingType =
+          doDraft.td_do_req_form.id_shippingline.split('|')[0].trim();
+        data.requestDetail.document.bc11Date = doDraft.td_do_req_form
+          .tanggal_bc11
+          ? String(doDraft.td_do_req_form.tanggal_bc11)
+          : '';
+        data.requestDetail.document.bc11Number = doDraft.td_do_req_form.no_bc11
+          ? doDraft.td_do_req_form.no_bc11
+          : '';
+        data.requestDetail.shippingLine.vesselName =
+          doDraft.td_do_req_form.nama_vessel || '';
+        data.requestDetail.shippingLine.voyageNumber =
+          doDraft.td_do_req_form.no_voyage || '';
+
+        // CASE 1 : IF THE STATUS IS SUBMITTED AND THE LAST STATUS OR BEFORE IS REJECTED, THEN HIT UPDATE DO SMART CONTRACT
+        if (listStatusDO.includes('Rejected') && status === 'Submitted') {
+          const listConData: Container[] = [];
+          doDraft.td_do_kontainer_form.forEach((con) => {
+            const result = {
+              Id: con.id,
+              containerNo: con.no_kontainer,
+              grossWeight: {
+                amount: con.gross_weight,
+                unit: con.id_gross_weight_unit,
+              },
+              sealNo: con.seals.map((seal) => seal.seal.no_seal),
+              ownership: String(con.id_ownership),
+              sizeType: {
+                kodeSize: con.id_sizeType,
+              },
+              depoDetail: {
+                depoId: con.td_depo.id ? con.td_depo.id : null,
+                depoName: con.td_depo.deskripsi ? con.td_depo.deskripsi : '',
+                depoNpwp: con.td_depo.npwp ? con.td_depo.npwp : '',
+                noTelp: con.td_depo.no_telp ? con.td_depo.no_telp : '',
+                alamat: con.td_depo.alamat ? con.td_depo.alamat : '',
+                kotaDepo: con.td_depo.id_kabkota ? con.td_depo.id_kabkota : '',
+                kodePos: con.td_depo.kode_pos ? con.td_depo.kode_pos : '',
+              },
+            };
+            listConData.push(result);
+          });
+          console.log(listConData);
+          data.cargoDetail.container = listConData;
+          data.requestDetail.terminalOp = doDraft.td_do_req_form.id_terminal_op;
+          data.requestDetail.document.posNumber = doDraft.td_do_req_form
+            .pos_number
+            ? doDraft.td_do_req_form.pos_number
+            : '';
+          data.requestDetail.callSign = doDraft.td_do_req_form.call_sign;
+          data.requestDetail.doReleaseNo = doDraft.td_do_req_form.no_do_release;
+          data.requestDetail.doReleaseDate = String(
+            doDraft.td_do_req_form.tgl_do_release,
+          );
+          data.requestDetail.doExpiredDate = String(
+            doDraft.td_do_req_form.tgl_do_exp,
+          );
+
+          const result = await this.smartContractService.updateDoCo(
+            userInfo.sub,
+            doData.order_id,
+            data,
+            status,
+            doDraft.td_reqdo_status[0].note,
+          );
+
+          // generate status do to smart contract
+          const headerDo = await this.prisma.td_reqdo_header_form.update({
+            where: {
+              id: doData.id,
+            },
+            data: {
+              order_id: doDraft.order_id,
+              request_type: data.requestType,
+              no_reqdo: data.requestDetail.requestDoNumber,
+              created_by: data.requestDetail.requestor.requestorId,
+              tgl_reqdo: new Date(result.response.datetime),
+              td_reqdo_status: {
+                create: {
+                  name: result.response.status,
+                  datetime_status: new Date(result.response.datetime),
+                },
+              },
+            },
+          });
+        }
+
+        // CASE 2 : IF THE STATUS IS SUBMITTED, SEND PAYLOAD DATA TO SMART CONTRACT
+        else if (status === 'Submitted') {
+          const listConData: Container[] = [];
+          doDraft.td_do_kontainer_form.forEach((con) => {
+            const result = {
+              Id: con.id,
+              containerNo: con.no_kontainer,
+              grossWeight: {
+                amount: con.gross_weight,
+                unit: con.id_gross_weight_unit,
+              },
+              sealNo: con.seals.map((seal) => seal.seal.no_seal),
+              ownership: String(con.id_ownership),
+              sizeType: {
+                kodeSize: con.id_sizeType,
+              },
+              depoDetail: {
+                depoId: con.td_depo.id ? con.td_depo.id : null,
+                depoName: con.td_depo.deskripsi ? con.td_depo.deskripsi : '',
+                depoNpwp: con.td_depo.npwp ? con.td_depo.npwp : '',
+                noTelp: con.td_depo.no_telp ? con.td_depo.no_telp : '',
+                alamat: con.td_depo.alamat ? con.td_depo.alamat : '',
+                kotaDepo: con.td_depo.id_kabkota ? con.td_depo.id_kabkota : '',
+                kodePos: con.td_depo.kode_pos ? con.td_depo.kode_pos : '',
+              },
+            };
+            listConData.push(result);
+          });
+          console.log(listConData);
+
+          data.cargoDetail.container = listConData;
+
+          const result = await this.smartContractService.requestDO(
+            data,
+            status,
+          );
+
+          // generate status do to smart contract
+          const headerDo = await this.prisma.td_reqdo_header_form.update({
+            where: {
+              id: doData.id,
+            },
+            data: {
+              order_id: result.response.orderId,
+              request_type: data.requestType,
+              no_reqdo: data.requestDetail.requestDoNumber,
+              created_by: data.requestDetail.requestor.requestorId,
+              tgl_reqdo: new Date(result.response.datetime),
+            },
+          });
+        }
       })
       .catch((error) => {
         console.error('Error in one or more promises:', error);
@@ -754,244 +626,6 @@ export class DeliveryOrderService {
     return {
       messsage: 'success',
       data: updatedStatus,
-    };
-  }
-
-  // CREATE NON KONTAINER
-  async createNonKontainer(
-    data: RequestDoDto,
-    token: string,
-    status?: StatusDo,
-  ) {
-    const userInfo = await this.userService.getDetail(token);
-    const timezone = await getLocalTimeZone();
-    const created_by = userInfo.sub;
-
-    // CHECK IF USER ROLE IS CO
-    if (userInfo.profile.details.kd_detail_ga) {
-      throw new BadRequestException(
-        'Cannot create DO non container, Role is not CO',
-      );
-    }
-
-    // CHECK IF REQUEST TYPE = 2
-    if (data.requestType !== 2) {
-      throw new BadRequestException(
-        'Tidak dapat melakukan create DO non kontainer, requestType != 2',
-      );
-    }
-
-    // CHECK IF USER IS FF AND SURAT KUASA EXIST
-    if (
-      data.requestDetail.requestor.requestorType == '2' &&
-      !data.requestDetail.requestor.urlFile
-    ) {
-      throw new BadRequestException('Freight Forwarder required surat kuasa');
-    }
-
-    // CHECK IF STATUS REQDO Draft or Submitted
-    if (!['Draft', 'Submitted'].includes(status)) {
-      throw new BadRequestException(
-        'Status DO of Create DO must be Draft or Submitted',
-      );
-    }
-
-    // CASE 1: IF DRAFT, SAVE TO RELATIONAL DATABASE
-    const dataDokumen = data.supportingDocument.documentType.map((item) => {
-      const data: Partial<td_do_dok_form> = {
-        created_by,
-        id_jenis_dok: item.document,
-        filepath_dok: item.urlFile,
-        no_dok: item.documentNo,
-        tgl_dok: new Date(item.documentDate),
-      };
-
-      return data;
-    });
-
-    const dataInvoice = data.paymentDetail.invoice.map((item) => {
-      const data: Partial<td_do_invoice_form> = {
-        created_by,
-        filepath_buktibayar: item.urlFile,
-        id_bank: item.bankId,
-        no_invoice: item.invoiceNo,
-        tgl_invoice: new Date(item.invoiceDate),
-        no_rekening: item.accountNo,
-        total_payment: item.totalAmount,
-        id_currency: item.currency, //TODO: ADD CURRENCY JSON
-      };
-
-      return data;
-    });
-
-    const dataVin = data.vinDetail.vinNumber.map((vin) => {
-      const data: Partial<td_do_vin> = {
-        no_vin: vin,
-      };
-      return data;
-    });
-
-    const createdDo = await this.prisma.td_reqdo_header_form.create({
-      data: {
-        request_type: data.requestType,
-        order_id: uuidv4(),
-        no_reqdo: generateNoReq(
-          data.requestDetail.shippingLine.shippingType.split('|')[0].trim(),
-        ),
-        created_by,
-        timezone: timezone,
-        td_do_requestor_form: {
-          create: {
-            id_jenis_requestor: +data.requestDetail.requestor.requestorType,
-            alamat: data.requestDetail.requestor.requestorAddress,
-            created_by,
-            nama: data.requestDetail.requestor.requestorName,
-            nib: data.requestDetail.requestor.nib,
-            npwp: data.requestDetail.requestor.npwp,
-            filepath_suratkuasa: data.requestDetail.requestor.urlFile,
-          },
-        },
-        td_do_req_form: {
-          create: {
-            created_by,
-            id_metode_bayar: +data.requestDetail.payment,
-            id_shippingline: data.requestDetail.shippingLine.shippingType,
-            nama_vessel: data.requestDetail.shippingLine.vesselName,
-            no_voyage: data.requestDetail.shippingLine.voyageNumber,
-            tgl_reqdo_exp: new Date(data.requestDetail.shippingLine.doExpired),
-            no_bc11: data.requestDetail.document.bc11Number || null,
-            tanggal_bc11: data.requestDetail.document.bc11Date
-              ? new Date(data.requestDetail.document.bc11Date)
-              : null,
-            pos_number: data.requestDetail.document.posNumber,
-          },
-        },
-        td_parties_detail_form: {
-          create: {
-            created_by,
-            id_negara_loading: data.location.locationType[0].countryCode,
-            id_port_loading: data.location.locationType[0].portDetail,
-            id_port_discharge: data.location.locationType[1].portDetail,
-            id_port_destination: data.location.locationType[2].portDetail,
-            nama_consignee: data.parties.consignee.name,
-            nama_notifyparty: data.parties.notifyParty.name,
-            nama_shipper: data.parties.shipper.name,
-            npwp_consignee: data.parties.shipper.npwp,
-            npwp_notifyparty: data.parties.notifyParty.npwp,
-          },
-        },
-        td_do_bl_form: {
-          create: {
-            created_by,
-            filepath_dok: data.requestDetail.document.urlFile,
-            id_jenis_bl: data.requestDetail.document.ladingBillType,
-            no_bl: data.requestDetail.document.ladingBillNumber,
-            tgl_bl: new Date(data.requestDetail.document.ladingBillDate),
-            do_vin: {
-              createMany: {
-                data: dataVin as td_do_vin[],
-              },
-            },
-          },
-        },
-        td_do_dok_form: {
-          createMany: {
-            data: dataDokumen as td_do_dok_form[],
-          },
-        },
-        td_do_invoice_form: {
-          createMany: {
-            data: dataInvoice as td_do_invoice_form[],
-          },
-        },
-      },
-    });
-
-    const promises = data.cargoDetail.nonContainer.map((item) => {
-      return this.prisma.td_do_nonkontainer_form.create({
-        data: {
-          id_reqdo_header: createdDo.id,
-          created_by,
-          good_desc: item.goodsDescription,
-          gross_weight: item.grossWeight.amount,
-          id_gross_weight_unit: item.grossWeight.unit,
-          measurement_unit: item.measurementVolume.unit,
-          measurement_vol: item.measurementVolume.amount,
-          package_qty: item.packageQuantity.amount,
-          id_package_unit: item.packageQuantity.unit,
-        },
-      });
-    });
-
-    // Using Promise.all to wait for all promises to resolve
-    Promise.all(promises)
-      .then((results) => {
-        console.log('All promises resolved successfully');
-      })
-      .catch((error) => {
-        console.error('Error in one or more promises:', error);
-      });
-
-    // CASE 1: DRAFT STATUS
-    if (status === 'Draft') {
-      const updatedStatus = await this.prisma.td_reqdo_status.create({
-        data: {
-          name: status,
-          id_reqdo_header: createdDo.id,
-          datetime_status: new Date(),
-        },
-      });
-    }
-
-    // CASE 2: IF SUBMITTED, SEND PAYLOAD TO SMART CONTRACT
-    if (status === 'Submitted') {
-      data.requestDetail.requestor.requestorId = userInfo.sub;
-      data.requestDetail.requestDoNumber = generateNoReq(
-        data.requestDetail.shippingLine.shippingType.split('|')[0].trim(),
-      );
-      data.requestDetail.shippingLine.shippingDetail =
-        data.requestDetail.shippingLine.shippingType.split('|')[1].trim();
-      data.requestDetail.shippingLine.shippingType =
-        data.requestDetail.shippingLine.shippingType.split('|')[0].trim();
-      data.requestDetail.document.bc11Date = data.requestDetail.document
-        .bc11Date
-        ? data.requestDetail.document.bc11Date
-        : '';
-      data.requestDetail.document.bc11Number = data.requestDetail.document
-        .bc11Number
-        ? data.requestDetail.document.bc11Number
-        : '';
-      data.requestDetail.document.posNumber = data.requestDetail.document
-        .posNumber
-        ? data.requestDetail.document.posNumber
-        : '';
-      const result = await this.smartContractService.requestDO(data, status);
-      const headerDo = await this.prisma.td_reqdo_header_form.update({
-        where: {
-          id: createdDo.id,
-        },
-        data: {
-          order_id: result.response.orderId,
-          request_type: data.requestType,
-          no_reqdo: data.requestDetail.requestDoNumber,
-          created_by: data.requestDetail.requestor.requestorId,
-          td_reqdo_status: {
-            create: {
-              name: result.response.status,
-              datetime_status: new Date(result.response.datetime),
-            },
-          },
-        },
-      });
-      return {
-        result,
-        data: headerDo,
-      };
-    }
-
-    return {
-      messsage: 'success',
-      data: createdDo,
     };
   }
 
@@ -1044,85 +678,18 @@ export class DeliveryOrderService {
         'Status DO of Update DO must be Draft or Submitted',
       );
     }
-    // CHECK IF DO EXIST
-    const doData = await this.getHeaderData(idDO);
+
+    // CHECK IF DO already exist
+    const doData = await this.prisma.td_reqdo_header_form.findUnique({
+      where: {
+        id: idDO,
+      },
+    });
+
     if (!doData) {
       throw new BadRequestException(`DO by id = ${idDO} not found.`);
     }
-    // CASE 1 : IF THE STATUS IS SUBMITTED AND THE LAST STATUS OR BEFORE IS REJECTED, THEN HIT UPDATE DO SMART CONTRACT
-    const last2Status = listStatusDO[listStatusDO.length - 2];
-    if (
-      [lastStatus, last2Status].includes('Rejected') &&
-      status === 'Submitted'
-    ) {
-      data.requestDetail.requestor.requestorId = userInfo.sub;
-      data.requestDetail.requestDoNumber = generateNoReq(
-        data.requestDetail.shippingLine.shippingType.split('|')[0].trim(),
-      );
-      data.requestDetail.shippingLine.shippingDetail =
-        data.requestDetail.shippingLine.shippingType.split('|')[1].trim();
-      data.requestDetail.shippingLine.shippingType =
-        data.requestDetail.shippingLine.shippingType.split('|')[0].trim();
-      data.requestDetail.document.bc11Date = data.requestDetail.document
-        .bc11Date
-        ? data.requestDetail.document.bc11Date
-        : '';
-      data.requestDetail.document.bc11Number = data.requestDetail.document
-        .bc11Number
-        ? data.requestDetail.document.bc11Number
-        : '';
-      data.requestDetail.document.posNumber = data.requestDetail.document
-        .posNumber
-        ? data.requestDetail.document.posNumber
-        : '';
-      const result = await this.smartContractService.updateDoCo(
-        userInfo.sub,
-        doData.order_id,
-        data,
-        status,
-      );
-      // get update header data
-      const updatedHeader = await this.updateHeaderData(
-        +idDO,
-        data.requestDetail.requestDoNumber,
-        doData.order_id,
-      );
-      return result;
-    }
 
-    // CASE 2 : IF STATUS DO IS SUBMITTED AFTER UPDATE DO, SEND PAYLOAD DATA TO SMART CONTRACT
-    else if (status === 'Submitted') {
-      data.requestDetail.requestor.requestorId = userInfo.sub;
-      data.requestDetail.requestDoNumber = generateNoReq(
-        data.requestDetail.shippingLine.shippingType.split('|')[0].trim(),
-      );
-      data.requestDetail.shippingLine.shippingDetail =
-        data.requestDetail.shippingLine.shippingType.split('|')[1].trim();
-      data.requestDetail.shippingLine.shippingType =
-        data.requestDetail.shippingLine.shippingType.split('|')[0].trim();
-      data.requestDetail.document.bc11Date = data.requestDetail.document
-        .bc11Date
-        ? data.requestDetail.document.bc11Date
-        : '';
-      data.requestDetail.document.bc11Number = data.requestDetail.document
-        .bc11Number
-        ? data.requestDetail.document.bc11Number
-        : '';
-      data.requestDetail.document.posNumber = data.requestDetail.document
-        .posNumber
-        ? data.requestDetail.document.posNumber
-        : '';
-      const result = await this.smartContractService.requestDO(data, status);
-      // update header data
-      const updatedHeader = await this.updateHeaderData(
-        +idDO,
-        data.requestDetail.requestDoNumber,
-        result.response.orderId,
-      );
-      return result;
-    }
-
-    // CASE 3 : IF STATUS DO IS STILL DRAFT AFTER UPDATE DO, UPDATE DO DATA ON DB
     const dataNonKontainer = data.cargoDetail.nonContainer.map((item) => {
       const data: Partial<td_do_nonkontainer_form> = {
         created_by: updated_by,
@@ -1168,9 +735,9 @@ export class DeliveryOrderService {
       return data;
     });
 
-    const dataVin = data.vinDetail.vinNumber.map((vin) => {
+    const dataVin = data.vinDetail.vinData.map((vin) => {
       const data: Partial<td_do_vin> = {
-        no_vin: vin,
+        no_vin: vin.vinNumber,
       };
       return data;
     });
@@ -1257,6 +824,134 @@ export class DeliveryOrderService {
       },
     });
 
+    const doDraft = await this.getDataDraft(idDO);
+
+    const listCargoData: NonContainer[] = [];
+    const listVinData: { Id: number; vinNumber: string }[] = [];
+
+    doDraft.td_do_nonkontainer_form.forEach((con) => {
+      const result = {
+        Id: con.id,
+        goodsDescription: con.good_desc,
+        packageQuantity: {
+          amount: con.package_qty,
+          unit: con.id_package_unit,
+        },
+        grossWeight: {
+          amount: con.gross_weight,
+          unit: con.id_gross_weight_unit,
+        },
+        measurementVolume: {
+          amount: con.measurement_vol,
+          unit: con.measurement_unit,
+        },
+      };
+      listCargoData.push(result);
+    });
+
+    doDraft.td_do_bl_form.do_vin.forEach((vin) => {
+      const result = {
+        Id: vin.id,
+        vinNumber: vin.no_vin,
+      };
+      listVinData.push(result);
+    });
+
+    data.cargoDetail.nonContainer = listCargoData;
+    data.vinDetail = {
+      ladingBillNumber: doDraft.td_do_bl_form.no_bl,
+      vinData: listVinData,
+    };
+
+    data.requestDetail.requestor.urlFile =
+      doDraft.td_do_requestor_form.filepath_suratkuasa;
+    data.requestDetail.requestor.requestorId = userInfo.sub;
+    data.requestDetail.requestDoNumber = doDraft.no_reqdo;
+    data.requestDetail.shippingLine.shippingDetail =
+      doDraft.td_do_req_form.id_shippingline.split('|')[1].trim();
+    data.requestDetail.shippingLine.shippingType =
+      doDraft.td_do_req_form.id_shippingline.split('|')[0].trim();
+    data.requestDetail.document.bc11Date = doDraft.td_do_req_form.tanggal_bc11
+      ? String(doDraft.td_do_req_form.tanggal_bc11)
+      : '';
+    data.requestDetail.document.bc11Number = doDraft.td_do_req_form.no_bc11
+      ? doDraft.td_do_req_form.no_bc11
+      : '';
+    data.requestDetail.shippingLine.vesselName =
+      doDraft.td_do_req_form.nama_vessel || '';
+    data.requestDetail.shippingLine.voyageNumber =
+      doDraft.td_do_req_form.no_voyage || '';
+
+    // CASE 1 : IF THE STATUS IS SUBMITTED AND THE LAST STATUS OR BEFORE IS REJECTED, THEN HIT UPDATE DO SMART CONTRACT
+    if (listStatusDO.includes('Rejected') && status === 'Submitted') {
+      data.requestDetail.terminalOp = doDraft.td_do_req_form.id_terminal_op;
+      data.requestDetail.document.posNumber = doDraft.td_do_req_form.pos_number
+        ? doDraft.td_do_req_form.pos_number
+        : '';
+      data.requestDetail.callSign = doDraft.td_do_req_form.call_sign;
+      data.requestDetail.doReleaseNo = doDraft.td_do_req_form.no_do_release;
+      data.requestDetail.doReleaseDate = String(
+        doDraft.td_do_req_form.tgl_do_release,
+      );
+      data.requestDetail.doExpiredDate = String(
+        doDraft.td_do_req_form.tgl_do_exp,
+      );
+
+      const result = await this.smartContractService.updateDoCo(
+        userInfo.sub,
+        doDraft.order_id,
+        data,
+        status,
+        doDraft.td_reqdo_status[0].note,
+      );
+
+      // generate status do to smart contract
+      const headerDo = await this.prisma.td_reqdo_header_form.update({
+        where: {
+          id: doDraft.id,
+        },
+        data: {
+          order_id: doDraft.order_id,
+          request_type: data.requestType,
+          no_reqdo: data.requestDetail.requestDoNumber,
+          created_by: data.requestDetail.requestor.requestorId,
+          tgl_reqdo: new Date(result.response.datetime),
+        },
+      });
+    }
+
+    // CASE 2 : IF STATUS DO IS SUBMITTED AFTER UPDATE DO, SEND PAYLOAD DATA TO SMART CONTRACT
+    else if (status === 'Submitted') {
+      data.requestDetail.document.bc11Date = data.requestDetail.document
+        .bc11Date
+        ? data.requestDetail.document.bc11Date
+        : '';
+      data.requestDetail.document.bc11Number = data.requestDetail.document
+        .bc11Number
+        ? data.requestDetail.document.bc11Number
+        : '';
+      data.requestDetail.document.posNumber = data.requestDetail.document
+        .posNumber
+        ? data.requestDetail.document.posNumber
+        : '';
+
+      const result = await this.smartContractService.requestDO(data, status);
+
+      // generate status do to smart contract
+      const headerDo = await this.prisma.td_reqdo_header_form.update({
+        where: {
+          id: doDraft.id,
+        },
+        data: {
+          order_id: result.response.orderId,
+          request_type: data.requestType,
+          no_reqdo: data.requestDetail.requestDoNumber,
+          created_by: data.requestDetail.requestor.requestorId,
+          tgl_reqdo: new Date(result.response.datetime),
+        },
+      });
+    }
+
     // UPDATE STATUS REQDO FOR DRAFT
     const updatedStatus = await this.updateStatusDo(idDO, token, status);
 
@@ -1300,7 +995,7 @@ export class DeliveryOrderService {
         td_reqdo_status: {
           create: {
             name: updatedDoSL.status,
-            datetime_status: new Date(updatedDoSL.datetime),
+            datetime_status: new Date(Date.parse(updatedDoSL.datetime)),
           },
         },
       },
@@ -1395,17 +1090,6 @@ export class DeliveryOrderService {
       }
 
       for (let i = 0; i < conData.length; i++) {
-        const depoData = await this.prisma.td_depo.create({
-          data: {
-            deskripsi: data.cargoDetail[i].depoDetail.depoName,
-            npwp: data.cargoDetail[i].depoDetail.depoNpwp,
-            no_telp: data.cargoDetail[i].depoDetail.noTelp,
-            alamat: data.cargoDetail[i].depoDetail.alamat,
-            kode_pos: data.cargoDetail[i].depoDetail.kodePos,
-            id_kabkota: data.cargoDetail[i].depoDetail.kotaDepo,
-            created_by: userInfo.sub,
-          },
-        });
         const updatedCon = await this.prisma.td_do_kontainer_form.update({
           where: {
             id: conData[i].id,
@@ -1413,9 +1097,31 @@ export class DeliveryOrderService {
           data: {
             no_kontainer: data.cargoDetail[i].containerNo,
             id_sizeType: data.cargoDetail[i].sizeType.kodeSize,
-            id_depo: data.cargoDetail[i].depoDetail.depoId
-              ? data.cargoDetail[i].depoDetail.depoId
-              : depoData.id,
+            td_depo: {
+              upsert: {
+                create: {
+                  deskripsi: data.cargoDetail[i].depoDetail.depoName,
+                  npwp: data.cargoDetail[i].depoDetail.depoNpwp,
+                  no_telp: data.cargoDetail[i].depoDetail.noTelp,
+                  alamat: data.cargoDetail[i].depoDetail.alamat,
+                  kode_pos: data.cargoDetail[i].depoDetail.kodePos,
+                  id_kabkota: data.cargoDetail[i].depoDetail.kotaDepo,
+                  created_by: userInfo.sub,
+                },
+                update: {
+                  deskripsi: data.cargoDetail[i].depoDetail.depoName,
+                  npwp: data.cargoDetail[i].depoDetail.depoNpwp,
+                  no_telp: data.cargoDetail[i].depoDetail.noTelp,
+                  alamat: data.cargoDetail[i].depoDetail.alamat,
+                  kode_pos: data.cargoDetail[i].depoDetail.kodePos,
+                  id_kabkota: data.cargoDetail[i].depoDetail.kotaDepo,
+                  created_by: userInfo.sub,
+                },
+                where: {
+                  id_kontainer: conData[i].id,
+                },
+              },
+            },
           },
         });
       }
@@ -1477,29 +1183,40 @@ export class DeliveryOrderService {
   ) {
     const userInfo = await this.userService.getDetail(token);
 
-    const statusDO = await this.prisma.td_reqdo_status.findFirst({
+    const headerData = await this.prisma.td_reqdo_header_form.findUnique({
+      select: {
+        td_reqdo_status: {
+          orderBy: {
+            datetime_status: 'desc',
+          },
+          take: 1,
+        },
+      },
       where: {
-        id_reqdo_header: idDO,
-        name: status,
+        id: idDO,
       },
     });
 
-    if (!statusDO) {
-      const updatedStatus = await this.prisma.td_reqdo_status.create({
+    const lastStatus = headerData.td_reqdo_status[0];
+
+    if (lastStatus.name === 'Draft' && status === 'Draft') {
+      const updatedStatus = await this.prisma.td_reqdo_status.update({
         data: {
           name: status,
-          id_reqdo_header: idDO,
-          note: note,
+          datetime_status: new Date(),
+        },
+        where: {
+          id: lastStatus.id,
         },
       });
       return updatedStatus;
     } else {
-      const updatedStatus = await this.prisma.td_reqdo_status.update({
-        where: {
-          id: statusDO.id,
-        },
+      const updatedStatus = await this.prisma.td_reqdo_status.create({
         data: {
+          name: status,
           datetime_status: new Date(),
+          id_reqdo_header: idDO,
+          note: note,
         },
       });
       return updatedStatus;
@@ -1508,6 +1225,144 @@ export class DeliveryOrderService {
 
   // GET DO DETAIL DRAFT
   async getDoDetailDraft(idDo: number) {
+    const data = await this.getDataDraft(idDo);
+
+    // get statusDO
+    const statusDO = data.td_reqdo_status.pop();
+
+    if (!data) {
+      throw new NotFoundException(`${idDo} is not found`);
+    }
+    const response = {
+      requestDetailForm: {
+        requestorType: data.td_do_requestor_form.id_jenis_requestor,
+        requestorName: data.td_do_requestor_form.nama,
+        requestorNib: data.td_do_requestor_form.nib,
+        requestorNpwp: data.td_do_requestor_form.npwp,
+        requestorAlamat: data.td_do_requestor_form.alamat,
+        requestorFile: data.td_do_requestor_form.filepath_suratkuasa,
+        shippingLine: data.td_do_req_form.id_shippingline,
+        vesselName: data.td_do_req_form.nama_vessel || '',
+        voyageNumber: data.td_do_req_form.no_voyage || '',
+        blNumber: data.td_do_bl_form.no_bl || '',
+        blDate: data.td_do_bl_form.tgl_bl
+          ? moment(data.td_do_bl_form.tgl_bl, 'YYYY-MM-DD').format('YYYY-MM-DD')
+          : null,
+        blType: data.td_do_bl_form.id_jenis_bl || '',
+        blFile: data.td_do_bl_form.filepath_dok || '',
+        bc11Date: data.td_do_req_form.tanggal_bc11
+          ? moment(data.td_do_req_form.tanggal_bc11, 'YYYY-MM-DD').format(
+              'YYYY-MM-DD',
+            )
+          : null,
+        bc11Number: data.td_do_req_form.no_bc11 || '',
+        posNumber: data.td_do_req_form.pos_number || '',
+        reqdoExp: data.td_do_req_form.tgl_reqdo_exp
+          ? moment(data.td_do_req_form.tgl_reqdo_exp, 'YYYY-MM-DD').format(
+              'YYYY-MM-DD',
+            )
+          : null,
+        metodeBayar: data.td_do_req_form.id_metode_bayar || '',
+        callSign: data.td_do_req_form.call_sign || '',
+        doReleaseDate: data.td_do_req_form.tgl_do_release
+          ? moment(data.td_do_req_form.tgl_do_release, 'YYYY-MM-DD').format(
+              'YYYY-MM-DD',
+            )
+          : null,
+        doReleaseNumber: data.td_do_req_form.no_do_release || '',
+        doExp: data.td_do_req_form.tgl_do_exp
+          ? moment(data.td_do_req_form.tgl_do_exp, 'YYYY-MM-DD').format(
+              'YYYY-MM-DD',
+            )
+          : null,
+        terminalOp: data.td_do_req_form.id_terminal_op || '',
+      },
+      partiesDetailForm: {
+        shipperName: data.td_parties_detail_form.nama_shipper || '',
+        consigneeName: data.td_parties_detail_form.nama_consignee || '',
+        consigneeNpwp: data.td_parties_detail_form.npwp_consignee || '',
+        notifyPartyName: data.td_parties_detail_form.nama_notifyparty || '',
+        notifyPartyNpwp: data.td_parties_detail_form.npwp_notifyparty || '',
+        placeLoading: data.td_parties_detail_form.id_negara_loading || '',
+        portLoading: data.td_parties_detail_form.id_port_loading || '',
+        placeDischarge: data.td_parties_detail_form.id_port_discharge || '',
+        placeDestination: data.td_parties_detail_form.id_port_destination || '',
+      },
+      containerDetailForm: !!data.td_do_kontainer_form.length
+        ? data.td_do_kontainer_form.map((data) => ({
+            Id: data.id,
+            containerNumber: data.no_kontainer,
+            containerSeal: data.seals.map((item) => item.seal.no_seal),
+            sizeType: data.id_sizeType,
+            grossWeightAmount: data.gross_weight,
+            grossWeightUnit: data.id_gross_weight_unit,
+            ownership: data.id_ownership,
+            depoForm: {
+              Id: data.td_depo?.id,
+              nama: data.td_depo?.deskripsi,
+              npwp: data.td_depo?.npwp,
+              alamat: data.td_depo?.alamat,
+              noTelp: data.td_depo?.no_telp,
+              kota: data.td_depo?.id_kabkota,
+              kodePos: data.td_depo?.kode_pos,
+            },
+          }))
+        : [],
+      nonContainerDetailForm: data.td_do_nonkontainer_form.length
+        ? data.td_do_nonkontainer_form.map((data) => ({
+            Id: data.id,
+            goodsDescription: data.good_desc,
+            packageQuantityAmount: data.package_qty,
+            packageQuantityUnit: data.id_package_unit,
+            grossWeightAmount: data.gross_weight,
+            grossWeightUnit: data.id_gross_weight_unit,
+            measurementVolume: data.measurement_vol,
+            measurementUnit: data.measurement_unit,
+          }))
+        : [],
+      vinDetailForm: {
+        ladingBillNumber: data.td_do_bl_form.no_bl,
+        vinData: data.td_do_bl_form.do_vin.length
+          ? data.td_do_bl_form.do_vin.map((vin) => ({
+              Id: vin.id,
+              vinNumber: vin.no_vin,
+            }))
+          : [],
+      },
+      paymentDetailForm: data.td_do_invoice_form.length
+        ? data.td_do_invoice_form.map((inv) => ({
+            invoiceNumber: inv.no_invoice,
+            invoiceDate: inv.tgl_invoice
+              ? moment(inv.tgl_invoice).format('YYYY-MM-DD')
+              : null,
+            currency: inv.id_currency,
+            totalPayment: inv.total_payment,
+            bank: inv.id_bank,
+            accountNumber: inv.no_rekening,
+            urlFile: inv.filepath_buktibayar,
+          }))
+        : [],
+      supportingDocumentForm: data.td_do_dok_form.length
+        ? data.td_do_dok_form.map((dok) => ({
+            documentType: dok.id_jenis_dok,
+            documentNumber: dok.no_dok,
+            documentDate: dok.tgl_dok
+              ? moment(dok.tgl_dok, 'YYYY-MM-DD').format('YYYY-MM-DD')
+              : null,
+            urlFile: dok.filepath_dok,
+          }))
+        : [],
+      statusReqdo: {
+        name: statusDO.name,
+        datetime: moment(statusDO.datetime_status, 'DD-MM-YYYY HH:mm:ss')
+          .tz(data.timezone)
+          .format('DD-MM-YYYY HH:mm:ss'),
+      },
+    };
+    return response;
+  }
+
+  async getDataDraft(idDo: number) {
     const data = await this.prisma.td_reqdo_header_form.findUnique({
       include: {
         td_do_requestor_form: {
@@ -1581,6 +1436,7 @@ export class DeliveryOrderService {
             filepath_buktibayar: true,
           },
         },
+
         td_do_dok_form: {
           select: {
             no_dok: true,
@@ -1589,10 +1445,12 @@ export class DeliveryOrderService {
             filepath_dok: true,
           },
         },
+
         td_reqdo_status: {
           select: {
             name: true,
             datetime_status: true,
+            note: true,
           },
         },
       },
@@ -1600,123 +1458,11 @@ export class DeliveryOrderService {
         id: idDo,
       },
     });
-
-    // get statusDO
-    const statusDO = data.td_reqdo_status.pop();
-
     if (!data) {
-      throw new NotFoundException(`${idDo} is not found`);
+      throw new NotFoundException(`DO Data Draft by Id = ${idDo} not found!`);
     }
-    const response = {
-      requestDetailForm: {
-        requestorType: data.td_do_requestor_form.id_jenis_requestor,
-        requestorName: data.td_do_requestor_form.nama,
-        requestorNib: data.td_do_requestor_form.nib,
-        requestorNpwp: data.td_do_requestor_form.npwp,
-        requestorAlamat: data.td_do_requestor_form.alamat,
-        requestorFile: data.td_do_requestor_form.filepath_suratkuasa,
-        shippingLine: data.td_do_req_form.id_shippingline,
-        vesselName: data.td_do_req_form.nama_vessel,
-        voyageNumber: data.td_do_req_form.no_voyage,
-        blNumber: data.td_do_bl_form.no_bl,
-        blDate: data.td_do_bl_form.tgl_bl
-          ? moment(data.td_do_bl_form.tgl_bl, 'YYYY-MM-DD').format('YYYY-MM-DD')
-          : null,
-        blType: data.td_do_bl_form.id_jenis_bl,
-        blFile: data.td_do_bl_form.filepath_dok,
-        bc11Date: data.td_do_req_form.tanggal_bc11
-          ? moment(data.td_do_req_form.tanggal_bc11, 'YYYY-MM-DD').format(
-              'YYYY-MM-DD',
-            )
-          : null,
-        bc11Number: data.td_do_req_form.no_bc11 || '',
-        posNumber: data.td_do_req_form.pos_number || '',
-        reqdoExp: data.td_do_req_form.tgl_reqdo_exp
-          ? moment(data.td_do_req_form.tgl_reqdo_exp, 'YYYY-MM-DD').format(
-              'YYYY-MM-DD',
-            )
-          : null,
-        metodeBayar: data.td_do_req_form.id_metode_bayar,
-        callSign: data.td_do_req_form.call_sign,
-        doReleaseDate: data.td_do_req_form.tgl_do_release
-          ? moment(data.td_do_req_form.tgl_do_release, 'YYYY-MM-DD').format(
-              'YYYY-MM-DD',
-            )
-          : null,
-        doReleaseNumber: data.td_do_req_form.no_do_release,
-        doExp: data.td_do_req_form.tgl_do_exp
-          ? moment(data.td_do_req_form.tgl_do_exp, 'YYYY-MM-DD').format(
-              'YYYY-MM-DD',
-            )
-          : null,
-        terminalOp: data.td_do_req_form.id_terminal_op,
-      },
-      partiesDetailForm: {
-        shipperName: data.td_parties_detail_form.nama_shipper,
-        consigneeName: data.td_parties_detail_form.nama_consignee,
-        consigneeNpwp: data.td_parties_detail_form.npwp_consignee,
-        notifyPartyName: data.td_parties_detail_form.nama_notifyparty,
-        notifyPartyNpwp: data.td_parties_detail_form.npwp_notifyparty,
-        placeLoading: data.td_parties_detail_form.id_negara_loading,
-        portLoading: data.td_parties_detail_form.id_port_loading,
-        placeDischarge: data.td_parties_detail_form.id_port_discharge,
-        placeDestination: data.td_parties_detail_form.id_port_destination,
-      },
-      containerDetailForm: data.td_do_kontainer_form.map((data) => ({
-        containerNumber: data.no_kontainer,
-        containerSeal: data.seals.map((item) => item.seal.no_seal),
-        sizeType: data.id_sizeType,
-        grossWeightAmount: data.gross_weight,
-        grossWeightUnit: data.id_gross_weight_unit,
-        ownership: data.id_ownership,
-        depoForm: {
-          nama: data.td_depo?.deskripsi,
-          npwp: data.td_depo?.npwp,
-          alamat: data.td_depo?.alamat,
-          noTelp: data.td_depo?.no_telp,
-          kota: data.td_depo?.id_kabkota,
-          kodePos: data.td_depo?.kode_pos,
-        },
-      })),
-      nonContainerDetailForm: data.td_do_nonkontainer_form.map((data) => ({
-        goodsDescription: data.good_desc,
-        packageQuantityAmount: data.package_qty,
-        packageQuantityUnit: data.id_package_unit,
-        grossWeightAmount: data.gross_weight,
-        grossWeightUnit: data.id_gross_weight_unit,
-        measurementVolume: data.measurement_vol,
-        measurementUnit: data.measurement_unit,
-      })),
-      vinDetailForm: {
-        vinNumber: data.td_do_bl_form.do_vin.map((vin) => vin.no_vin),
-      },
-      paymentDetailForm: data.td_do_invoice_form.map((inv) => ({
-        invoiceNumber: inv.no_invoice,
-        invoiceDate: inv.tgl_invoice
-          ? moment(inv.tgl_invoice).format('YYYY-MM-DD')
-          : null,
-        currency: inv.id_currency,
-        totalPayment: inv.total_payment,
-        bank: inv.id_bank,
-        accountNumber: inv.no_rekening,
-        urlFile: inv.filepath_buktibayar,
-      })),
-      supportingDocumentForm: data.td_do_dok_form.map((dok) => ({
-        documentType: dok.id_jenis_dok,
-        documentNumber: dok.no_dok,
-        documentDate: dok.tgl_dok
-          ? moment(dok.tgl_dok, 'YYYY-MM-DD').format('YYYY-MM-DD')
-          : null,
-        urlFile: dok.filepath_dok,
-      })),
-      statusReqdo: {
-        name: statusDO.name,
-        datetime: moment(statusDO.datetime_status, 'DD-MM-YYYY HH:mm:ss')
-          .tz(data.timezone)
-          .format('DD-MM-YYYY HH:mm:ss'),
-      },
-    };
-    return response;
+
+    return data;
   }
 
   // GET DO DETAIL SMART CONTRACT
@@ -1753,36 +1499,47 @@ export class DeliveryOrderService {
         voyageNumber: data.requestDetail.shippingLine.voyageNumber,
         blNumber: data.requestDetail.document.ladingBillNumber,
         blDate: data.requestDetail.document.ladingBillDate
-          ? moment(data.requestDetail.document.ladingBillDate).format(
-              'YYYY-MM-DD',
-            )
+          ? moment(
+              new Date(Date.parse(data.requestDetail.document.ladingBillDate)),
+            ).format('YYYY-MM-DD')
           : null,
         blType: data.requestDetail.document.ladingBillType,
         blFile: data.requestDetail.document.urlFile,
         bc11Date: data.requestDetail.document.bc11Date
-          ? moment(data.requestDetail.document.bc11Date).format('YYYY-MM-DD')
-          : null,
-        bc11Number: data.requestDetail.document.bc11Number || '',
-        posNumber: data.requestDetail.document.posNumber || '',
-        reqdoExp: data.requestDetail.shippingLine.doExpired
           ? moment(
-              data.requestDetail.shippingLine.doExpired,
+              new Date(Date.parse(data.requestDetail.document.bc11Date)),
               'YYYY-MM-DD',
             ).format('YYYY-MM-DD')
           : null,
+        bc11Number: data.requestDetail.document.bc11Number || '',
+        posNumber: data.requestDetail.document.posNumber || '',
+        reqdoExp:
+          data.requestDetail.shippingLine.doExpired &&
+          data.requestDetail.shippingLine.doExpired !== 'null'
+            ? moment(
+                new Date(Date.parse(data.requestDetail.shippingLine.doExpired)),
+                'YYYY-MM-DD',
+              ).format('YYYY-MM-DD')
+            : null,
         metodeBayar: data.requestDetail.payment,
         callSign: data.requestDetail.callSign || '',
-        doReleaseDate: data.requestDetail.doReleaseDate
-          ? moment(data.requestDetail.doReleaseDate, 'YYYY-MM-DD').format(
-              'YYYY-MM-DD',
-            )
-          : null,
+        doReleaseDate:
+          data.requestDetail.doReleaseDate &&
+          data.requestDetail.doReleaseDate !== 'null'
+            ? moment(
+                new Date(Date.parse(data.requestDetail.doReleaseDate)),
+                'YYYY-MM-DD',
+              ).format('YYYY-MM-DD')
+            : null,
         doReleaseNumber: data.requestDetail.doReleaseNumber || '',
-        doExp: data.requestDetail.doExpiredDate
-          ? moment(data.requestDetail.doExpiredDate, 'YYYY-MM-DD').format(
-              'YYYY-MM-DD',
-            )
-          : null,
+        doExp:
+          data.requestDetail.doExpiredDate &&
+          data.requestDetail.doExpiredDate !== 'null'
+            ? moment(
+                new Date(Date.parse(data.requestDetail.doExpiredDate)),
+                'YYYY-MM-DD',
+              ).format('YYYY-MM-DD')
+            : null,
         terminalOp: data.requestDetail.terminalOp || '',
       },
       partiesDetailForm: {
@@ -1799,6 +1556,7 @@ export class DeliveryOrderService {
       containerDetailForm:
         data.cargoDetail.container !== undefined
           ? data.cargoDetail.container.map((item) => ({
+              Id: item.Id,
               containerNumber: item.containerNo,
               containerSeal: item.sealNo,
               sizeType: item.sizeType.kodeSize,
@@ -1806,6 +1564,10 @@ export class DeliveryOrderService {
               grossWeightUnit: item.grossWeight.unit,
               ownership: item.ownership,
               depoForm: {
+                Id:
+                  item.depoDetail.depoId && item.depoDetail.depoId !== undefined
+                    ? item.depoDetail.depoId
+                    : null,
                 nama:
                   item.depoDetail && item.depoDetail.depoName !== undefined
                     ? item.depoDetail.depoName
@@ -1836,6 +1598,7 @@ export class DeliveryOrderService {
       nonContainerDetailForm:
         data.cargoDetail.nonContainer !== undefined
           ? data.cargoDetail.nonContainer.map((item) => ({
+              Id: item.Id,
               goodsDescription: item.goodsDescription,
               packageQuantityAmount: item.packageQuantity.amount,
               packageQuantityUnit: item.packageQuantity.unit,
@@ -1845,14 +1608,19 @@ export class DeliveryOrderService {
               measurementUnit: item.measurementVolume.unit,
             }))
           : [],
-      vinDetailForm: {
-        vinNumber:
-          data.vinDetail.vinNumber.length !== 0 ? data.vinDetail.vinNumber : [],
-      },
+      vinDetailForm:
+        data.vinDetail !== undefined
+          ? {
+              ladingBillNumber: data.vinDetail.ladingBillNumber,
+              vinData: data.vinDetail.vinData,
+            }
+          : {},
       paymentDetailForm: data.paymentDetail.invoice.map((inv) => ({
         invoiceNumber: inv.invoiceNo,
         invoiceDate: inv.invoiceDate
-          ? moment(inv.invoiceDate, 'YYYY-MM-DD').format('YYYY-MM-DD')
+          ? moment(new Date(Date.parse(inv.invoiceDate)), 'YYYY-MM-DD').format(
+              'YYYY-MM-DD',
+            )
           : null,
         currency: inv.currency,
         totalPayment: inv.totalAmount,
@@ -1865,14 +1633,20 @@ export class DeliveryOrderService {
           documentType: dok.document,
           documentNumber: dok.documentNo,
           documentDate: dok.documentDate
-            ? moment(dok.documentDate, 'YYYY-MM-DD').format('YYYY-MM-DD')
+            ? moment(
+                new Date(Date.parse(dok.documentDate)),
+                'YYYY-MM-DD',
+              ).format('YYYY-MM-DD')
             : null,
           urlFile: dok.urlFile,
         }),
       ),
       statusReqdo: {
         name: data.status,
-        datetime: moment(data.statusDate, 'DD-MM-YYYY HH:mm:ss')
+        datetime: moment(
+          new Date(Date.parse(data.statusDate)),
+          'DD-MM-YYYY HH:mm:ss',
+        )
           .tz(timezone)
           .format('DD-MM-YYYY HH:mm:ss'),
       },
@@ -1905,11 +1679,11 @@ export class DeliveryOrderService {
       data: {
         no_reqdo: reqdoNum,
         order_id: orderId,
-        tgl_reqdo: new Date(statusDo.datetime),
+        tgl_reqdo: new Date(Date.parse(statusDo.datetime)),
         td_reqdo_status: {
           create: {
             name: statusDo.status,
-            datetime_status: new Date(statusDo.datetime),
+            datetime_status: new Date(Date.parse(statusDo.datetime)),
           },
         },
       },
@@ -1944,5 +1718,754 @@ export class DeliveryOrderService {
     //   fs.createReadStream(filepath).pipe(res);
     // });
     pdfDoc.end();
+  }
+
+  async createRequestDetail(data: RequestDetail, token: string) {
+    const userInfo = await this.userService.getDetail(token);
+    const created_by = userInfo.sub;
+
+    const result = await this.prisma.td_reqdo_header_form.create({
+      data: {
+        no_reqdo: generateNoReq(
+          data.shippingLine.shippingType.split('|')[0].trim(),
+        ),
+        order_id: uuidv4(),
+        request_type: data.requestType,
+        created_by,
+        tgl_reqdo: new Date(),
+        timezone: 'Asia/Jakarta',
+        td_do_req_form: {
+          create: {
+            created_by,
+            id_metode_bayar: +data.payment || 999,
+            id_shippingline: data.shippingLine.shippingType,
+            nama_vessel: data.shippingLine.vesselName || '',
+            no_voyage: data.shippingLine.voyageNumber || '',
+            pos_number: data.document.posNumber || '',
+            tgl_reqdo_exp: data.shippingLine.doExpired
+              ? new Date(data.shippingLine.doExpired)
+              : null,
+            no_bc11: data.document.bc11Number || '',
+            tanggal_bc11: data.document.bc11Date
+              ? new Date(data.document.bc11Date)
+              : null,
+          },
+        },
+        td_do_requestor_form: {
+          create: {
+            id_jenis_requestor: +data.requestor.requestorType,
+            alamat: userInfo.organization.address.address,
+            created_by,
+            nama: userInfo.organization.details.name,
+            nib: userInfo.organization.nib,
+            npwp: userInfo.organization.npwp,
+            filepath_suratkuasa: data.requestor.urlFile || '',
+          },
+        },
+        td_do_bl_form: {
+          create: {
+            no_bl: data.document.ladingBillNumber,
+            id_jenis_bl: data.document.ladingBillType,
+            created_by,
+            tgl_bl: new Date(data.document.ladingBillDate),
+            filepath_dok: data.document.urlFile || '',
+          },
+        },
+        td_parties_detail_form: {
+          create: {
+            id_negara_loading: '',
+            id_port_loading: '',
+            id_port_discharge: '',
+            id_port_destination: '',
+            nama_consignee: '',
+            npwp_consignee: '',
+            nama_notifyparty: '',
+            npwp_notifyparty: '',
+            nama_shipper: '',
+            created_by,
+          },
+        },
+        td_reqdo_status: {
+          create: {
+            name: 'Draft',
+            datetime_status: new Date(),
+          },
+        },
+      },
+    });
+    return result;
+  }
+
+  async getRequestDetail(idDo: number, token: string) {
+    const userInfo = await this.userService.getUserDB(token);
+
+    const data = await this.prisma.td_reqdo_header_form.findUnique({
+      include: {
+        td_do_requestor_form: {
+          select: {
+            id_jenis_requestor: true,
+            filepath_suratkuasa: true,
+          },
+        },
+        td_do_req_form: {
+          select: {
+            id_metode_bayar: true,
+            id_shippingline: true,
+            nama_vessel: true,
+            no_voyage: true,
+            tgl_reqdo_exp: true,
+            pos_number: true,
+            no_bc11: true,
+            tanggal_bc11: true,
+          },
+        },
+        td_do_bl_form: {
+          select: {
+            id_jenis_bl: true,
+            no_bl: true,
+            tgl_bl: true,
+            filepath_dok: true,
+          },
+        },
+      },
+      where: {
+        id: idDo,
+      },
+    });
+
+    if (!data) {
+      throw new NotFoundException(
+        `Request DO Header by Id = ${idDo} not found!`,
+      );
+    }
+
+    const response = {
+      requestDetailForm: {
+        requestorType: data.td_do_requestor_form.id_jenis_requestor,
+        requestorFile: data.td_do_requestor_form.filepath_suratkuasa,
+        shippingLine: data.td_do_req_form.id_shippingline,
+        vesselName: data.td_do_req_form.nama_vessel || '',
+        voyageNumber: data.td_do_req_form.no_voyage || '',
+        blNumber: data.td_do_bl_form.no_bl || '',
+        blDate: data.td_do_bl_form.tgl_bl
+          ? moment(data.td_do_bl_form.tgl_bl, 'YYYY-MM-DD').format('YYYY-MM-DD')
+          : null,
+        blType: data.td_do_bl_form.id_jenis_bl || '',
+        blFile: data.td_do_bl_form.filepath_dok || '',
+        bc11Date: data.td_do_req_form.tanggal_bc11
+          ? moment(data.td_do_req_form.tanggal_bc11, 'YYYY-MM-DD').format(
+              'YYYY-MM-DD',
+            )
+          : null,
+        bc11Number: data.td_do_req_form.no_bc11 || '',
+        posNumber: data.td_do_req_form.pos_number || '',
+        reqdoExp: data.td_do_req_form.tgl_reqdo_exp
+          ? moment(data.td_do_req_form.tgl_reqdo_exp, 'YYYY-MM-DD').format(
+              'YYYY-MM-DD',
+            )
+          : null,
+        metodeBayar: data.td_do_req_form.id_metode_bayar || '',
+      },
+    };
+    return response;
+  }
+
+  async updateRequestDetail(idDo: number, data: RequestDetail, token: string) {
+    const userInfo = await this.userService.getDetail(token);
+    const created_by = userInfo.sub;
+    const result = await this.prisma.td_reqdo_header_form.update({
+      where: {
+        id: idDo,
+      },
+      data: {
+        no_reqdo: generateNoReq(
+          data.shippingLine.shippingType.split('|')[0].trim(),
+        ),
+        td_do_req_form: {
+          update: {
+            created_by,
+            id_metode_bayar: +data.payment || 999,
+            id_shippingline: data.shippingLine.shippingType,
+            nama_vessel: data.shippingLine.vesselName || '',
+            no_voyage: data.shippingLine.voyageNumber || '',
+            pos_number: data.document.posNumber || '',
+            tgl_reqdo_exp: data.shippingLine.doExpired
+              ? new Date(data.shippingLine.doExpired)
+              : null,
+            no_bc11: data.document.bc11Number || '',
+            tanggal_bc11: data.document.bc11Date
+              ? new Date(data.document.bc11Date)
+              : null,
+          },
+        },
+        td_do_requestor_form: {
+          update: {
+            id_jenis_requestor: +data.requestor.requestorType,
+            filepath_suratkuasa: data.requestor.urlFile || '',
+          },
+        },
+        td_do_bl_form: {
+          update: {
+            no_bl: data.document.ladingBillNumber,
+            id_jenis_bl: data.document.ladingBillType,
+            tgl_bl: new Date(data.document.ladingBillDate),
+            filepath_dok: data.document.urlFile || '',
+          },
+        },
+      },
+    });
+    await this.updateStatusDo(idDo, token, 'Draft');
+    return result;
+  }
+
+  async createRequestPartiesDetail(
+    idDo: number,
+    data: RequestPartiesDetail,
+    token: string,
+  ) {
+    const userInfo = await this.userService.getDetail(token);
+    const created_by = userInfo.sub;
+
+    const result = await this.prisma.td_reqdo_header_form.update({
+      data: {
+        td_do_req_form: {
+          update: {
+            created_by,
+            id_metode_bayar: +data.requestDetail.payment || 999,
+            id_shippingline: data.requestDetail.shippingLine.shippingType,
+            nama_vessel: data.requestDetail.shippingLine.vesselName || '',
+            no_voyage: data.requestDetail.shippingLine.voyageNumber || '',
+            pos_number: data.requestDetail.document.posNumber || '',
+            tgl_reqdo_exp: data.requestDetail.shippingLine.doExpired
+              ? new Date(data.requestDetail.shippingLine.doExpired)
+              : null,
+            no_bc11: data.requestDetail.document.bc11Number || '',
+            tanggal_bc11: data.requestDetail.document.bc11Date
+              ? new Date(data.requestDetail.document.bc11Date)
+              : null,
+          },
+        },
+        td_do_requestor_form: {
+          update: {
+            id_jenis_requestor: +data.requestDetail.requestor.requestorType,
+            filepath_suratkuasa: data.requestDetail.requestor.urlFile || '',
+          },
+        },
+        td_do_bl_form: {
+          update: {
+            no_bl: data.requestDetail.document.ladingBillNumber || '',
+            id_jenis_bl: data.requestDetail.document.ladingBillType || '',
+            created_by,
+            tgl_bl: new Date(data.requestDetail.document.ladingBillDate),
+            filepath_dok: data.requestDetail.document.urlFile || '',
+          },
+        },
+        td_parties_detail_form: {
+          upsert: {
+            create: {
+              id_negara_loading:
+                data.location.locationType[0].countryCode || '',
+              id_port_loading: data.location.locationType[0].portDetail || '',
+              id_port_discharge: data.location.locationType[1].portDetail || '',
+              id_port_destination:
+                data.location.locationType[2].portDetail || '',
+              nama_consignee: data.parties.consignee.name || '',
+              npwp_consignee: data.parties.consignee.npwp || '',
+              nama_notifyparty: data.parties.notifyParty.name || '',
+              npwp_notifyparty: data.parties.notifyParty.npwp || '',
+              nama_shipper: data.parties.shipper.name || '',
+              created_by,
+            },
+            update: {
+              id_negara_loading:
+                data.location.locationType[0].countryCode || '',
+              id_port_loading: data.location.locationType[0].portDetail || '',
+              id_port_discharge: data.location.locationType[1].portDetail || '',
+              id_port_destination:
+                data.location.locationType[2].portDetail || '',
+              nama_shipper: data.parties.shipper.name || '',
+              nama_consignee: data.parties.consignee.name || '',
+              npwp_consignee: data.parties.consignee.npwp || '',
+              nama_notifyparty: data.parties.notifyParty.name || '',
+              npwp_notifyparty: data.parties.notifyParty.npwp || '',
+            },
+            where: {
+              id_reqdo_header: idDo,
+            },
+          },
+        },
+      },
+      where: {
+        id: idDo,
+      },
+    });
+    if (!result) {
+      throw new NotFoundException(
+        `Request header DO by Id = ${idDo} not found!`,
+      );
+    }
+    await this.updateStatusDo(idDo, token, 'Draft');
+    return result;
+  }
+
+  async getRequestPartiesDetail(idDo: number, token: string) {
+    const userInfo = await this.userService.getDetail(token);
+
+    const data = await this.prisma.td_reqdo_header_form.findUnique({
+      include: {
+        td_do_requestor_form: {
+          select: {
+            id_jenis_requestor: true,
+            filepath_suratkuasa: true,
+          },
+        },
+        td_do_req_form: {
+          select: {
+            id_metode_bayar: true,
+            id_shippingline: true,
+            nama_vessel: true,
+            no_voyage: true,
+            tgl_reqdo_exp: true,
+            pos_number: true,
+            no_bc11: true,
+            tanggal_bc11: true,
+          },
+        },
+        td_do_bl_form: {
+          select: {
+            id_jenis_bl: true,
+            no_bl: true,
+            tgl_bl: true,
+            filepath_dok: true,
+          },
+        },
+        td_parties_detail_form: {
+          select: {
+            id_negara_loading: true,
+            id_port_destination: true,
+            id_port_discharge: true,
+            id_port_loading: true,
+            nama_consignee: true,
+            npwp_consignee: true,
+            nama_notifyparty: true,
+            npwp_notifyparty: true,
+            nama_shipper: true,
+          },
+        },
+      },
+      where: {
+        id: idDo,
+      },
+    });
+
+    if (!data) {
+      throw new NotFoundException(
+        `Request Header DO by Id = ${idDo} not found`,
+      );
+    }
+
+    const response = {
+      requestDetailForm: {
+        requestorType: data.td_do_requestor_form.id_jenis_requestor,
+        requestorFile: data.td_do_requestor_form.filepath_suratkuasa,
+        shippingLine: data.td_do_req_form.id_shippingline,
+        vesselName: data.td_do_req_form.nama_vessel || '',
+        voyageNumber: data.td_do_req_form.no_voyage || '',
+        blNumber: data.td_do_bl_form.no_bl || '',
+        blDate: data.td_do_bl_form.tgl_bl
+          ? moment(data.td_do_bl_form.tgl_bl, 'YYYY-MM-DD').format('YYYY-MM-DD')
+          : null,
+        blType: data.td_do_bl_form.id_jenis_bl || '',
+        blFile: data.td_do_bl_form.filepath_dok || '',
+        bc11Date: data.td_do_req_form.tanggal_bc11
+          ? moment(data.td_do_req_form.tanggal_bc11, 'YYYY-MM-DD').format(
+              'YYYY-MM-DD',
+            )
+          : null,
+        bc11Number: data.td_do_req_form.no_bc11 || '',
+        posNumber: data.td_do_req_form.pos_number || '',
+        reqdoExp: data.td_do_req_form.tgl_reqdo_exp
+          ? moment(data.td_do_req_form.tgl_reqdo_exp, 'YYYY-MM-DD').format(
+              'YYYY-MM-DD',
+            )
+          : null,
+        metodeBayar: data.td_do_req_form.id_metode_bayar || '',
+      },
+      partiesDetailForm: {
+        shipperName: data.td_parties_detail_form.nama_shipper || '',
+        consigneeName: data.td_parties_detail_form.nama_consignee || '',
+        consigneeNpwp: data.td_parties_detail_form.npwp_consignee || '',
+        notifyPartyName: data.td_parties_detail_form.nama_notifyparty || '',
+        notifyPartyNpwp: data.td_parties_detail_form.npwp_notifyparty || '',
+        placeLoading: data.td_parties_detail_form.id_negara_loading || '',
+        portLoading: data.td_parties_detail_form.id_port_loading || '',
+        placeDischarge: data.td_parties_detail_form.id_port_discharge || '',
+        placeDestination: data.td_parties_detail_form.id_port_destination || '',
+      },
+    };
+    return response;
+  }
+
+  async createContainerDetail(idDo: number, data: Container[], token: string) {
+    const userInfo = await this.userService.getDetail(token);
+    const created_by = userInfo.sub;
+
+    const headerData = await this.prisma.td_reqdo_header_form.findUnique({
+      where: {
+        id: idDo,
+      },
+    });
+
+    if (!headerData) {
+      throw new NotFoundException(
+        `Request Header DO by Id = ${idDo} not found!`,
+      );
+    }
+
+    await this.prisma.td_do_kontainer_form.deleteMany({
+      where: {
+        id_reqdo_header: idDo,
+      },
+    });
+
+    const promises = data.map((item) => {
+      return this.prisma.td_do_kontainer_form.create({
+        data: {
+          id_reqdo_header: idDo,
+          created_by,
+          gross_weight: item.grossWeight.amount,
+          no_kontainer: item.containerNo,
+          id_sizeType: item.sizeType.kodeSize,
+          id_ownership: +item.ownership,
+          id_gross_weight_unit: item.grossWeight.unit,
+          seals: {
+            create: item.sealNo.map((val) => ({
+              assignedBy: created_by,
+              seal: {
+                create: {
+                  no_seal: val,
+                },
+              },
+            })),
+          },
+        },
+      });
+    });
+
+    // Using Promise.all to wait for all promises to resolve
+    Promise.all(promises)
+      .then((results) => {
+        console.log('All promises resolved successfully');
+      })
+      .catch((error) => {
+        console.error('Error in one or more promises:', error);
+      });
+
+    await this.updateStatusDo(idDo, token, 'Draft');
+  }
+
+  async getContainerDetail(idDo: number, token: string) {
+    const userInfo = await this.userService.getDetail(token);
+
+    const data = await this.prisma.td_reqdo_header_form.findUnique({
+      include: {
+        td_do_kontainer_form: {
+          include: {
+            seals: {
+              include: {
+                seal: true,
+              },
+            },
+            td_depo: true,
+          },
+        },
+      },
+      where: {
+        id: idDo,
+      },
+    });
+
+    if (!data) {
+      throw new NotFoundException(
+        `Request Header Data by Id = ${idDo} not found!`,
+      );
+    }
+
+    const response = {
+      containerDetailForm: !!data.td_do_kontainer_form.length
+        ? data.td_do_kontainer_form.map((data) => ({
+            Id: data.id,
+            containerNumber: data.no_kontainer,
+            containerSeal: data.seals.map((item) => item.seal.no_seal),
+            sizeType: data.id_sizeType,
+            grossWeightAmount: data.gross_weight,
+            grossWeightUnit: data.id_gross_weight_unit,
+            ownership: data.id_ownership,
+            depoForm: {
+              Id: data.td_depo?.id,
+              nama: data.td_depo?.deskripsi,
+              npwp: data.td_depo?.npwp,
+              alamat: data.td_depo?.alamat,
+              noTelp: data.td_depo?.no_telp,
+              kota: data.td_depo?.id_kabkota,
+              kodePos: data.td_depo?.kode_pos,
+            },
+          }))
+        : [],
+    };
+
+    return response;
+  }
+
+  async createPaymentSupportingDetail(
+    idDo: number,
+    payload: PaymentSupportingDetail,
+    token: string,
+  ) {
+    const userInfo = await this.userService.getDetail(token);
+    const created_by = userInfo.sub;
+
+    const headerData = await this.prisma.td_reqdo_header_form.findUnique({
+      where: {
+        id: idDo,
+      },
+    });
+
+    if (!headerData) {
+      throw new NotFoundException(
+        `Request Header DO by Id = ${idDo} not found!`,
+      );
+    }
+
+    const dataDokumen = payload.supportingDocument.documentType.map((item) => {
+      const data: Partial<td_do_dok_form> = {
+        created_by,
+        id_jenis_dok: item.document,
+        filepath_dok: item.urlFile,
+        no_dok: item.documentNo,
+        tgl_dok: new Date(item.documentDate),
+      };
+
+      return data;
+    });
+
+    const dataInvoice = payload.paymentDetail.invoice.map((item) => {
+      const data: Partial<td_do_invoice_form> = {
+        created_by,
+        filepath_buktibayar: item.urlFile,
+        id_bank: item.bankId,
+        no_invoice: item.invoiceNo,
+        tgl_invoice: new Date(item.invoiceDate),
+        no_rekening: item.accountNo,
+        total_payment: item.totalAmount,
+        id_currency: item.currency, //TODO: ADD CURRENCY JSON
+      };
+      return data;
+    });
+
+    const result = await this.prisma.td_reqdo_header_form.update({
+      data: {
+        td_do_dok_form: {
+          deleteMany: {},
+          createMany: {
+            data: dataDokumen as td_do_dok_form[],
+          },
+        },
+        td_do_invoice_form: {
+          deleteMany: {},
+          createMany: {
+            data: dataInvoice as td_do_invoice_form[],
+          },
+        },
+      },
+      where: {
+        id: idDo,
+      },
+    });
+    await this.updateStatusDo(idDo, token, 'Draft');
+    return result;
+  }
+
+  async getPaymentSupportingDetail(idDo: number, token: string) {
+    const userInfo = await this.userService.getDetail(token);
+
+    const data = await this.prisma.td_reqdo_header_form.findUnique({
+      include: {
+        td_do_invoice_form: {
+          select: {
+            id: true,
+            id_bank: true,
+            id_currency: true,
+            filepath_buktibayar: true,
+            no_invoice: true,
+            no_rekening: true,
+            tgl_invoice: true,
+            total_payment: true,
+          },
+        },
+        td_do_dok_form: {
+          select: {
+            id: true,
+            id_jenis_dok: true,
+            filepath_dok: true,
+            no_dok: true,
+            tgl_dok: true,
+          },
+        },
+      },
+      where: {
+        id: idDo,
+      },
+    });
+
+    const response = {
+      paymentDetailForm: data.td_do_invoice_form.length
+        ? data.td_do_invoice_form.map((inv) => ({
+            invoiceNumber: inv.no_invoice,
+            invoiceDate: inv.tgl_invoice
+              ? moment(inv.tgl_invoice).format('YYYY-MM-DD')
+              : null,
+            currency: inv.id_currency,
+            totalPayment: inv.total_payment,
+            bank: inv.id_bank,
+            accountNumber: inv.no_rekening,
+            urlFile: inv.filepath_buktibayar,
+          }))
+        : [],
+      supportingDocumentForm: data.td_do_dok_form.length
+        ? data.td_do_dok_form.map((dok) => ({
+            documentType: dok.id_jenis_dok,
+            documentNumber: dok.no_dok,
+            documentDate: dok.tgl_dok
+              ? moment(dok.tgl_dok, 'YYYY-MM-DD').format('YYYY-MM-DD')
+              : null,
+            urlFile: dok.filepath_dok,
+          }))
+        : [],
+    };
+    return response;
+  }
+
+  async createCargoVinDetail(
+    idDo: number,
+    data: CargoVinDetail,
+    token: string,
+  ) {
+    const userInfo = await this.userService.getDetail(token);
+    const created_by = userInfo.sub;
+
+    const headerData = await this.prisma.td_reqdo_header_form.findUnique({
+      where: {
+        id: idDo,
+      },
+    });
+
+    if (!headerData) {
+      throw new NotFoundException(
+        `Request Header DO by Id = ${idDo} not found!`,
+      );
+    }
+
+    const dataNonKontainer = data.nonContainer.map((item) => {
+      const data: Partial<td_do_nonkontainer_form> = {
+        created_by,
+        updated_at: new Date(),
+        good_desc: item.goodsDescription,
+        gross_weight: item.grossWeight.amount,
+        id_gross_weight_unit: item.grossWeight.unit,
+        measurement_unit: item.measurementVolume.unit,
+        measurement_vol: item.measurementVolume.amount,
+        package_qty: item.packageQuantity.amount,
+        id_package_unit: item.packageQuantity.unit,
+      };
+      return data;
+    });
+
+    const dataVin = data.vinDetail.vinData.map((vin) => {
+      const data: Partial<td_do_vin> = {
+        no_vin: vin.vinNumber,
+      };
+      return data;
+    });
+
+    const result = await this.prisma.td_reqdo_header_form.update({
+      where: {
+        id: idDo,
+      },
+      data: {
+        td_do_bl_form: {
+          update: {
+            data: {
+              no_bl: data.vinDetail.ladingBillNumber,
+              do_vin: {
+                deleteMany: {},
+                createMany: {
+                  data: dataVin as td_do_vin[],
+                },
+              },
+            },
+          },
+        },
+        td_do_nonkontainer_form: {
+          deleteMany: {},
+          createMany: {
+            data: dataNonKontainer as td_do_nonkontainer_form[],
+          },
+        },
+      },
+    });
+    await this.updateStatusDo(idDo, token, 'Draft');
+    return result;
+  }
+
+  async getCargoVinDetail(idDo: number, token: string) {
+    const userInfo = await this.userService.getDetail(token);
+
+    const data = await this.prisma.td_reqdo_header_form.findUnique({
+      include: {
+        td_do_bl_form: {
+          select: {
+            no_bl: true,
+            do_vin: true,
+          },
+        },
+        td_do_nonkontainer_form: true,
+      },
+      where: {
+        id: idDo,
+      },
+    });
+
+    if (!data) {
+      throw new NotFoundException(
+        `Request Header DO b Id = ${idDo} not found!`,
+      );
+    }
+
+    const response = {
+      nonContainerDetailForm: data.td_do_nonkontainer_form.length
+        ? data.td_do_nonkontainer_form.map((data) => ({
+            Id: data.id,
+            goodsDescription: data.good_desc,
+            packageQuantityAmount: data.package_qty,
+            packageQuantityUnit: data.id_package_unit,
+            grossWeightAmount: data.gross_weight,
+            grossWeightUnit: data.id_gross_weight_unit,
+            measurementVolume: data.measurement_vol,
+            measurementUnit: data.measurement_unit,
+          }))
+        : [],
+      vinDetailForm: {
+        ladingBillNumber: data.td_do_bl_form.no_bl,
+        vinData: data.td_do_bl_form.do_vin.length
+          ? data.td_do_bl_form.do_vin.map((vin) => ({
+              Id: vin.id,
+              vinNumber: vin.no_vin,
+            }))
+          : [],
+      },
+    };
+
+    return response;
   }
 }
