@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   ConsoleLogger,
+  HttpException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -28,12 +29,10 @@ import * as moment from 'moment-timezone';
 import { UserService } from 'src/user/user.service';
 import { fonts, generateNoReq, jsonToBodyPdf } from 'src/util';
 import { ShippinglineService } from 'src/referensi/shippingline/shippingline.service';
-import { DepoService } from 'src/referensi/depo/depo.service';
 import { SmartContractService } from 'src/smart-contract/smart-contract.service';
 import { v4 as uuidv4 } from 'uuid';
 import * as pdfPrinter from 'pdfmake';
 import * as fs from 'fs';
-import { timeStamp } from 'console';
 
 @Injectable()
 export class DeliveryOrderService {
@@ -41,7 +40,6 @@ export class DeliveryOrderService {
     private prisma: PrismaService,
     private userService: UserService,
     private shippinglineService: ShippinglineService,
-    private depoService: DepoService,
     private smartContractService: SmartContractService,
   ) {}
 
@@ -104,7 +102,7 @@ export class DeliveryOrderService {
           ? moment(item.td_do_bl_form.tgl_bl, 'DD-MM-YYYY').format('DD-MM-YYYY')
           : null,
         requestName: item.td_do_requestor_form.nama,
-        shippingLine: item.td_do_req_form.id_shippingline.split('|')[0].trim(),
+        shippingLine: item.td_do_req_form.id_shippingline.split('|')[1].trim(),
         status: item.td_reqdo_status[0].name,
         isContainer: item.request_type == 1,
       }));
@@ -137,13 +135,15 @@ export class DeliveryOrderService {
           blNumber: item.Record.requestDetail.document.ladingBillNumber,
           blDate: item.Record.requestDetail.document.ladingBillDate
             ? moment(
-                item.Record.requestDetail.document.ladingBillDate,
+                new Date(
+                  Date.parse(item.Record.requestDetail.document.ladingBillDate),
+                ),
                 'DD-MM-YYYY',
               ).format('DD-MM-YYYY')
             : null,
           requestName: item.Record.requestDetail.requestor.requestorName,
           shippingLine: item.Record.requestDetail.shippingLine.shippingType
-            .split('|')[0]
+            .split('|')[1]
             .trim(),
           status: item.Record.status,
           isContainer: item.Record.requestType == 1,
@@ -195,9 +195,7 @@ export class DeliveryOrderService {
             ).format('DD-MM-YYYY')
           : null,
         requestName: item.Record.requestDetail.requestor.requestorName,
-        shippingLine: item.Record.requestDetail.shippingLine.shippingType
-          .split('|')[0]
-          .trim(),
+        shippingLine: item.Record.requestDetail.shippingLine.shippingDetail,
         status: item.Record.status,
         isContainer: item.Record.requestType == 1,
       });
@@ -423,47 +421,79 @@ export class DeliveryOrderService {
             data: dataInvoice as td_do_invoice_form[],
           },
         },
-        td_do_kontainer_form: {
-          deleteMany: {},
-        },
       },
     });
 
-    const promises = data.cargoDetail.container.map((item) => {
-      return this.prisma.td_do_kontainer_form.create({
-        data: {
-          id_reqdo_header: idDO,
-          updated_by,
-          created_by: updated_by,
-          updated_at: new Date(),
-          gross_weight: item.grossWeight.amount,
-          no_kontainer: item.containerNo,
-          id_sizeType: item.sizeType.kodeSize,
-          id_ownership: +item.ownership,
-          id_gross_weight_unit: item.grossWeight.unit,
-          td_depo: {
-            create: {
-              created_by: userInfo.sub,
-              alamat: '',
-              deskripsi: '',
-              id_kabkota: '',
-              kode_pos: '',
-              no_telp: '',
-              npwp: '',
+    const promises = data.cargoDetail.container.map(async (item) => {
+      if (!!+item.Id) {
+        const con = await this.prisma.td_do_kontainer_form.findUnique({
+          where: {
+            id: +item.Id,
+          },
+        });
+        if (con) {
+          return this.prisma.td_do_kontainer_form.update({
+            where: {
+              id: +item.Id,
+            },
+            data: {
+              id_reqdo_header: idDO,
+              updated_by,
+              updated_at: new Date(),
+              gross_weight: item.grossWeight.amount,
+              no_kontainer: item.containerNo,
+              id_sizeType: item.sizeType.kodeSize,
+              id_ownership: +item.ownership,
+              id_gross_weight_unit: item.grossWeight.unit,
+              seals: {
+                deleteMany: {},
+                create: item.sealNo.map((val) => ({
+                  assignedBy: updated_by,
+                  seal: {
+                    create: {
+                      no_seal: val,
+                    },
+                  },
+                })),
+              },
+            },
+          });
+        }
+      } else {
+        return this.prisma.td_do_kontainer_form.create({
+          data: {
+            id_reqdo_header: idDO,
+            created_at: new Date(),
+            created_by: updated_by,
+            gross_weight: item.grossWeight.amount,
+            no_kontainer: item.containerNo,
+            id_sizeType: item.sizeType.kodeSize,
+            id_ownership: +item.ownership,
+            id_gross_weight_unit: item.grossWeight.unit,
+            td_depo: {
+              create: {
+                created_by: userInfo.sub,
+                alamat: '',
+                deskripsi: '',
+                id_kabkota: '',
+                kode_pos: '',
+                no_telp: '',
+                npwp: '',
+              },
+            },
+            seals: {
+              create: item.sealNo.map((val) => ({
+                assignedBy: updated_by,
+                seal: {
+                  create: {
+                    no_seal: val,
+                  },
+                },
+              })),
             },
           },
-          seals: {
-            create: item.sealNo.map((val) => ({
-              assignedBy: updated_by,
-              seal: {
-                create: {
-                  no_seal: val,
-                },
-              },
-            })),
-          },
-        },
-      });
+        });
+      }
     });
 
     // Using Promise.all to wait for all promises to resolve
@@ -473,6 +503,8 @@ export class DeliveryOrderService {
         const doDraft = await this.getDataDraft(idDO);
         data.requestDetail.requestor.urlFile =
           doDraft.td_do_requestor_form.filepath_suratkuasa;
+        data.requestDetail.requestor.requestorName =
+          doDraft.td_do_requestor_form.nama;
         data.requestDetail.requestor.requestorId = userInfo.sub;
         data.requestDetail.requestDoNumber = doDraft.no_reqdo;
         data.requestDetail.shippingLine.shippingDetail =
@@ -493,22 +525,22 @@ export class DeliveryOrderService {
 
         // CASE 1 : IF THE STATUS IS SUBMITTED AND THE LAST STATUS OR BEFORE IS REJECTED, THEN HIT UPDATE DO SMART CONTRACT
         if (listStatusDO.includes('Rejected') && status === 'Submitted') {
-          const listConData: Container[] = [];
+          const listConData = [];
           doDraft.td_do_kontainer_form.forEach((con) => {
             const result = {
-              Id: con.id,
+              Id: String(con.id),
               containerNo: con.no_kontainer,
               grossWeight: {
                 amount: con.gross_weight,
                 unit: con.id_gross_weight_unit,
               },
               sealNo: con.seals.map((seal) => seal.seal.no_seal),
-              ownership: String(con.id_ownership),
+              ownership: con.id_ownership,
               sizeType: {
                 kodeSize: con.id_sizeType,
               },
               depoDetail: {
-                depoId: con.td_depo.id ? con.td_depo.id : null,
+                Id: con.td_depo.id ? String(con.td_depo.id) : '',
                 depoName: con.td_depo.deskripsi ? con.td_depo.deskripsi : '',
                 depoNpwp: con.td_depo.npwp ? con.td_depo.npwp : '',
                 noTelp: con.td_depo.no_telp ? con.td_depo.no_telp : '',
@@ -553,11 +585,11 @@ export class DeliveryOrderService {
               request_type: data.requestType,
               no_reqdo: data.requestDetail.requestDoNumber,
               created_by: data.requestDetail.requestor.requestorId,
-              tgl_reqdo: new Date(result.response.datetime),
+              tgl_reqdo: new Date(result.datetime),
               td_reqdo_status: {
                 create: {
-                  name: result.response.status,
-                  datetime_status: new Date(result.response.datetime),
+                  name: result.status,
+                  datetime_status: new Date(result.datetime),
                 },
               },
             },
@@ -569,7 +601,7 @@ export class DeliveryOrderService {
           const listConData: Container[] = [];
           doDraft.td_do_kontainer_form.forEach((con) => {
             const result = {
-              Id: con.id,
+              Id: String(con.id),
               containerNo: con.no_kontainer,
               grossWeight: {
                 amount: con.gross_weight,
@@ -581,7 +613,7 @@ export class DeliveryOrderService {
                 kodeSize: con.id_sizeType,
               },
               depoDetail: {
-                depoId: con.td_depo.id ? con.td_depo.id : null,
+                Id: con.td_depo.id ? String(con.td_depo.id) : '',
                 depoName: con.td_depo.deskripsi ? con.td_depo.deskripsi : '',
                 depoNpwp: con.td_depo.npwp ? con.td_depo.npwp : '',
                 noTelp: con.td_depo.no_telp ? con.td_depo.no_telp : '',
@@ -592,7 +624,6 @@ export class DeliveryOrderService {
             };
             listConData.push(result);
           });
-          console.log(listConData);
 
           data.cargoDetail.container = listConData;
 
@@ -641,6 +672,7 @@ export class DeliveryOrderService {
     );
     const userInfo = await this.userService.getDetail(token);
     const updated_by = userInfo.sub;
+    const created_by = userInfo.sub;
 
     // CHECK IF USER ROLE IS CO
     if (userInfo.profile.details.kd_detail_ga) {
@@ -690,22 +722,6 @@ export class DeliveryOrderService {
       throw new BadRequestException(`DO by id = ${idDO} not found.`);
     }
 
-    const dataNonKontainer = data.cargoDetail.nonContainer.map((item) => {
-      const data: Partial<td_do_nonkontainer_form> = {
-        created_by: updated_by,
-        updated_by,
-        updated_at: new Date(),
-        good_desc: item.goodsDescription,
-        gross_weight: item.grossWeight.amount,
-        id_gross_weight_unit: item.grossWeight.unit,
-        measurement_unit: item.measurementVolume.unit,
-        measurement_vol: item.measurementVolume.amount,
-        package_qty: item.packageQuantity.amount,
-        id_package_unit: item.packageQuantity.unit,
-      };
-      return data;
-    });
-
     const dataDokumen = data.supportingDocument.documentType.map((item) => {
       const data: Partial<td_do_dok_form> = {
         created_by: updated_by,
@@ -731,6 +747,21 @@ export class DeliveryOrderService {
         no_rekening: item.accountNo,
         total_payment: item.totalAmount,
         id_currency: item.currency,
+      };
+      return data;
+    });
+
+    const dataNonKontainer = data.cargoDetail.nonContainer.map((item) => {
+      const data: Partial<td_do_nonkontainer_form> = {
+        created_by,
+        updated_at: new Date(),
+        good_desc: item.goodsDescription,
+        gross_weight: item.grossWeight.amount,
+        id_gross_weight_unit: item.grossWeight.unit,
+        measurement_unit: item.measurementVolume.unit,
+        measurement_vol: item.measurementVolume.amount,
+        package_qty: item.packageQuantity.amount,
+        id_package_unit: item.packageQuantity.unit,
       };
       return data;
     });
@@ -826,45 +857,37 @@ export class DeliveryOrderService {
 
     const doDraft = await this.getDataDraft(idDO);
 
-    const listCargoData: NonContainer[] = [];
-    const listVinData: { Id: number; vinNumber: string }[] = [];
-
-    doDraft.td_do_nonkontainer_form.forEach((con) => {
-      const result = {
-        Id: con.id,
-        goodsDescription: con.good_desc,
+    data.cargoDetail.nonContainer = doDraft.td_do_nonkontainer_form.map(
+      (item) => ({
+        Id: String(item.id),
+        goodsDescription: item.good_desc,
         packageQuantity: {
-          amount: con.package_qty,
-          unit: con.id_package_unit,
+          amount: item.package_qty,
+          unit: item.id_package_unit,
         },
         grossWeight: {
-          amount: con.gross_weight,
-          unit: con.id_gross_weight_unit,
+          amount: item.gross_weight,
+          unit: item.id_gross_weight_unit,
         },
         measurementVolume: {
-          amount: con.measurement_vol,
-          unit: con.measurement_unit,
+          amount: item.measurement_vol,
+          unit: item.measurement_unit,
         },
-      };
-      listCargoData.push(result);
-    });
+      }),
+    );
 
-    doDraft.td_do_bl_form.do_vin.forEach((vin) => {
-      const result = {
-        Id: vin.id,
-        vinNumber: vin.no_vin,
-      };
-      listVinData.push(result);
-    });
-
-    data.cargoDetail.nonContainer = listCargoData;
     data.vinDetail = {
       ladingBillNumber: doDraft.td_do_bl_form.no_bl,
-      vinData: listVinData,
+      vinData: doDraft.td_do_bl_form.do_vin.map((item) => ({
+        Id: String(item.id),
+        vinNumber: item.no_vin,
+      })),
     };
 
     data.requestDetail.requestor.urlFile =
       doDraft.td_do_requestor_form.filepath_suratkuasa;
+    data.requestDetail.requestor.requestorName =
+      doDraft.td_do_requestor_form.nama;
     data.requestDetail.requestor.requestorId = userInfo.sub;
     data.requestDetail.requestDoNumber = doDraft.no_reqdo;
     data.requestDetail.shippingLine.shippingDetail =
@@ -905,6 +928,8 @@ export class DeliveryOrderService {
         doDraft.td_reqdo_status[0].note,
       );
 
+      console.log(result);
+
       // generate status do to smart contract
       const headerDo = await this.prisma.td_reqdo_header_form.update({
         where: {
@@ -915,7 +940,13 @@ export class DeliveryOrderService {
           request_type: data.requestType,
           no_reqdo: data.requestDetail.requestDoNumber,
           created_by: data.requestDetail.requestor.requestorId,
-          tgl_reqdo: new Date(result.response.datetime),
+          tgl_reqdo: new Date(result.datetime),
+          td_reqdo_status: {
+            create: {
+              name: result.status,
+              datetime_status: new Date(result.datetime),
+            },
+          },
         },
       });
     }
@@ -1098,28 +1129,14 @@ export class DeliveryOrderService {
             no_kontainer: data.cargoDetail[i].containerNo,
             id_sizeType: data.cargoDetail[i].sizeType.kodeSize,
             td_depo: {
-              upsert: {
-                create: {
-                  deskripsi: data.cargoDetail[i].depoDetail.depoName,
-                  npwp: data.cargoDetail[i].depoDetail.depoNpwp,
-                  no_telp: data.cargoDetail[i].depoDetail.noTelp,
-                  alamat: data.cargoDetail[i].depoDetail.alamat,
-                  kode_pos: data.cargoDetail[i].depoDetail.kodePos,
-                  id_kabkota: data.cargoDetail[i].depoDetail.kotaDepo,
-                  created_by: userInfo.sub,
-                },
-                update: {
-                  deskripsi: data.cargoDetail[i].depoDetail.depoName,
-                  npwp: data.cargoDetail[i].depoDetail.depoNpwp,
-                  no_telp: data.cargoDetail[i].depoDetail.noTelp,
-                  alamat: data.cargoDetail[i].depoDetail.alamat,
-                  kode_pos: data.cargoDetail[i].depoDetail.kodePos,
-                  id_kabkota: data.cargoDetail[i].depoDetail.kotaDepo,
-                  created_by: userInfo.sub,
-                },
-                where: {
-                  id_kontainer: conData[i].id,
-                },
+              update: {
+                deskripsi: data.cargoDetail[i].depoDetail.depoName,
+                npwp: data.cargoDetail[i].depoDetail.depoNpwp,
+                no_telp: data.cargoDetail[i].depoDetail.noTelp,
+                alamat: data.cargoDetail[i].depoDetail.alamat,
+                kode_pos: data.cargoDetail[i].depoDetail.kodePos,
+                id_kabkota: data.cargoDetail[i].depoDetail.kotaDepo,
+                created_by: userInfo.sub,
               },
             },
           },
@@ -1199,7 +1216,7 @@ export class DeliveryOrderService {
 
     const lastStatus = headerData.td_reqdo_status[0];
 
-    if (lastStatus.name === 'Draft' && status === 'Draft') {
+    if (lastStatus.name === status) {
       const updatedStatus = await this.prisma.td_reqdo_status.update({
         data: {
           name: status,
@@ -1756,7 +1773,7 @@ export class DeliveryOrderService {
             id_jenis_requestor: +data.requestor.requestorType,
             alamat: userInfo.organization.address.address,
             created_by,
-            nama: userInfo.organization.details.name,
+            nama: userInfo.profile.details.full_name,
             nib: userInfo.organization.nib,
             npwp: userInfo.organization.npwp,
             filepath_suratkuasa: data.requestor.urlFile || '',
@@ -1870,9 +1887,21 @@ export class DeliveryOrderService {
     return response;
   }
 
-  async updateRequestDetail(idDo: number, data: RequestDetail, token: string) {
+  async updateRequestDetail(
+    idDo: number,
+    data: RequestDetail,
+    token: string,
+    status: StatusDo,
+  ) {
     const userInfo = await this.userService.getDetail(token);
     const created_by = userInfo.sub;
+
+    if (!['Processed', 'Draft'].includes(status)) {
+      throw new BadRequestException(
+        `Status is invalid, must be Processed or Draft`,
+      );
+    }
+
     const result = await this.prisma.td_reqdo_header_form.update({
       where: {
         id: idDo,
@@ -1896,6 +1925,15 @@ export class DeliveryOrderService {
             tanggal_bc11: data.document.bc11Date
               ? new Date(data.document.bc11Date)
               : null,
+            id_terminal_op: data.terminalOp,
+            call_sign: data.callSign,
+            no_do_release: data.doReleaseNo,
+            tgl_do_exp: data.doExpiredDate
+              ? new Date(data.doExpiredDate)
+              : null,
+            tgl_do_release: data.doReleaseDate
+              ? new Date(data.doReleaseDate)
+              : null,
           },
         },
         td_do_requestor_form: {
@@ -1914,7 +1952,7 @@ export class DeliveryOrderService {
         },
       },
     });
-    await this.updateStatusDo(idDo, token, 'Draft');
+    await this.updateStatusDo(idDo, token, status);
     return result;
   }
 
@@ -2106,9 +2144,20 @@ export class DeliveryOrderService {
     return response;
   }
 
-  async createContainerDetail(idDo: number, data: Container[], token: string) {
+  async createContainerDetail(
+    idDo: number,
+    data: Container[],
+    token: string,
+    status: StatusDo,
+  ) {
     const userInfo = await this.userService.getDetail(token);
     const created_by = userInfo.sub;
+
+    if (!['Processed', 'Draft'].includes(status)) {
+      throw new BadRequestException(
+        `Status is invalid, must be Processed or Draft`,
+      );
+    }
 
     const headerData = await this.prisma.td_reqdo_header_form.findUnique({
       where: {
@@ -2122,34 +2171,95 @@ export class DeliveryOrderService {
       );
     }
 
-    await this.prisma.td_do_kontainer_form.deleteMany({
-      where: {
-        id_reqdo_header: idDo,
-      },
-    });
-
-    const promises = data.map((item) => {
-      return this.prisma.td_do_kontainer_form.create({
-        data: {
+    // delete all container data
+    if (data.length === 0) {
+      await this.prisma.td_do_kontainer_form.deleteMany({
+        where: {
           id_reqdo_header: idDo,
-          created_by,
-          gross_weight: item.grossWeight.amount,
-          no_kontainer: item.containerNo,
-          id_sizeType: item.sizeType.kodeSize,
-          id_ownership: +item.ownership,
-          id_gross_weight_unit: item.grossWeight.unit,
-          seals: {
-            create: item.sealNo.map((val) => ({
-              assignedBy: created_by,
-              seal: {
-                create: {
-                  no_seal: val,
-                },
-              },
-            })),
-          },
         },
       });
+
+      return await this.updateStatusDo(idDo, token, 'Draft');
+    }
+
+    const promises = data.map(async (item) => {
+      if (!!+item.Id) {
+        const con = await this.prisma.td_do_kontainer_form.findUnique({
+          where: {
+            id: +item.Id,
+          },
+        });
+        if (con) {
+          return this.prisma.td_do_kontainer_form.update({
+            where: {
+              id: con.id,
+            },
+            data: {
+              id_reqdo_header: idDo,
+              created_by,
+              gross_weight: item.grossWeight.amount,
+              no_kontainer: item.containerNo,
+              id_sizeType: item.sizeType.kodeSize,
+              id_ownership: +item.ownership,
+              id_gross_weight_unit: item.grossWeight.unit,
+              td_depo: {
+                update: {
+                  alamat: item.depoDetail.alamat,
+                  deskripsi: item.depoDetail.depoName,
+                  id_kabkota: item.depoDetail.kotaDepo,
+                  kode_pos: item.depoDetail.kodePos,
+                  no_telp: item.depoDetail.noTelp,
+                  npwp: item.depoDetail.depoNpwp,
+                },
+              },
+              seals: {
+                deleteMany: {},
+                create: item.sealNo.map((val) => ({
+                  assignedBy: created_by,
+                  seal: {
+                    create: {
+                      no_seal: val,
+                    },
+                  },
+                })),
+              },
+            },
+          });
+        }
+      } else {
+        return this.prisma.td_do_kontainer_form.create({
+          data: {
+            id_reqdo_header: idDo,
+            created_by,
+            gross_weight: item.grossWeight.amount,
+            no_kontainer: item.containerNo,
+            id_sizeType: item.sizeType.kodeSize,
+            id_ownership: +item.ownership,
+            id_gross_weight_unit: item.grossWeight.unit,
+            td_depo: {
+              create: {
+                created_by: userInfo.sub,
+                alamat: '',
+                deskripsi: '',
+                id_kabkota: '',
+                kode_pos: '',
+                no_telp: '',
+                npwp: '',
+              },
+            },
+            seals: {
+              create: item.sealNo.map((val) => ({
+                assignedBy: created_by,
+                seal: {
+                  create: {
+                    no_seal: val,
+                  },
+                },
+              })),
+            },
+          },
+        });
+      }
     });
 
     // Using Promise.all to wait for all promises to resolve
@@ -2161,7 +2271,7 @@ export class DeliveryOrderService {
         console.error('Error in one or more promises:', error);
       });
 
-    await this.updateStatusDo(idDo, token, 'Draft');
+    await this.updateStatusDo(idDo, token, status);
   }
 
   async getContainerDetail(idDo: number, token: string) {
@@ -2215,6 +2325,24 @@ export class DeliveryOrderService {
     };
 
     return response;
+  }
+
+  async deleteContainerDetail(id: number, token: string) {
+    const userInfo = this.userService.getDetail(token);
+    const con = await this.prisma.td_do_kontainer_form.findUnique({
+      where: {
+        id: id,
+      },
+    });
+    if (!con) {
+      throw new NotFoundException(`Container data by Id = ${id} not found!`);
+    }
+
+    return await this.prisma.td_do_kontainer_form.delete({
+      where: {
+        id: +id,
+      },
+    });
   }
 
   async createPaymentSupportingDetail(

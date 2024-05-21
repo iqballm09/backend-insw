@@ -3,7 +3,6 @@ import { AppModule } from './app.module';
 import * as passport from 'passport';
 import * as session from 'express-session';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
-import { NestExpressApplication } from '@nestjs/platform-express';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, { cors: true });
@@ -16,7 +15,7 @@ async function bootstrap() {
       saveUninitialized: false, // will default to false in near future: https://github.com/expressjs/session#saveuninitialized
       rolling: true, // keep session alive
       cookie: {
-        maxAge: 30 * 60 * 1000, // session expires in 1hr, refreshed by `rolling: true` option.
+        maxAge: 60 * 60 * 1000, // session expires in 1hr, refreshed by `rolling: true` option.
         httpOnly: true, // so that cookie can't be accessed via client-side script
       },
     }),

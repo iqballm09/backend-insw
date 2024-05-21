@@ -8,17 +8,14 @@ import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 export class PelabuhanController {
   constructor(private readonly pelabuhanService: PelabuhanService) {}
 
-  @Get('indonesia')
-  @ApiBearerAuth()
-  @UseGuards(AuthGuard)
-  findAllIndo(@Req() req: any) {
-    return this.pelabuhanService.findAllIndo(req.token);
-  }
-
   @Get()
   @ApiBearerAuth()
   @UseGuards(AuthGuard)
-  findAll(@Req() req: any, @Query('keyword') keyword: string) {
-    return this.pelabuhanService.findAll(req.token, keyword);
+  findAll(
+    @Req() req: any,
+    @Query('kodeNegara') kodeNegara: string,
+    @Query('keyword') keyword: string,
+  ) {
+    return this.pelabuhanService.findAll(req.token, kodeNegara, keyword);
   }
 }

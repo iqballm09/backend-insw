@@ -106,21 +106,24 @@ export class DeliveryOrderController {
     return this.deliveryOrderService.getRequestDetail(+id, req.token);
   }
 
-  @Put('forms/request-detail/:id')
+  @Put('forms/request-detail/:id?')
   @UseGuards(AuthGuard)
   @ApiBody({
     type: RequestDetail,
   })
+  @ApiQuery({ name: 'status', enum: StatusDo })
   @ApiBearerAuth()
   updateRequestDetail(
     @Param('id') id: number,
     @Body() payload: RequestDetail,
     @Req() req: any,
+    @Query('status') status: StatusDo,
   ) {
     return this.deliveryOrderService.updateRequestDetail(
       +id,
       payload,
       req.token,
+      status,
     );
   }
 
@@ -175,19 +178,22 @@ export class DeliveryOrderController {
     return this.deliveryOrderService.getPaymentSupportingDetail(+id, req.token);
   }
 
-  @Post('forms/kontainer-detail/:id')
+  @Post('forms/kontainer-detail/:id?')
   @HttpCode(201)
   @UseGuards(AuthGuard)
+  @ApiQuery({ name: 'status', enum: StatusDo })
   @ApiBearerAuth()
   createContainerDetail(
     @Param('id') id: number,
     @Body() payload: Container[],
     @Req() req: any,
+    @Query('status') status: StatusDo,
   ) {
     return this.deliveryOrderService.createContainerDetail(
       +id,
       payload,
       req.token,
+      status,
     );
   }
 
@@ -197,6 +203,14 @@ export class DeliveryOrderController {
   @ApiBearerAuth()
   getContainerDetail(@Param('id') id: number, @Req() req: any) {
     return this.deliveryOrderService.getContainerDetail(+id, req.token);
+  }
+
+  @Delete('forms/kontainer-detail/:id')
+  @HttpCode(200)
+  @UseGuards(AuthGuard)
+  @ApiBearerAuth()
+  deleteContainerDetail(@Param('id') id: number, @Req() req: any) {
+    return this.deliveryOrderService.deleteContainerDetail(+id, req.token);
   }
 
   @Post('forms/cargovin-detail/:id')

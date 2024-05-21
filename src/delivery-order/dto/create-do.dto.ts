@@ -70,7 +70,7 @@ class MeasurementVolume {
 }
 
 export class Container {
-  Id?: number;
+  Id: string;
   containerNo: string;
   sealNo: string[];
   sizeType: SizeType;
@@ -80,7 +80,7 @@ export class Container {
 }
 
 export class NonContainer {
-  Id?: number;
+  Id: string;
   goodsDescription: string;
   packageQuantity: PackageQuantity;
   grossWeight: GrossWeight;
@@ -114,7 +114,7 @@ class DocumentType {
 export class VinDetail {
   ladingBillNumber: string;
   vinData: {
-    Id?: number;
+    Id: string;
     vinNumber: string;
   }[];
 }
@@ -155,7 +155,7 @@ export class CargoVinDetail {
   vinDetail?: {
     ladingBillNumber?: string;
     vinData: {
-      Id?: number;
+      Id: string;
       vinNumber: string;
     }[];
   };
@@ -186,7 +186,7 @@ export class RequestDoDto {
 }
 
 export class DepoDto {
-  depoId?: number;
+  Id?: string;
   depoName?: string;
   depoNpwp?: string;
   noTelp?: string;
