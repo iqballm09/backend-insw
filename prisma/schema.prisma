@@ -10,17 +10,18 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-enum UserRole {
-  CO
-  SL
-}
-
 enum StatusDo {
   Draft
   Submitted
   Processed
   Released
   Rejected
+  Cancelled
+}
+
+enum UserRole {
+  CO
+  SL
 }
 
 model Role {

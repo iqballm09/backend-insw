@@ -62,6 +62,7 @@ export class DeliveryOrderService {
         td_do_req_form: {
           select: {
             id_shippingline: true,
+            tgl_do_exp: true,
           },
         },
         td_parties_detail_form: {
@@ -102,6 +103,11 @@ export class DeliveryOrderService {
           ? moment(item.td_do_bl_form.tgl_bl, 'DD-MM-YYYY').format('DD-MM-YYYY')
           : null,
         requestName: item.td_do_requestor_form.nama,
+        doExp: item.td_do_req_form.tgl_do_exp
+          ? moment(item.td_do_req_form.tgl_do_exp, 'DD-MM-YYYY').format(
+              'DD-MM-YYYY',
+            )
+          : null,
         shippingLine: item.td_do_req_form.id_shippingline.split('|')[1].trim(),
         status: item.td_reqdo_status[0].name,
         isContainer: item.request_type == 1,
@@ -141,10 +147,16 @@ export class DeliveryOrderService {
                 'DD-MM-YYYY',
               ).format('DD-MM-YYYY')
             : null,
+          doExp: item.Record.requestDetail.shippingLine.doExpired
+            ? moment(
+                new Date(
+                  Date.parse(item.Record.requestDetail.shippingLine.doExpired),
+                ),
+                'DD-MM-YYYY',
+              ).format('DD-MM-YYYY')
+            : null,
           requestName: item.Record.requestDetail.requestor.requestorName,
-          shippingLine: item.Record.requestDetail.shippingLine.shippingType
-            .split('|')[1]
-            .trim(),
+          shippingLine: item.Record.requestDetail.shippingLine.shippingDetail,
           status: item.Record.status,
           isContainer: item.Record.requestType == 1,
         });
@@ -190,7 +202,17 @@ export class DeliveryOrderService {
         blNumber: item.Record.requestDetail.document.ladingBillNumber,
         blDate: item.Record.requestDetail.document.ladingBillDate
           ? moment(
-              item.Record.requestDetail.document.ladingBillDate,
+              new Date(
+                Date.parse(item.Record.requestDetail.document.ladingBillDate),
+              ),
+              'DD-MM-YYYY',
+            ).format('DD-MM-YYYY')
+          : null,
+        doExp: item.Record.requestDetail.shippingLine.doExpired
+          ? moment(
+              new Date(
+                Date.parse(item.Record.requestDetail.shippingLine.doExpired),
+              ),
               'DD-MM-YYYY',
             ).format('DD-MM-YYYY')
           : null,
@@ -1016,6 +1038,7 @@ export class DeliveryOrderService {
       userInfo.sub,
       headerData.order_id,
       'Processed',
+      '',
     );
 
     const updatedStatusDO = await this.prisma.td_reqdo_header_form.update({
@@ -1741,6 +1764,13 @@ export class DeliveryOrderService {
     const userInfo = await this.userService.getDetail(token);
     const created_by = userInfo.sub;
 
+    // CHECK IF USER ROLE IS CO
+    if (userInfo.profile.details.kd_detail_ga) {
+      throw new BadRequestException(
+        'Cannot update DO container, Role is not CO',
+      );
+    }
+
     const result = await this.prisma.td_reqdo_header_form.create({
       data: {
         no_reqdo: generateNoReq(
@@ -1896,6 +1926,13 @@ export class DeliveryOrderService {
     const userInfo = await this.userService.getDetail(token);
     const created_by = userInfo.sub;
 
+    // CHECK IF USER ROLE IS CO
+    if (userInfo.profile.details.kd_detail_ga) {
+      throw new BadRequestException(
+        'Cannot update DO container, Role is not CO',
+      );
+    }
+
     if (!['Processed', 'Draft'].includes(status)) {
       throw new BadRequestException(
         `Status is invalid, must be Processed or Draft`,
@@ -1963,6 +2000,13 @@ export class DeliveryOrderService {
   ) {
     const userInfo = await this.userService.getDetail(token);
     const created_by = userInfo.sub;
+
+    // CHECK IF USER ROLE IS CO
+    if (userInfo.profile.details.kd_detail_ga) {
+      throw new BadRequestException(
+        'Cannot update DO container, Role is not CO',
+      );
+    }
 
     const result = await this.prisma.td_reqdo_header_form.update({
       data: {
@@ -2153,6 +2197,13 @@ export class DeliveryOrderService {
     const userInfo = await this.userService.getDetail(token);
     const created_by = userInfo.sub;
 
+    // CHECK IF USER ROLE IS CO
+    if (userInfo.profile.details.kd_detail_ga) {
+      throw new BadRequestException(
+        'Cannot update DO container, Role is not CO',
+      );
+    }
+
     if (!['Processed', 'Draft'].includes(status)) {
       throw new BadRequestException(
         `Status is invalid, must be Processed or Draft`,
@@ -2277,6 +2328,13 @@ export class DeliveryOrderService {
   async getContainerDetail(idDo: number, token: string) {
     const userInfo = await this.userService.getDetail(token);
 
+    // CHECK IF USER ROLE IS CO
+    if (userInfo.profile.details.kd_detail_ga) {
+      throw new BadRequestException(
+        'Cannot update DO container, Role is not CO',
+      );
+    }
+
     const data = await this.prisma.td_reqdo_header_form.findUnique({
       include: {
         td_do_kontainer_form: {
@@ -2328,7 +2386,15 @@ export class DeliveryOrderService {
   }
 
   async deleteContainerDetail(id: number, token: string) {
-    const userInfo = this.userService.getDetail(token);
+    const userInfo = await this.userService.getDetail(token);
+
+    // CHECK IF USER ROLE IS CO
+    if (userInfo.profile.details.kd_detail_ga) {
+      throw new BadRequestException(
+        'Cannot update DO container, Role is not CO',
+      );
+    }
+
     const con = await this.prisma.td_do_kontainer_form.findUnique({
       where: {
         id: id,
@@ -2352,6 +2418,13 @@ export class DeliveryOrderService {
   ) {
     const userInfo = await this.userService.getDetail(token);
     const created_by = userInfo.sub;
+
+    // CHECK IF USER ROLE IS CO
+    if (userInfo.profile.details.kd_detail_ga) {
+      throw new BadRequestException(
+        'Cannot update DO container, Role is not CO',
+      );
+    }
 
     const headerData = await this.prisma.td_reqdo_header_form.findUnique({
       where: {
@@ -2482,6 +2555,13 @@ export class DeliveryOrderService {
     const userInfo = await this.userService.getDetail(token);
     const created_by = userInfo.sub;
 
+    // CHECK IF USER ROLE IS CO
+    if (userInfo.profile.details.kd_detail_ga) {
+      throw new BadRequestException(
+        'Cannot update DO container, Role is not CO',
+      );
+    }
+
     const headerData = await this.prisma.td_reqdo_header_form.findUnique({
       where: {
         id: idDo,
@@ -2595,5 +2675,90 @@ export class DeliveryOrderService {
     };
 
     return response;
+  }
+
+  async cancelDo(idDo: number, note: string, token: string) {
+    const userInfo = await this.userService.getDetail(token);
+
+    // CHECK IF USER ROLE IS CO
+    if (!userInfo.profile.details.kd_detail_ga) {
+      throw new BadRequestException(
+        'Cannot update DO container, Role is not SL',
+      );
+    }
+
+    const headerDo = await this.getHeaderData(idDo);
+
+    if (!headerDo) {
+      throw new NotFoundException(`DO Data by Id = ${idDo} is not exist`);
+    }
+
+    const statusDO = await this.smartContractService.getStatusDo(
+      headerDo.order_id,
+    );
+
+    const dataDO = await this.getDoDetailSC(userInfo.sub, headerDo.order_id);
+
+    if (statusDO.status !== 'Released') {
+      throw new BadRequestException(
+        `Cannot update status DO to Cancelled, last status DO is not Released`,
+      );
+    }
+
+    // update status DO SL from 'Released' to 'Cancelled'
+    const result = await this.smartContractService.updateStatusDo(
+      userInfo.sub,
+      headerDo.order_id,
+      'Cancelled',
+      note,
+    );
+
+    await this.updateStatusDo(idDo, token, 'Cancelled', note);
+
+    return result;
+  }
+
+  async extendDo(idDo: number, extendDate: string, token: string) {
+    const userInfo = await this.userService.getDetail(token);
+    // CHECK IF USER ROLE IS CO
+    if (userInfo.profile.details.kd_detail_ga) {
+      throw new BadRequestException(
+        'Cannot update DO container, Role is not CO',
+      );
+    }
+
+    const headerDo = await this.getHeaderData(idDo);
+
+    if (!headerDo) {
+      throw new NotFoundException(`DO Data by Id = ${idDo} is not exist`);
+    }
+
+    const statusDO = await this.smartContractService.getStatusDo(
+      headerDo.order_id,
+    );
+
+    const data = await this.smartContractService.getDoDetailData(
+      userInfo.sub,
+      headerDo.order_id,
+    );
+
+    data.requestDetail.shippingLine.doExpired = extendDate;
+
+    if (statusDO.status !== 'Released') {
+      throw new BadRequestException(
+        `Cannot update status DO to Cancelled, last status DO is not Released`,
+      );
+    }
+
+    const result = await this.smartContractService.updateDoCo(
+      userInfo.sub,
+      headerDo.order_id,
+      data,
+      'Processed',
+      '',
+    );
+    await this.updateStatusDo(idDo, token, 'Processed', null);
+
+    return result;
   }
 }

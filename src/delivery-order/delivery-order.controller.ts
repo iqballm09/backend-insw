@@ -22,13 +22,12 @@ import {
   ApiOperation,
   ApiProperty,
   ApiQuery,
+  ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
 import {
   CargoVinDetail,
   Container,
-  CreateContainerRequestDO,
-  CreateNonContainerRequestDO,
   PaymentSupportingDetail,
   RequestDetail,
   RequestPartiesDetail,
@@ -303,6 +302,46 @@ export class DeliveryOrderController {
   @ApiBearerAuth()
   deleteModel(@Param('id') id: string, @Req() req: any) {
     return this.deliveryOrderService.deleteDo(+id, req.token);
+  }
+
+  @Post('extend/:id')
+  @UseGuards(AuthGuard)
+  @ApiBearerAuth()
+  @ApiBody({
+    schema: {
+      example: {
+        doExpiredDate: '2024-05-24',
+      },
+    },
+  })
+  async extendDO(
+    @Param('id') id: number,
+    @Body() payload: { doExpiredDate: string },
+    @Req() req: any,
+  ) {
+    return this.deliveryOrderService.extendDo(
+      +id,
+      payload.doExpiredDate,
+      req.token,
+    );
+  }
+
+  @Post('cancel/:id')
+  @UseGuards(AuthGuard)
+  @ApiBearerAuth()
+  @ApiBody({
+    schema: {
+      example: {
+        note: 'Tidak lengkap',
+      },
+    },
+  })
+  async cancelDO(
+    @Param('id') id: number,
+    @Body() payload: { note: string },
+    @Req() req: any,
+  ) {
+    return this.deliveryOrderService.cancelDo(+id, payload.note, req.token);
   }
 
   @Get('print/:id')

@@ -230,7 +230,7 @@ export class SmartContractService {
     }
   }
 
-  async updateStatusDo(username: string, orderId: string, status: string) {
+  async updateStatusDo(username: string, orderId: string, status: string, note: string) {
     const tokenAdmin = (await this.enrollAdmin()).token;
     const userData = await this.userService.getUserDB(username);
     // generate user token
@@ -239,7 +239,7 @@ export class SmartContractService {
       `${this.configService.get('API_SMART_CONTRACT')}/invoke/do-channel/chaincode1`,
       {
         method: 'updateStatusDO',
-        args: [orderId, status],
+        args: [orderId, status, note],
       },
       {
         headers: {
