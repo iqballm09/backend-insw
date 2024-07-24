@@ -5,9 +5,14 @@ FROM node:latest
 WORKDIR /app
 
 # SET ENVIRONMENT VARIABLE
-# SSO ENVLnsw2o23!@
+# SSO ENV
 ENV API_REF_BASE_URL=https://api.insw.go.id/api/ref/v2
-ENV API_SMART_CONTRACT=http://10.239.54.32:8801
+ENV API_SC_CO=http://10.239.54.36:3000
+ENV API_SC_SL=http://10.239.54.38:3000
+ENV API_SC_TO=http://10.239.54.39:3000
+ENV API_SC_BANK=http://10.239.54.23:3000
+ENV API_SC_LNSW=http://10.239.54.32:3000
+ENV API_SC_INAPORT=http://10.239.54.33:3000
 ENV SSO_CLIENT_ID="90b61241-8687-40f8-942d-391b54529936"
 ENV SSO_CLIENT_SECRET="77a1bae1-b452-46ea-8ade-5fba53a908f6"
 ENV SSO_ISSUE_URL=https://sso.insw.go.id/connect/.well-known/openid-configuration
@@ -20,7 +25,7 @@ ENV WEB_URI="http://${WEB_HOST}:${WEB_PORT}"
 ENV API_HOST=10.239.54.34
 ENV API_PORT=5000
 ENV API_URI=http://10.239.54.34:5000
-ENV DATABASE_URL="postgresql://myuser:mysecret@insw_db_temp:5432/db_temp_do_req?schema=public&connect_timeout=60"
+ENV DATABASE_URL="postgresql://insw_admin:Lnsw2o24@10.239.54.37:5432/insw_do_db?schema=public&connect_timeout=60"
 ENV SC_ADMIN_ID = 'admin'
 ENV SC_ADMIN_SECRET = 'adminpw'
 ENV NODE_ENV=production

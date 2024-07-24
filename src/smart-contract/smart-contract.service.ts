@@ -7,123 +7,18 @@ import {
   UpdateDoSLDto,
 } from 'src/delivery-order/dto/create-do.dto';
 import { StatusDo } from '@prisma/client';
-import { UserService } from 'src/user/user.service';
 
 @Injectable()
 export class SmartContractService {
-  constructor(
-    private userService: UserService,
-    private configService: ConfigService,
-  ) {}
+  constructor(private configService: ConfigService) {}
 
-  async enrollAdmin() {
-    try {
-      const response = await axios.post(
-        `${this.configService.get('API_SMART_CONTRACT')}/user/enroll`,
-        {
-          id: 'admin',
-          secret: 'adminpw',
-        },
-      );
-      return {
-        token: response.data.token,
-      };
-    } catch (e) {
-      validateError(e);
-    }
-  }
-
-  async enrollUser(userData: any, tokenAdmin: string) {
-    // TODO: Registration account to Blockhain
-    await this.createUser(userData, tokenAdmin);
-    // get user token from smart contract
-    try {
-      const response = await axios.post(
-        `${this.configService.get('API_SMART_CONTRACT')}/user/enroll`,
-        {
-          id: userData.name,
-          secret: userData.hash,
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${tokenAdmin}`,
-          },
-        },
-      );
-      return {
-        token: response.data.token,
-      };
-    } catch (e) {
-      validateError(e);
-    }
-  }
-
-  async getAllUsers(tokenAdmin: string) {
-    try {
-      const response = await axios.get(
-        `${this.configService.get('API_SMART_CONTRACT')}/user/identities`,
-        {
-          headers: {
-            Authorization: `Bearer ${tokenAdmin}`,
-          },
-        },
-      );
-      return {
-        data: response.data.response.identities,
-      };
-    } catch (e) {
-      validateError(e);
-    }
-  }
-
-  async createUser(userData: any, tokenAdmin: string) {
-    // check if user already exists
-    const listUsers = (await this.getAllUsers(tokenAdmin)).data;
-    for (const user of listUsers) {
-      if (user.id === userData.name) {
-        return;
-      }
-    }
-    try {
-      const response = await axios.post(
-        `${this.configService.get('API_SMART_CONTRACT')}/user/register`,
-        {
-          id: userData.name,
-          secret: userData.hash,
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${tokenAdmin}`,
-          },
-        },
-      );
-      return response;
-    } catch (e) {
-      validateError(e);
-    }
-  }
-
-  async requestDO(payload: RequestDoDto, statusDo: StatusDo) {
-    // generate admin token
-    const tokenAdmin = (await this.enrollAdmin()).token;
-    // get user info
-    const userData = await this.userService.getUserDB(
-      payload.requestDetail.requestor.requestorId,
-    );
-    // generate user token
-    const userToken = (await this.enrollUser(userData, tokenAdmin)).token;
+  async requestDO(payload: RequestDoDto) {
     // send do to smart contract
     try {
       const response = await axios.post(
-        `${this.configService.get('API_SMART_CONTRACT')}/invoke/do-channel/chaincode1`,
+        `${this.configService.get('API_SC_CO')}/chaincode/invoke/do`,
         {
-          method: 'requestDO',
-          args: [JSON.stringify(payload)],
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${userToken}`,
-          },
+          data: JSON.stringify(payload),
         },
       );
       return response.data;
@@ -132,142 +27,88 @@ export class SmartContractService {
     }
   }
 
-  async getDoDetailData(userId: string, orderId: string) {
-    // generate admin token
-    const tokenAdmin = (await this.enrollAdmin()).token;
-    // get user info
-    const userData = await this.userService.getUserDB(userId);
-    // generate user token
-    const userToken = (await this.enrollUser(userData, tokenAdmin)).token;
+  async getDoDetailData(orderId: string) {
     try {
-      const response = await axios.post(
-        `${this.configService.get('API_SMART_CONTRACT')}/query/do-channel/chaincode1`,
-        {
-          method: 'queryOrderById',
-          args: [orderId],
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${userToken}`,
-          },
-        },
+      const response = await axios.get(
+        `${this.configService.get('API_SC_LNSW')}/chaincode/query/do/${orderId}`,
       );
-      return response.data.response;
+      return response.data;
     } catch (e) {
       validateError(e);
     }
   }
 
   async getAllDoData() {
-    // generate admin token
-    const tokenAdmin = (await this.enrollAdmin()).token;
     try {
-      const response = await axios.post(
-        `${this.configService.get('API_SMART_CONTRACT')}/query/do-channel/chaincode1`,
-        {
-          method: 'queryAllOrders',
-          args: [],
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${tokenAdmin}`,
-          },
-        },
+      const response = await axios.get(
+        `${this.configService.get('API_SC_LNSW')}/chaincode/query/do`,
       );
-      return { data: response.data.response };
+      return { data: response.data };
     } catch (e) {
       validateError(e);
     }
   }
 
   async getAllDoCo(coName: string) {
-    const tokenAdmin = (await this.enrollAdmin()).token;
-    // get user info
-    const userData = await this.userService.getUserDB(coName);
-    // generate user token
-    const userToken = (await this.enrollUser(userData, tokenAdmin)).token;
     try {
       const response = await axios.post(
-        `${this.configService.get('API_SMART_CONTRACT')}/query/do-channel/chaincode1`,
+        `${this.configService.get('API_SC_CO')}/chaincode/query/do/co`,
         {
-          method: 'queryAllOrdersCO',
-          args: [coName],
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${userToken}`,
-          },
+          orgName: coName,
         },
       );
-      return { data: response.data.response };
+      return { data: response.data };
     } catch (e) {
       validateError(e);
     }
   }
 
-  async getAllDoSL(slName: string, listKodeSL: string[]) {
-    const tokenAdmin = (await this.enrollAdmin()).token;
-    // get user info
-    const userData = await this.userService.getUserDB(slName);
-    // generate user token
-    const userToken = (await this.enrollUser(userData, tokenAdmin)).token;
+  async getAllDoSL(listKodeSL: string[]) {
     try {
       const response = await axios.post(
-        `${this.configService.get('API_SMART_CONTRACT')}/query/do-channel/chaincode1`,
+        `${this.configService.get('API_SC_SL')}/chaincode/query/do/sl`,
         {
-          method: 'queryAllOrdersSL',
-          args: [JSON.stringify(listKodeSL)],
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${userToken}`,
-          },
+          orgName: JSON.stringify(listKodeSL),
         },
       );
-      return { data: response.data.response };
+      return { data: response.data };
     } catch (e) {
       validateError(e);
     }
   }
 
-  async updateStatusDo(username: string, orderId: string, status: string, note: string) {
-    const tokenAdmin = (await this.enrollAdmin()).token;
-    const userData = await this.userService.getUserDB(username);
-    // generate user token
-    const userToken = (await this.enrollUser(userData, tokenAdmin)).token;
-    const response = await axios.post(
-      `${this.configService.get('API_SMART_CONTRACT')}/invoke/do-channel/chaincode1`,
+  async updateStatusDoCo(orderId: string, status: string, note: string) {
+    const response = await axios.put(
+      `${this.configService.get('API_SC_CO')}/chaincode/invoke/status-do/co/${orderId}`,
       {
-        method: 'updateStatusDO',
-        args: [orderId, status, note],
-      },
-      {
-        headers: {
-          Authorization: `Bearer ${userToken}`,
-        },
+        status: status,
+        note: note,
       },
     );
-    return response.data.response;
+    return response.data;
   }
 
-  async updateDoSL(
-    slName: string,
-    orderId: string,
-    payload: UpdateDoSLDto,
-    status: StatusDo,
-  ) {
-    const tokenAdmin = (await this.enrollAdmin()).token;
-    const userData = await this.userService.getUserDB(slName);
+  async updateStatusDoSl(orderId: string, status: string, note: string) {
+    const response = await axios.put(
+      `${this.configService.get('API_SC_SL')}/chaincode/invoke/status-do/sl/${orderId}`,
+      {
+        status: status,
+        note: note,
+      },
+    );
+    return response.data;
+  }
 
+  async updateDoSL(orderId: string, payload: UpdateDoSLDto, status: StatusDo) {
     // get do data
-    const data = await this.getDoDetailData(slName, orderId);
+    const data = await this.getDoDetailData(orderId);
 
     // update data
     data.requestDetail.shippingLine.vesselName = payload.vesselName;
     data.requestDetail.shippingLine.voyageNumber = payload.voyageNo;
     data.requestDetail.doReleaseDate = payload.doReleaseDate;
     data.requestDetail.doExpiredDate = payload.doExpiredDate;
-    data.requestDetail.doReleaseNumber = payload.doReleaseNo;
+    data.requestDetail.doReleaseNo = payload.doReleaseNo;
     data.requestDetail.callSign = payload.callSign;
     data.requestDetail.terminalOp = payload.terminalOp;
 
@@ -287,101 +128,50 @@ export class SmartContractService {
     data.statusDate = String(new Date());
     data.statusNote = payload.statusNote;
 
-    // generate user token
-    const userToken = (await this.enrollUser(userData, tokenAdmin)).token;
     try {
-      const response = await axios.post(
-        `${this.configService.get('API_SMART_CONTRACT')}/invoke/do-channel/chaincode1`,
+      const response = await axios.put(
+        `${this.configService.get('API_SC_SL')}/chaincode/invoke/do/sl/${orderId}`,
         {
-          method: 'updateDO',
-          args: [orderId, JSON.stringify(data)],
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${userToken}`,
-          },
+          data: JSON.stringify(data),
         },
       );
-      return response.data.response;
+      return response.data;
     } catch (e) {
       validateError(e);
     }
   }
 
   async updateDoCo(
-    coName: string,
     orderId: string,
     payload: RequestDoDto,
     status: StatusDo,
     statusNote: string,
   ) {
-    const tokenAdmin = (await this.enrollAdmin()).token;
-    const userData = await this.userService.getUserDB(coName);
-
     // update status
     payload.status = status;
     payload.statusDate = String(new Date());
     payload.orderId = orderId;
     payload.statusNote = statusNote;
 
-    // generate user token
-    const userToken = (await this.enrollUser(userData, tokenAdmin)).token;
     try {
-      const response = await axios.post(
-        `${this.configService.get('API_SMART_CONTRACT')}/invoke/do-channel/chaincode1`,
+      const response = await axios.put(
+        `${this.configService.get('API_SC_CO')}/chaincode/invoke/do/co/${orderId}`,
         {
-          method: 'updateDO',
-          args: [orderId, JSON.stringify(payload)],
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${userToken}`,
-          },
+          data: JSON.stringify(payload),
         },
       );
-      return response.data.response;
-    } catch (e) {
-      validateError(e);
-    }
-  }
-
-  async deleteDo(orderId: string) {
-    const tokenAdmin = (await this.enrollAdmin()).token;
-    try {
-      const response = await axios.post(
-        `${this.configService.get('API_SMART_CONTRACT')}/invoke/do-channel/chaincode1`,
-        {
-          method: 'deleteDO',
-          args: [orderId],
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${tokenAdmin}`,
-          },
-        },
-      );
-      return response.data.response;
+      return response.data;
     } catch (e) {
       validateError(e);
     }
   }
 
   async getStatusDo(orderId: string) {
-    const tokenAdmin = (await this.enrollAdmin()).token;
     try {
-      const response = await axios.post(
-        `${this.configService.get('API_SMART_CONTRACT')}/query/do-channel/chaincode1`,
-        {
-          method: 'getStatusDO',
-          args: [orderId],
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${tokenAdmin}`,
-          },
-        },
+      const response = await axios.get(
+        `${this.configService.get('API_SC_LNSW')}/chaincode/query/status-do/${orderId}`,
       );
-      return response.data.response;
+      return response.data;
     } catch (e) {
       validateError(e);
     }

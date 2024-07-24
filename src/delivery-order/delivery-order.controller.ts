@@ -276,7 +276,6 @@ export class DeliveryOrderController {
     // CASE 1 : IF USER HAS KD_DETAIL_GA, GET DO DATA FOR SL
     if (userInfo.profile.details.kd_detail_ga) {
       return this.deliveryOrderService.getAllDoSL(
-        userInfo.sub,
         userInfo.profile.details.kd_detail_ga,
         req.token,
       );

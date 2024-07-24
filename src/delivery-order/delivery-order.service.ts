@@ -33,6 +33,11 @@ import { SmartContractService } from 'src/smart-contract/smart-contract.service'
 import { v4 as uuidv4 } from 'uuid';
 import * as pdfPrinter from 'pdfmake';
 import * as fs from 'fs';
+import { FlagService } from 'src/referensi/flag/flag.service';
+
+const delay = (delayInms: any) => {
+  return new Promise((resolve) => setTimeout(resolve, delayInms));
+};
 
 @Injectable()
 export class DeliveryOrderService {
@@ -41,6 +46,7 @@ export class DeliveryOrderService {
     private userService: UserService,
     private shippinglineService: ShippinglineService,
     private smartContractService: SmartContractService,
+    private flagService: FlagService,
   ) {}
 
   async getAllDoCo(coName: string) {
@@ -73,6 +79,7 @@ export class DeliveryOrderService {
         td_reqdo_status: {
           select: {
             name: true,
+            datetime_status: true,
           },
           orderBy: {
             datetime_status: 'desc',
@@ -103,18 +110,24 @@ export class DeliveryOrderService {
           ? moment(item.td_do_bl_form.tgl_bl, 'DD-MM-YYYY').format('DD-MM-YYYY')
           : null,
         requestName: item.td_do_requestor_form.nama,
+        transactionId: item.order_id,
         doExp: item.td_do_req_form.tgl_do_exp
-          ? moment(item.td_do_req_form.tgl_do_exp, 'DD-MM-YYYY').format(
-              'DD-MM-YYYY',
+          ? moment(item.td_do_req_form.tgl_do_exp, 'YYYY-MM-DD').format(
+              'YYYY-MM-DD',
             )
           : null,
         shippingLine: item.td_do_req_form.id_shippingline.split('|')[1].trim(),
         status: item.td_reqdo_status[0].name,
+        statusDatetime: moment(
+          item.td_reqdo_status[0].datetime_status,
+          'DD-MM-YYYY HH:mm:ss',
+        )
+          .tz(item.timezone)
+          .format('DD-MM-YYYY HH:mm:ss'),
         isContainer: item.request_type == 1,
       }));
 
     const listDraftId = dataDraft.map((item) => item.id);
-
     for (const item of (await this.smartContractService.getAllDoCo(coName))
       .data) {
       // get header data by order id
@@ -147,17 +160,19 @@ export class DeliveryOrderService {
                 'DD-MM-YYYY',
               ).format('DD-MM-YYYY')
             : null,
-          doExp: item.Record.requestDetail.shippingLine.doExpired
+          transactionId: item.Record.orderId,
+          doExp: item.Record.requestDetail.doExpiredDate
             ? moment(
-                new Date(
-                  Date.parse(item.Record.requestDetail.shippingLine.doExpired),
-                ),
-                'DD-MM-YYYY',
-              ).format('DD-MM-YYYY')
+                new Date(Date.parse(item.Record.requestDetail.doExpiredDate)),
+                'YYYY-MM-DD',
+              ).format('YYYY-MM-DD')
             : null,
           requestName: item.Record.requestDetail.requestor.requestorName,
           shippingLine: item.Record.requestDetail.shippingLine.shippingDetail,
           status: item.Record.status,
+          statusDatetime: moment(item.Record.statusDate, 'DD-MM-YYYY HH:mm:ss')
+            .tz(headerData.timezone)
+            .format('DD-MM-YYYY HH:mm:ss'),
           isContainer: item.Record.requestType == 1,
         });
       }
@@ -165,22 +180,21 @@ export class DeliveryOrderService {
 
     // merge data draft and data submitted
     const dataDoCo = dataDraft.concat(dataNonDraft).sort((b, a) => {
-      return a.requestTime.localeCompare(b.requestTime);
+      return a.statusDatetime.localeCompare(b.statusDatetime);
     });
 
     return dataDoCo;
   }
 
-  async getAllDoSL(slName: string, kodeDetailGa: string, token: string) {
+  async getAllDoSL(kodeDetailGa: string, token: string) {
     let dataDoSL = [];
     // get list of shippingline codes that by kode detail ga
     const listKodeSL = (await this.shippinglineService.findAll(token)).data
       .filter((item) => item.kd_detail_ga === kodeDetailGa)
       .map((item) => item.kode);
 
-    for (const item of (
-      await this.smartContractService.getAllDoSL(slName, listKodeSL)
-    ).data) {
+    for (const item of (await this.smartContractService.getAllDoSL(listKodeSL))
+      .data) {
       // get header data by order id
       const headerData = await this.prisma.td_reqdo_header_form.findFirst({
         where: {
@@ -208,22 +222,24 @@ export class DeliveryOrderService {
               'DD-MM-YYYY',
             ).format('DD-MM-YYYY')
           : null,
-        doExp: item.Record.requestDetail.shippingLine.doExpired
+        transactionId: item.Record.orderId,
+        doExp: item.Record.requestDetail.doExpiredDate
           ? moment(
-              new Date(
-                Date.parse(item.Record.requestDetail.shippingLine.doExpired),
-              ),
-              'DD-MM-YYYY',
-            ).format('DD-MM-YYYY')
+              new Date(Date.parse(item.Record.requestDetail.doExpiredDate)),
+              'YYYY-MM-DD',
+            ).format('YYYY-MM-DD')
           : null,
         requestName: item.Record.requestDetail.requestor.requestorName,
         shippingLine: item.Record.requestDetail.shippingLine.shippingDetail,
         status: item.Record.status,
+        statusDatetime: moment(item.Record.statusDate, 'DD-MM-YYYY HH:mm:ss')
+          .tz(headerData.timezone)
+          .format('DD-MM-YYYY HH:mm:ss'),
         isContainer: item.Record.requestType == 1,
       });
     }
     return dataDoSL.sort((b, a) => {
-      return a.requestTime.localeCompare(b.requestTime);
+      return a.statusDatetime.localeCompare(b.statusDatetime);
     });
   }
 
@@ -242,7 +258,7 @@ export class DeliveryOrderService {
       return response;
     }
     // CASE 2 : IF LAST STATUS IS DRAFT, GET DO DETAIL FROM DB
-    const response = await this.getDoDetailDraft(idDo);
+    const response = await this.getDoDetailDraft(idDo, token);
     return response;
   }
 
@@ -270,11 +286,6 @@ export class DeliveryOrderService {
       );
     }
 
-    const listStatusDO = await this.getAllStatus(idDo);
-    if (listStatusDO.data.map((item) => item.status).includes('Rejected')) {
-      this.smartContractService.deleteDo(data.order_id);
-    }
-
     const deleted = await this.prisma.td_reqdo_header_form.delete({
       where: {
         id: idDo,
@@ -297,6 +308,7 @@ export class DeliveryOrderService {
       (item) => item.status,
     );
     const userInfo = await this.userService.getDetail(token);
+    const queryOwnership = await this.flagService.findAll(token, 'ownership');
     const updated_by = userInfo.sub;
 
     // CHECK IF USER ROLE IS CO
@@ -380,9 +392,6 @@ export class DeliveryOrderService {
         id: +idDO,
       },
       data: {
-        no_reqdo: generateNoReq(
-          data.requestDetail.shippingLine.shippingType.split('|')[0].trim(),
-        ),
         tgl_reqdo: new Date(),
         td_do_requestor_form: {
           update: {
@@ -465,7 +474,13 @@ export class DeliveryOrderService {
               gross_weight: item.grossWeight.amount,
               no_kontainer: item.containerNo,
               id_sizeType: item.sizeType.kodeSize,
-              id_ownership: +item.ownership,
+              id_ownership: +queryOwnership.data.filter(
+                (own) =>
+                  own.uraian ===
+                  (Array.isArray(item.ownership)
+                    ? item.ownership[0]
+                    : item.ownership),
+              )[0].kode,
               id_gross_weight_unit: item.grossWeight.unit,
               seals: {
                 deleteMany: {},
@@ -490,7 +505,13 @@ export class DeliveryOrderService {
             gross_weight: item.grossWeight.amount,
             no_kontainer: item.containerNo,
             id_sizeType: item.sizeType.kodeSize,
-            id_ownership: +item.ownership,
+            id_ownership: +queryOwnership.data.filter(
+              (own) =>
+                own.uraian ===
+                (Array.isArray(item.ownership)
+                  ? item.ownership[0]
+                  : item.ownership),
+            )[0].kode,
             id_gross_weight_unit: item.grossWeight.unit,
             td_depo: {
               create: {
@@ -557,7 +578,9 @@ export class DeliveryOrderService {
                 unit: con.id_gross_weight_unit,
               },
               sealNo: con.seals.map((seal) => seal.seal.no_seal),
-              ownership: con.id_ownership,
+              ownership: queryOwnership.data.filter(
+                (own) => +own.kode === con.id_ownership,
+              )[0].uraian,
               sizeType: {
                 kodeSize: con.id_sizeType,
               },
@@ -573,7 +596,6 @@ export class DeliveryOrderService {
             };
             listConData.push(result);
           });
-          console.log(listConData);
           data.cargoDetail.container = listConData;
           data.requestDetail.terminalOp = doDraft.td_do_req_form.id_terminal_op;
           data.requestDetail.document.posNumber = doDraft.td_do_req_form
@@ -590,7 +612,6 @@ export class DeliveryOrderService {
           );
 
           const result = await this.smartContractService.updateDoCo(
-            userInfo.sub,
             doData.order_id,
             data,
             status,
@@ -630,7 +651,9 @@ export class DeliveryOrderService {
                 unit: con.id_gross_weight_unit,
               },
               sealNo: con.seals.map((seal) => seal.seal.no_seal),
-              ownership: String(con.id_ownership),
+              ownership: queryOwnership.data.filter(
+                (own) => +own.kode === con.id_ownership,
+              )[0].uraian,
               sizeType: {
                 kodeSize: con.id_sizeType,
               },
@@ -649,22 +672,18 @@ export class DeliveryOrderService {
 
           data.cargoDetail.container = listConData;
 
-          const result = await this.smartContractService.requestDO(
-            data,
-            status,
-          );
-
+          const result = await this.smartContractService.requestDO(data);
           // generate status do to smart contract
           const headerDo = await this.prisma.td_reqdo_header_form.update({
             where: {
               id: doData.id,
             },
             data: {
-              order_id: result.response.orderId,
+              order_id: result.orderId,
               request_type: data.requestType,
               no_reqdo: data.requestDetail.requestDoNumber,
               created_by: data.requestDetail.requestor.requestorId,
-              tgl_reqdo: new Date(result.response.datetime),
+              tgl_reqdo: new Date(result.datetime),
             },
           });
         }
@@ -800,9 +819,6 @@ export class DeliveryOrderService {
         id: idDO,
       },
       data: {
-        no_reqdo: generateNoReq(
-          data.requestDetail.shippingLine.shippingType.split('|')[0].trim(),
-        ),
         tgl_reqdo: new Date(),
         td_do_requestor_form: {
           update: {
@@ -943,14 +959,11 @@ export class DeliveryOrderService {
       );
 
       const result = await this.smartContractService.updateDoCo(
-        userInfo.sub,
         doDraft.order_id,
         data,
         status,
         doDraft.td_reqdo_status[0].note,
       );
-
-      console.log(result);
 
       // generate status do to smart contract
       const headerDo = await this.prisma.td_reqdo_header_form.update({
@@ -988,7 +1001,7 @@ export class DeliveryOrderService {
         ? data.requestDetail.document.posNumber
         : '';
 
-      const result = await this.smartContractService.requestDO(data, status);
+      const result = await this.smartContractService.requestDO(data);
 
       // generate status do to smart contract
       const headerDo = await this.prisma.td_reqdo_header_form.update({
@@ -996,11 +1009,11 @@ export class DeliveryOrderService {
           id: doDraft.id,
         },
         data: {
-          order_id: result.response.orderId,
+          order_id: result.orderId,
           request_type: data.requestType,
           no_reqdo: data.requestDetail.requestDoNumber,
           created_by: data.requestDetail.requestor.requestorId,
-          tgl_reqdo: new Date(result.response.datetime),
+          tgl_reqdo: new Date(result.datetime),
         },
       });
     }
@@ -1034,8 +1047,7 @@ export class DeliveryOrderService {
       );
     }
     // update status DO SL from 'Submitted' to 'Processed'
-    const updatedDoSL = await this.smartContractService.updateStatusDo(
-      userInfo.sub,
+    const updatedDoSL = await this.smartContractService.updateStatusDoSl(
       headerData.order_id,
       'Processed',
       '',
@@ -1101,7 +1113,6 @@ export class DeliveryOrderService {
     }
 
     const response = await this.smartContractService.updateDoSL(
-      userInfo.sub,
       headerDo.order_id,
       data,
       status,
@@ -1144,6 +1155,15 @@ export class DeliveryOrderService {
       }
 
       for (let i = 0; i < conData.length; i++) {
+        (data.cargoDetail[i].depoDetail.depoNpwp =
+          data.cargoDetail[i].depoDetail.depoNpwp || ''),
+          (data.cargoDetail[i].depoDetail.alamat =
+            data.cargoDetail[i].depoDetail.alamat || ''),
+          (data.cargoDetail[i].depoDetail.kodePos =
+            data.cargoDetail[i].depoDetail.kodePos || ''),
+          (data.cargoDetail[i].depoDetail.kotaDepo =
+            data.cargoDetail[i].depoDetail.kotaDepo || '');
+
         const updatedCon = await this.prisma.td_do_kontainer_form.update({
           where: {
             id: conData[i].id,
@@ -1200,13 +1220,19 @@ export class DeliveryOrderService {
       },
     });
 
-    const result = data.map((item) => ({
-      status: item.name,
-      datetime: moment(item.datetime_status, 'DD-MM-YYYY HH:mm:ss')
-        .tz(headerDo.timezone)
-        .format('DD-MM-YYYY HH:mm:ss'),
-      note: item.note,
-    }));
+    const result = data
+      .map((item) => ({
+        status: item.name,
+        datetime: moment(item.datetime_status, 'DD-MM-YYYY HH:mm:ss')
+          .tz(headerDo.timezone)
+          .format('DD-MM-YYYY HH:mm:ss'),
+        note: item.note,
+      }))
+      .sort((a, b) =>
+        moment(a.datetime, 'DD-MM-YYYY HH:mm:ss').diff(
+          moment(b.datetime, 'DD-MM-YYYY HH:mm:ss'),
+        ),
+      );
 
     return {
       message: 'success',
@@ -1264,8 +1290,9 @@ export class DeliveryOrderService {
   }
 
   // GET DO DETAIL DRAFT
-  async getDoDetailDraft(idDo: number) {
+  async getDoDetailDraft(idDo: number, token: string) {
     const data = await this.getDataDraft(idDo);
+    const queryOwnership = await this.flagService.findAll(token, 'ownership');
 
     // get statusDO
     const statusDO = data.td_reqdo_status.pop();
@@ -1336,7 +1363,9 @@ export class DeliveryOrderService {
             sizeType: data.id_sizeType,
             grossWeightAmount: data.gross_weight,
             grossWeightUnit: data.id_gross_weight_unit,
-            ownership: data.id_ownership,
+            ownership: queryOwnership.data.filter(
+              (own) => +own.kode === data.id_ownership,
+            )[0].uraian,
             depoForm: {
               Id: data.td_depo?.id,
               nama: data.td_depo?.deskripsi,
@@ -1507,21 +1536,19 @@ export class DeliveryOrderService {
 
   // GET DO DETAIL SMART CONTRACT
   async getDoDetailSC(username: string, orderId: string) {
-    const data = await this.smartContractService.getDoDetailData(
-      username,
-      orderId,
-    );
-    // get timezone
     const headerData = await this.prisma.td_reqdo_header_form.findFirst({
       where: {
         order_id: orderId,
       },
     });
+
     if (!headerData) {
       throw new NotFoundException(
         `Header Data by Order Id = ${orderId} not found`,
       );
     }
+    const data = await this.smartContractService.getDoDetailData(orderId);
+
     const timezone = headerData.timezone;
     const result = {
       requestDetailForm: {
@@ -1571,7 +1598,7 @@ export class DeliveryOrderService {
                 'YYYY-MM-DD',
               ).format('YYYY-MM-DD')
             : null,
-        doReleaseNumber: data.requestDetail.doReleaseNumber || '',
+        doReleaseNumber: data.requestDetail.doReleaseNo || '',
         doExp:
           data.requestDetail.doExpiredDate &&
           data.requestDetail.doExpiredDate !== 'null'
@@ -1801,11 +1828,14 @@ export class DeliveryOrderService {
         td_do_requestor_form: {
           create: {
             id_jenis_requestor: +data.requestor.requestorType,
-            alamat: userInfo.organization.address.address,
+            alamat:
+              userInfo.organization.address.address +
+              ', ' +
+              userInfo.organization.address.city,
             created_by,
             nama: userInfo.profile.details.full_name,
-            nib: userInfo.organization.nib,
-            npwp: userInfo.organization.npwp,
+            nib: userInfo.organization.nib || '',
+            npwp: userInfo.organization.npwp || '',
             filepath_suratkuasa: data.requestor.urlFile || '',
           },
         },
@@ -1944,9 +1974,6 @@ export class DeliveryOrderService {
         id: idDo,
       },
       data: {
-        no_reqdo: generateNoReq(
-          data.shippingLine.shippingType.split('|')[0].trim(),
-        ),
         td_do_req_form: {
           update: {
             created_by,
@@ -2196,6 +2223,7 @@ export class DeliveryOrderService {
   ) {
     const userInfo = await this.userService.getDetail(token);
     const created_by = userInfo.sub;
+    const queryOwnership = await this.flagService.findAll(token, 'ownership');
 
     // CHECK IF USER ROLE IS CO
     if (userInfo.profile.details.kd_detail_ga) {
@@ -2251,7 +2279,13 @@ export class DeliveryOrderService {
               gross_weight: item.grossWeight.amount,
               no_kontainer: item.containerNo,
               id_sizeType: item.sizeType.kodeSize,
-              id_ownership: +item.ownership,
+              id_ownership: +queryOwnership.data.filter(
+                (own) =>
+                  own.uraian ===
+                  (Array.isArray(item.ownership)
+                    ? item.ownership[0]
+                    : item.ownership),
+              )[0].kode,
               id_gross_weight_unit: item.grossWeight.unit,
               td_depo: {
                 update: {
@@ -2285,7 +2319,13 @@ export class DeliveryOrderService {
             gross_weight: item.grossWeight.amount,
             no_kontainer: item.containerNo,
             id_sizeType: item.sizeType.kodeSize,
-            id_ownership: +item.ownership,
+            id_ownership: +queryOwnership.data.filter(
+              (own) =>
+                own.uraian ===
+                (Array.isArray(item.ownership)
+                  ? item.ownership[0]
+                  : item.ownership),
+            )[0].kode,
             id_gross_weight_unit: item.grossWeight.unit,
             td_depo: {
               create: {
@@ -2327,6 +2367,7 @@ export class DeliveryOrderService {
 
   async getContainerDetail(idDo: number, token: string) {
     const userInfo = await this.userService.getDetail(token);
+    const queryOwnership = await this.flagService.findAll(token, 'ownership');
 
     // CHECK IF USER ROLE IS CO
     if (userInfo.profile.details.kd_detail_ga) {
@@ -2368,7 +2409,9 @@ export class DeliveryOrderService {
             sizeType: data.id_sizeType,
             grossWeightAmount: data.gross_weight,
             grossWeightUnit: data.id_gross_weight_unit,
-            ownership: data.id_ownership,
+            ownership: queryOwnership.data.filter(
+              (own) => +own.kode === data.id_ownership,
+            )[0].uraian,
             depoForm: {
               Id: data.td_depo?.id,
               nama: data.td_depo?.deskripsi,
@@ -2706,8 +2749,7 @@ export class DeliveryOrderService {
     }
 
     // update status DO SL from 'Released' to 'Cancelled'
-    const result = await this.smartContractService.updateStatusDo(
-      userInfo.sub,
+    const result = await this.smartContractService.updateStatusDoSl(
       headerDo.order_id,
       'Cancelled',
       note,
@@ -2738,7 +2780,6 @@ export class DeliveryOrderService {
     );
 
     const data = await this.smartContractService.getDoDetailData(
-      userInfo.sub,
       headerDo.order_id,
     );
 
@@ -2751,7 +2792,6 @@ export class DeliveryOrderService {
     }
 
     const result = await this.smartContractService.updateDoCo(
-      userInfo.sub,
       headerDo.order_id,
       data,
       'Processed',

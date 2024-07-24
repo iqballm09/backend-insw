@@ -3,15 +3,19 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { DepoDto } from 'src/delivery-order/dto/create-do.dto';
+import { ConfigService } from '@nestjs/config';
+import axios from 'axios';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { UserService } from 'src/user/user.service';
+import { DepoEntity } from './entities/depo.entity';
+import { validateError } from 'src/util';
 
 @Injectable()
 export class DepoService {
   constructor(
     private prisma: PrismaService,
     private userService: UserService,
+    private configService: ConfigService
   ) {}
 
   async getAllDepo(token: string) {
@@ -37,5 +41,28 @@ export class DepoService {
       kodePos: depo.kode_pos,
     }));
     return results;
+  }
+
+  async findAll(token: string) {
+    try {
+      const { data } = await axios.get(
+        `https://api.insw.go.id/api/doSp/getListDepo`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        },
+      );
+      const result: DepoEntity[] = data.data.map((item: any) => ({
+        kode: item.kodeBank,
+        uraian: item.uraianBank,
+        display: item.kodeBank + ' | ' + item.uraianBank,
+      }));
+      return {
+        data: result,
+      };
+    } catch (e) {
+      validateError(e);
+    }
   }
 }

@@ -8,6 +8,30 @@ import { ShippinglineEntity } from './entities/shippingline.entity';
 export class ShippinglineService {
   constructor(private configService: ConfigService) {}
 
+  async findSpecific(token: string, keyword: string) {
+    try {
+      const { data } = await axios.get(
+        `${this.configService.get('API_REF_BASE_URL')}/shipping-line/search?keyword=${keyword.trim().toUpperCase()}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        },
+      );
+      const result: ShippinglineEntity[] = data.data.map((item) => ({
+        kode: item.kode,
+        uraian: item.uraian,
+        display: item.display,
+        kd_detail_ga: item.kd_detail_ga,
+      }));
+      return {
+        data: result,
+      };
+    } catch (e) {
+      validateError(e);
+    }
+  }
+
   async findAll(token: string) {
     try {
       const { data } = await axios.get(

@@ -6,6 +6,8 @@ import { AuthService } from 'src/auth/auth.service';
 import { ShippinglineService } from 'src/referensi/shippingline/shippingline.service';
 import { DepoService } from 'src/referensi/depo/depo.service';
 import { SmartContractService } from 'src/smart-contract/smart-contract.service';
+import { FlagService } from 'src/referensi/flag/flag.service';
+import { PrismaService } from 'src/prisma/prisma.service';
 
 @Module({
   controllers: [DeliveryOrderController],
@@ -13,9 +15,11 @@ import { SmartContractService } from 'src/smart-contract/smart-contract.service'
     DeliveryOrderService,
     UserService,
     AuthService,
+    PrismaService,
     ShippinglineService,
     DepoService,
     SmartContractService,
+    FlagService,
   ],
 })
 export class DeliveryOrderModule {}
