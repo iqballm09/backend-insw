@@ -323,7 +323,7 @@ export class DeliveryOrderService {
 
     // get last status DO
     const lastStatus = listStatusDO[listStatusDO.length - 1];
-    if (!['Draft', 'Rejected'].includes(lastStatus)) {
+    if (!['Draft', 'Rejected', 'Cancelled'].includes(lastStatus)) {
       throw new BadRequestException(
         `Cannot update container DO, the last status DO is not draft or rejected!`,
       );
@@ -727,9 +727,9 @@ export class DeliveryOrderService {
 
     // find the last status DO
     const lastStatus = listStatusDO[listStatusDO.length - 1];
-    if (!['Draft', 'Rejected'].includes(lastStatus)) {
+    if (!['Draft', 'Rejected', 'Cancelled'].includes(lastStatus)) {
       throw new BadRequestException(
-        `Cannot update non container DO, the last status DO is not draft or rejected!`,
+        `Cannot update container DO, the last status DO is not draft or rejected!`,
       );
     }
 
