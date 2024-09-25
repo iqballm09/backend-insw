@@ -325,7 +325,7 @@ export class DeliveryOrderService {
     const lastStatus = listStatusDO[listStatusDO.length - 1];
     if (!['Draft', 'Rejected', 'Cancelled'].includes(lastStatus)) {
       throw new BadRequestException(
-        `Cannot update container DO, the last status DO is not draft or rejected!`,
+        `Cannot update container DO, the last status DO is not draft, rejected, cancelled!`,
       );
     }
 
@@ -555,7 +555,12 @@ export class DeliveryOrderService {
           doDraft.td_do_req_form.no_voyage || '';
 
         // CASE 1 : IF THE STATUS IS SUBMITTED AND THE LAST STATUS OR BEFORE IS REJECTED, THEN HIT UPDATE DO SMART CONTRACT
-        if (listStatusDO.includes('Rejected') && status === 'Submitted') {
+        if (
+          ['Rejected', 'Cancelled'].some((status0: StatusDo) =>
+            listStatusDO.includes(status0),
+          ) &&
+          status === 'Submitted'
+        ) {
           const listConData = [];
           doDraft.td_do_kontainer_form.forEach((con) => {
             const result = {
@@ -729,7 +734,7 @@ export class DeliveryOrderService {
     const lastStatus = listStatusDO[listStatusDO.length - 1];
     if (!['Draft', 'Rejected', 'Cancelled'].includes(lastStatus)) {
       throw new BadRequestException(
-        `Cannot update container DO, the last status DO is not draft or rejected!`,
+        `Cannot update container DO, the last status DO is not draft, rejected, cancelled!`,
       );
     }
 
@@ -924,7 +929,12 @@ export class DeliveryOrderService {
       doDraft.td_do_req_form.no_voyage || '';
 
     // CASE 1 : IF THE STATUS IS SUBMITTED AND THE LAST STATUS OR BEFORE IS REJECTED, THEN HIT UPDATE DO SMART CONTRACT
-    if (listStatusDO.includes('Rejected') && status === 'Submitted') {
+    if (
+      ['Rejected', 'Cancelled'].some((status0: StatusDo) =>
+        listStatusDO.includes(status0),
+      ) &&
+      status === 'Submitted'
+    ) {
       data.requestDetail.terminalOp = doDraft.td_do_req_form.id_terminal_op;
       data.requestDetail.document.posNumber = doDraft.td_do_req_form.pos_number
         ? doDraft.td_do_req_form.pos_number
