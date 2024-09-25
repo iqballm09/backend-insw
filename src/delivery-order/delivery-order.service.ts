@@ -248,18 +248,21 @@ export class DeliveryOrderService {
     // get header data by idDo
     const headerData = await this.getHeaderData(idDo);
     // get last status DO
-    const lastStatus = (await this.getAllStatus(+idDo)).data.pop().status;
-    // CASE 1 : IF LAST STATUS IS NOT DRAFT, GET DO DETAIL FROM SMART CONTRACT
-    if (lastStatus !== 'Draft') {
-      const response = await this.getDoDetailSC(
-        userInfo.sub,
-        headerData.order_id,
-      );
+    if (!!idDo) {
+      const lastStatus = (await this.getAllStatus(+idDo)).data.pop().status;
+      // CASE 1 : IF LAST STATUS IS NOT DRAFT, GET DO DETAIL FROM SMART CONTRACT
+      if (lastStatus !== 'Draft') {
+        const response = await this.getDoDetailSC(
+          userInfo.sub,
+          headerData.order_id,
+        );
+        return response;
+      }
+      // CASE 2 : IF LAST STATUS IS DRAFT, GET DO DETAIL FROM DB
+      const response = await this.getDoDetailDraft(idDo, token);
       return response;
     }
-    // CASE 2 : IF LAST STATUS IS DRAFT, GET DO DETAIL FROM DB
-    const response = await this.getDoDetailDraft(idDo, token);
-    return response;
+    return {};
   }
 
   async deleteDo(idDo: number, token: string) {
@@ -269,14 +272,7 @@ export class DeliveryOrderService {
       throw new BadRequestException('Failed to delete DO, Role is not CO');
     }
 
-    const data = await this.prisma.td_reqdo_header_form.findUnique({
-      where: {
-        id: idDo,
-      },
-    });
-    if (!data) {
-      throw new NotFoundException(`DO data by id = ${idDo} not found`);
-    }
+    const data = await this.getHeaderData(idDo);
 
     // check if status is draft
     const statusDO = (await this.getAllStatus(data.id)).data.pop().status;
@@ -299,12 +295,12 @@ export class DeliveryOrderService {
 
   // UPDATE KONTAINER
   async updateKontainer(
-    idDO: number,
+    idDo: number,
     data: RequestDoDto,
     token: string,
     status?: StatusDo,
   ) {
-    const listStatusDO = (await this.getAllStatus(+idDO)).data.map(
+    const listStatusDO = (await this.getAllStatus(+idDo)).data.map(
       (item) => item.status,
     );
     const userInfo = await this.userService.getDetail(token);
@@ -348,15 +344,7 @@ export class DeliveryOrderService {
       throw new BadRequestException('Freight Forwarder required surat kuasa');
     }
 
-    const doData = await this.prisma.td_reqdo_header_form.findUnique({
-      where: {
-        id: idDO,
-      },
-    });
-
-    if (!doData) {
-      throw new NotFoundException(`DO with id = ${idDO} is not found!`);
-    }
+    const doData = await this.getHeaderData(idDo);
 
     const dataInvoice = data.paymentDetail.invoice.map((item) => {
       const data: Partial<td_do_invoice_form> = {
@@ -389,7 +377,7 @@ export class DeliveryOrderService {
 
     const updateDo = await this.prisma.td_reqdo_header_form.update({
       where: {
-        id: +idDO,
+        id: +idDo,
       },
       data: {
         tgl_reqdo: new Date(),
@@ -468,7 +456,7 @@ export class DeliveryOrderService {
               id: +item.Id,
             },
             data: {
-              id_reqdo_header: idDO,
+              id_reqdo_header: idDo,
               updated_by,
               updated_at: new Date(),
               gross_weight: item.grossWeight.amount,
@@ -499,7 +487,7 @@ export class DeliveryOrderService {
       } else {
         return this.prisma.td_do_kontainer_form.create({
           data: {
-            id_reqdo_header: idDO,
+            id_reqdo_header: idDo,
             created_at: new Date(),
             created_by: updated_by,
             gross_weight: item.grossWeight.amount,
@@ -543,7 +531,7 @@ export class DeliveryOrderService {
     Promise.all(promises)
       .then(async (results) => {
         console.log('All promises resolved successfully');
-        const doDraft = await this.getDataDraft(idDO);
+        const doDraft = await this.getDataDraft(idDo);
         data.requestDetail.requestor.urlFile =
           doDraft.td_do_requestor_form.filepath_suratkuasa;
         data.requestDetail.requestor.requestorName =
@@ -693,7 +681,7 @@ export class DeliveryOrderService {
       });
 
     // UPDATE STATUS DO
-    const updatedStatus = await this.updateStatusDo(idDO, token, status);
+    const updatedStatus = await this.updateStatusDo(idDo, token, status);
 
     return {
       messsage: 'success',
@@ -703,12 +691,12 @@ export class DeliveryOrderService {
 
   // UPDATE NON KONTAINER
   async updateNonKontainer(
-    idDO: number,
+    idDo: number,
     data: RequestDoDto,
     token: string,
     status?: StatusDo,
   ) {
-    const listStatusDO = (await this.getAllStatus(+idDO)).data.map(
+    const listStatusDO = (await this.getAllStatus(+idDo)).data.map(
       (item) => item.status,
     );
     const userInfo = await this.userService.getDetail(token);
@@ -753,15 +741,7 @@ export class DeliveryOrderService {
     }
 
     // CHECK IF DO already exist
-    const doData = await this.prisma.td_reqdo_header_form.findUnique({
-      where: {
-        id: idDO,
-      },
-    });
-
-    if (!doData) {
-      throw new BadRequestException(`DO by id = ${idDO} not found.`);
-    }
+    const doData = await this.getHeaderData(idDo);
 
     const dataDokumen = data.supportingDocument.documentType.map((item) => {
       const data: Partial<td_do_dok_form> = {
@@ -816,7 +796,7 @@ export class DeliveryOrderService {
 
     const updatedDo = await this.prisma.td_reqdo_header_form.update({
       where: {
-        id: idDO,
+        id: idDo,
       },
       data: {
         tgl_reqdo: new Date(),
@@ -893,7 +873,7 @@ export class DeliveryOrderService {
       },
     });
 
-    const doDraft = await this.getDataDraft(idDO);
+    const doDraft = await this.getDataDraft(idDo);
 
     data.cargoDetail.nonContainer = doDraft.td_do_nonkontainer_form.map(
       (item) => ({
@@ -1019,7 +999,7 @@ export class DeliveryOrderService {
     }
 
     // UPDATE STATUS REQDO FOR DRAFT
-    const updatedStatus = await this.updateStatusDo(idDO, token, status);
+    const updatedStatus = await this.updateStatusDo(idDo, token, status);
 
     return {
       messsage: 'success',
@@ -1027,7 +1007,7 @@ export class DeliveryOrderService {
     };
   }
 
-  async updateStatusDoProcessSL(idDO: number, token: string) {
+  async updateStatusDoProcessSL(idDo: number, token: string) {
     const userInfo = await this.userService.getDetail(token);
     // check if role is shippingline
     if (!userInfo.profile.details.kd_detail_ga) {
@@ -1036,7 +1016,7 @@ export class DeliveryOrderService {
       );
     }
     // get header data
-    const headerData = await this.getHeaderData(idDO);
+    const headerData = await this.getHeaderData(idDo);
     // check status if status DO == 'submitted'
     const statusDO = await this.smartContractService.getStatusDo(
       headerData.order_id,
@@ -1055,7 +1035,7 @@ export class DeliveryOrderService {
 
     const updatedStatusDO = await this.prisma.td_reqdo_header_form.update({
       where: {
-        id: +idDO,
+        id: +idDo,
       },
       data: {
         td_reqdo_status: {
@@ -1076,7 +1056,7 @@ export class DeliveryOrderService {
 
   // UPDATE DO - SHIPPINGLINE
   async updateDoSL(
-    idDO: number,
+    idDo: number,
     data: UpdateDoSLDto,
     token: string,
     status: StatusDo,
@@ -1096,10 +1076,7 @@ export class DeliveryOrderService {
       );
     }
 
-    const headerDo = await this.getHeaderData(+idDO);
-    if (!headerDo) {
-      throw new NotFoundException(`DO by id = ${idDO} not found.`);
-    }
+    const headerDo = await this.getHeaderData(+idDo);
 
     // get last status do db
     const lastStatusDO = await this.smartContractService.getStatusDo(
@@ -1189,7 +1166,7 @@ export class DeliveryOrderService {
 
     // update status reqdo on db
     const updatedStatus = await this.updateStatusDo(
-      idDO,
+      idDo,
       token,
       status,
       data.statusNote,
@@ -1209,40 +1186,39 @@ export class DeliveryOrderService {
   }
 
   // GET ALL STATUS REQDO
-  async getAllStatus(idDO: number) {
-    const headerDo = await this.getHeaderData(idDO);
-    if (!headerDo) {
-      throw new NotFoundException(`DO Request by id = ${idDO} not found`);
+  async getAllStatus(idDo: number) {
+    if (!!idDo) {
+      const headerDo = await this.getHeaderData(idDo);
+      const data = await this.prisma.td_reqdo_status.findMany({
+        where: {
+          id_reqdo_header: idDo,
+        },
+      });
+
+      const result = data
+        .map((item) => ({
+          status: item.name,
+          datetime: moment(item.datetime_status, 'DD-MM-YYYY HH:mm:ss')
+            .tz(headerDo.timezone)
+            .format('DD-MM-YYYY HH:mm:ss'),
+          note: item.note,
+        }))
+        .sort((a, b) =>
+          moment(a.datetime, 'DD-MM-YYYY HH:mm:ss').diff(
+            moment(b.datetime, 'DD-MM-YYYY HH:mm:ss'),
+          ),
+        );
+
+      return {
+        message: 'success',
+        data: result,
+      };
     }
-    const data = await this.prisma.td_reqdo_status.findMany({
-      where: {
-        id_reqdo_header: idDO,
-      },
-    });
-
-    const result = data
-      .map((item) => ({
-        status: item.name,
-        datetime: moment(item.datetime_status, 'DD-MM-YYYY HH:mm:ss')
-          .tz(headerDo.timezone)
-          .format('DD-MM-YYYY HH:mm:ss'),
-        note: item.note,
-      }))
-      .sort((a, b) =>
-        moment(a.datetime, 'DD-MM-YYYY HH:mm:ss').diff(
-          moment(b.datetime, 'DD-MM-YYYY HH:mm:ss'),
-        ),
-      );
-
-    return {
-      message: 'success',
-      data: result,
-    };
   }
 
   // UPDATE STATUS DO
   async updateStatusDo(
-    idDO: number,
+    idDo: number,
     token: string,
     status: StatusDo,
     note?: string,
@@ -1259,7 +1235,7 @@ export class DeliveryOrderService {
         },
       },
       where: {
-        id: idDO,
+        id: idDo,
       },
     });
 
@@ -1281,7 +1257,7 @@ export class DeliveryOrderService {
         data: {
           name: status,
           datetime_status: new Date(),
-          id_reqdo_header: idDO,
+          id_reqdo_header: idDo,
           note: note,
         },
       });
@@ -1721,27 +1697,29 @@ export class DeliveryOrderService {
     return result;
   }
 
-  async getHeaderData(idDO: number) {
-    const data = await this.prisma.td_reqdo_header_form.findUnique({
-      where: {
-        id: idDO,
-      },
-    });
-    if (!data) {
-      throw new NotFoundException(`${idDO} is not found`);
+  async getHeaderData(idDo: number) {
+    if (!!idDo) {
+      const data = await this.prisma.td_reqdo_header_form.findUnique({
+        where: {
+          id: idDo,
+        },
+      });
+      if (!data) {
+        throw new NotFoundException(`${idDo} is not found`);
+      }
+      return data;
     }
-    return data;
   }
 
-  async updateHeaderData(idDO: number, reqdoNum: string, orderId: string) {
+  async updateHeaderData(idDo: number, reqdoNum: string, orderId: string) {
     // check if DO exist
-    const headerData = await this.getHeaderData(idDO);
+    const headerData = await this.getHeaderData(idDo);
     // get status do from smart contract
     const statusDo = await this.smartContractService.getStatusDo(orderId);
 
     const updatedHeader = await this.prisma.td_reqdo_header_form.update({
       where: {
-        id: +idDO,
+        id: +idDo,
       },
       data: {
         no_reqdo: reqdoNum,
@@ -2238,17 +2216,7 @@ export class DeliveryOrderService {
       );
     }
 
-    const headerData = await this.prisma.td_reqdo_header_form.findUnique({
-      where: {
-        id: idDo,
-      },
-    });
-
-    if (!headerData) {
-      throw new NotFoundException(
-        `Request Header DO by Id = ${idDo} not found!`,
-      );
-    }
+    const headerData = await this.getHeaderData(+idDo);
 
     // delete all container data
     if (data.length === 0) {
@@ -2469,17 +2437,7 @@ export class DeliveryOrderService {
       );
     }
 
-    const headerData = await this.prisma.td_reqdo_header_form.findUnique({
-      where: {
-        id: idDo,
-      },
-    });
-
-    if (!headerData) {
-      throw new NotFoundException(
-        `Request Header DO by Id = ${idDo} not found!`,
-      );
-    }
+    const headerData = await this.getHeaderData(+idDo);
 
     const dataDokumen = payload.supportingDocument.documentType.map((item) => {
       const data: Partial<td_do_dok_form> = {
@@ -2605,17 +2563,7 @@ export class DeliveryOrderService {
       );
     }
 
-    const headerData = await this.prisma.td_reqdo_header_form.findUnique({
-      where: {
-        id: idDo,
-      },
-    });
-
-    if (!headerData) {
-      throw new NotFoundException(
-        `Request Header DO by Id = ${idDo} not found!`,
-      );
-    }
+    const headerData = await this.getHeaderData(+idDo);
 
     const dataNonKontainer = data.nonContainer.map((item) => {
       const data: Partial<td_do_nonkontainer_form> = {
